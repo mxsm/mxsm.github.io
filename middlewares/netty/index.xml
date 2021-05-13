@@ -1,0 +1,505 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>蚂蚁背大象 – Netty</title>
+    <link>/middlewares/netty/</link>
+    <description>Recent content in Netty on 蚂蚁背大象</description>
+    <generator>Hugo -- gohugo.io</generator>
+    
+	  <atom:link href="/middlewares/netty/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Middlewares: Netty-EventLoop</title>
+      <link>/middlewares/netty/netty-eventloop/</link>
+      <pubDate>Tue, 24 Sep 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/middlewares/netty/netty-eventloop/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;1-什么是eventloop&#34;&gt;1. 什么是EventLoop?&lt;/h3&gt;
+&lt;p&gt;运行任务来处理在连接的生命周期内发生的事件是任何网络框架的基本功能。与之相应的编程上的构造通常被称为事件循环。这就是 &lt;strong&gt;&lt;code&gt;Netty&lt;/code&gt;&lt;/strong&gt; 中的 &lt;strong&gt;&lt;code&gt;EventLoop&lt;/code&gt;&lt;/strong&gt;&lt;/p&gt;
+&lt;h3 id=&#34;2-eventloop接口&#34;&gt;2. EventLoop接口&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;EventLoop&lt;/code&gt;&lt;/strong&gt; 是协同设计的一部分采用了两个基本的API:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;并发&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;io.netty.util.concurrent&lt;/code&gt;&lt;/strong&gt; 包构建在 JDK 的 &lt;strong&gt;&lt;code&gt;java.util.concurrent&lt;/code&gt;&lt;/strong&gt; 包上，用来提供线程执行器&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;网络编程&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;io.netty.channel&lt;/code&gt;&lt;/strong&gt; 包中的类，为了与 &lt;strong&gt;&lt;code&gt;Channel&lt;/code&gt;&lt;/strong&gt; 的事件进行交互，扩展了接口/类&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/EventLoop%E7%9A%84%E7%B1%BB%E5%B1%82%E6%AC%A1%E7%BB%93%E6%9E%84%E5%9B%BE.jpg?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt; &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;//netty 4.1.17版本
+&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;interface&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;EventLoop&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;OrderedEventExecutor&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;EventLoopGroup&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color:#5c35cc;font-weight:bold&#34;&gt;@Override&lt;/span&gt;
+    &lt;span style=&#34;color:#000&#34;&gt;EventLoopGroup&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;parent&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;();&lt;/span&gt;
+&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在这个模型中，一个 &lt;strong&gt;&lt;code&gt;EventLoop&lt;/code&gt;&lt;/strong&gt; 将由一个永远都不会改变的 &lt;strong&gt;&lt;code&gt;Thread&lt;/code&gt;&lt;/strong&gt; 驱动，同时任务 (&lt;strong&gt;&lt;code&gt;Runnable&lt;/code&gt;&lt;/strong&gt; 或者 &lt;strong&gt;&lt;code&gt;Callable&lt;/code&gt;&lt;/strong&gt;)可以直接提交给 &lt;strong&gt;&lt;code&gt;EventLoop&lt;/code&gt;&lt;/strong&gt; 实现，以立即执行或者调度执行。 根据配置和可用核心的不同，可能会创建多个 EventLoop 实例用以优化资源的使用，并且单个 &lt;strong&gt;&lt;code&gt;EventLoop&lt;/code&gt;&lt;/strong&gt; 可能会被指派用于服务多个 &lt;strong&gt;&lt;code&gt;Channel&lt;/code&gt;&lt;/strong&gt; 。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;EventLoop&lt;/code&gt;&lt;/strong&gt;  和 &lt;strong&gt;&lt;code&gt;Channel&lt;/code&gt;&lt;/strong&gt;  &lt;strong&gt;存在1对多的关系&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;需要注意的是， &lt;strong&gt;&lt;code&gt;Netty&lt;/code&gt;&lt;/strong&gt; 的 &lt;strong&gt;&lt;code&gt;EventLoop&lt;/code&gt;&lt;/strong&gt; 在继承了 &lt;strong&gt;&lt;code&gt;ScheduledExecutorService&lt;/code&gt;&lt;/strong&gt; 的同时，只定 义了一个方法，&lt;strong&gt;&lt;code&gt;parent()&lt;/code&gt;&lt;/strong&gt; 。这个方法，如下面的代码片断所示，用于返回到当前 &lt;strong&gt;&lt;code&gt;EventLoop&lt;/code&gt;&lt;/strong&gt; 实 现的实例所属的 &lt;strong&gt;&lt;code&gt;EventLoopGroup&lt;/code&gt;&lt;/strong&gt; 的引用&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;注意：从上面的代码来看继承了OrderedEventExecutor顺序时间执行器。那么为什么要顺序执行事件或任务呢？
+事件/任务的执行顺序 事件和任务是以先进先出(FIFO)的顺序执行的。这样可以通过保证字 节内容总是按正确的顺序被理，
+消除潜在的数据损坏的可能性。
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&#34;3-eventloop异步工作原理&#34;&gt;3 EventLoop异步工作原理&lt;/h3&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/EventLoop%E5%BC%82%E6%AD%A5%E6%83%85%E5%86%B5%E4%B8%8B%E7%9A%84%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86.jpg?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;一个EventLoop绑定一个线程&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;一个EventLoop可以绑定多个Channel，并且Channel的整个生命周期都由一个EventLoop处理&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;在Channel整个生命周期当中都是由一个EventLoop进行处理的。换句话说是由一个线程处理(好处：减少了多线程之间线程上下文的切换过程，所以在Netty编程过程中尽可能的减少对Channel时间的占用)&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Middlewares: Netty-channel组件</title>
+      <link>/middlewares/netty/netty-channel/</link>
+      <pubDate>Sat, 02 Mar 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/middlewares/netty/netty-channel/</guid>
+      <description>
+        
+        
+        
+      </description>
+    </item>
+    
+    <item>
+      <title>Middlewares: Netty</title>
+      <link>/middlewares/netty/netty/</link>
+      <pubDate>Mon, 17 Dec 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/middlewares/netty/netty/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;netty-线程模型&#34;&gt;Netty 线程模型&lt;/h3&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/NettyServer%E5%A4%84%E7%90%86%E8%BF%9E%E6%8E%A5%E7%9A%84%E7%A4%BA%E6%84%8F%E5%9B%BE.png?raw=true&#34; alt=&#34;线程模型&#34;&gt;&lt;/p&gt;
+&lt;p&gt;上图显示的是 &lt;strong&gt;&lt;code&gt;Netty&lt;/code&gt;&lt;/strong&gt; 主从模型。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Boss NioEventLoopGroup&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这个Boss Group主要是用来监听和轮询Accept请求，然后处理Accept请求处理建立Channel通道，并且将Channel注册到Worker Group&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Worker NioEventLoopGroup&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这个Worker Group 主要用来监听READ和WRITE事件的。处理来自Boss Group注册来的Channel。每一个NioEventLoop都是一个线程，Worker Group就是一个线程组。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Middlewares: Netty-ChannelHandler组件</title>
+      <link>/middlewares/netty/netty-channelhandler/</link>
+      <pubDate>Sat, 15 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/middlewares/netty/netty-channelhandler/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;channel的生命周期&#34;&gt;Channel的生命周期&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;状态&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;ChannelUnregistered&lt;/td&gt;
+&lt;td&gt;Channel 已经被创建，但还未注册到 EventLoop&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ChannelRegistered&lt;/td&gt;
+&lt;td&gt;Channel 已经被注册到了 EventLoop&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ChannelActive&lt;/td&gt;
+&lt;td&gt;Channel 处于活动状态(已经连接到它的远程节点)。它现在可以接收和发送数据了&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ChannelInactive&lt;/td&gt;
+&lt;td&gt;Channel没有连接到远程节点&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;当这些状态发生改变的时候，将会生成对应的事件。这些事件会被转发给 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt;  中的  &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt;  其可以随后对他们做出响应。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/channel%E4%BA%8B%E4%BB%B6%E7%9A%84%E5%8F%98%E5%8C%96.jpg?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;channelhandler的生命周期&#34;&gt;ChannelHandler的生命周期&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;类型&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;handlerAdded&lt;/td&gt;
+&lt;td&gt;当把 ChannelHandler 添加到 ChannelPipeline 中时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;handlerRemoved&lt;/td&gt;
+&lt;td&gt;当从 ChannelPipeline 中移除 ChannelHandler 时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;exceptionCaught&lt;/td&gt;
+&lt;td&gt;当处理过程中在 ChannelPipeline 中有错误产生时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;Netty&lt;/code&gt;&lt;/strong&gt; 定义了下面两个重要的 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt;  子接口：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;ChannelInboundHandler&lt;/strong&gt; — 处理 &lt;strong&gt;入站&lt;/strong&gt; 数据以及各种状态变化&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;ChannelOutboundHandler&lt;/strong&gt; — 处理 &lt;strong&gt;出站&lt;/strong&gt; 数据并且允许拦截所有的操作&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id=&#34;channelinboundhandler-接口&#34;&gt;ChannelInboundHandler 接口&lt;/h4&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;类型&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;channelRegistered&lt;/td&gt;
+&lt;td&gt;当 Channel 已经注册到它的 EventLoop 并且能够处理 I/O 时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;channelUnregistered&lt;/td&gt;
+&lt;td&gt;当 Channel 从它的 EventLoop 注销并且无法处理任何 I/O 时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;channelActive&lt;/td&gt;
+&lt;td&gt;当 Channel 处于活动状态时被调用;Channel 已经连接/绑定并且已经就绪&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;channelInactive&lt;/td&gt;
+&lt;td&gt;当 Channel 离开活动状态并且不再连接它的远程节点时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;channelReadComplete&lt;/td&gt;
+&lt;td&gt;当Channel上的一个读操作完成时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;channelRead&lt;/td&gt;
+&lt;td&gt;当从 Channel 读取数据时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ChannelWritabilityChanged&lt;/td&gt;
+&lt;td&gt;当Channel的可写状态发生改变时被调用。用户可以确保写操作不会完成得太快(以避免发生 OutOfMemoryError)或者可以在 Channel 变为再次可写时恢复写入。可以通过调用Channel的isWritable()方法来检测Channel 的可写性。与可写性相关的阈值可以通过Channel.config().setWriteHighWaterMark()和 Channel.config().setWriteLowWaterMark()方法来设置&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;userEventTriggered&lt;/td&gt;
+&lt;td&gt;当 ChannelnboundHandler.fireUserEventTriggered()方法被调用时被调用，因为一个 POJO 被传经了 ChannelPipeline&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h4 id=&#34;channeloutboundhandler-接口&#34;&gt;ChannelOutboundHandler 接口&lt;/h4&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;类型&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;bind(ChannelHandlerContext,SocketAddress,ChannelPromise)&lt;/td&gt;
+&lt;td&gt;当请求将 Channel 绑定到本地地址时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;connect(ChannelHandlerContext,SocketAddress,SocketAddress,ChannelPromise)&lt;/td&gt;
+&lt;td&gt;当请求将 Channel 连接到远程节点时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;disconnect(ChannelHandlerContext,ChannelPromise)&lt;/td&gt;
+&lt;td&gt;当请求将 Channel 从远程节点断开时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;close(ChannelHandlerContext,ChannelPromise)&lt;/td&gt;
+&lt;td&gt;当请求关闭 Channel 时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;deregister(ChannelHandlerContext,ChannelPromise)&lt;/td&gt;
+&lt;td&gt;当请求将 Channel 从它的 EventLoop 注销时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;read(ChannelHandlerContext)&lt;/td&gt;
+&lt;td&gt;当请求从 Channel 读取更多的数据时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;flush(ChannelHandlerContext)&lt;/td&gt;
+&lt;td&gt;当请求通过 Channel 将入队数据冲刷到远程节点时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;write(ChannelHandlerContext,Object,ChannelPromise)&lt;/td&gt;
+&lt;td&gt;当请求通过 Channel 将数据写到远程节点时被调用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h4 id=&#34;channelhandler的适配器&#34;&gt;ChannelHandler的适配器&lt;/h4&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/ChannelHandlerAdapter.jpg?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;h4 id=&#34;资源管理&#34;&gt;资源管理&lt;/h4&gt;
+&lt;p&gt;&lt;strong&gt;泄露级别的检测：&lt;/strong&gt;&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;级别&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;DISABLED&lt;/td&gt;
+&lt;td&gt;禁用泄漏检测。只有在详尽的测试之后才应设置为这个值&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SIMPLE&lt;/td&gt;
+&lt;td&gt;使用 1%的默认采样率检测并报告任何发现的泄露。这是默认级别，适合绝大部分的情况&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ADVANCED&lt;/td&gt;
+&lt;td&gt;使用默认的采样率，报告所发现的任何的泄露以及对应的消息被访问的位置&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;PARANOID&lt;/td&gt;
+&lt;td&gt;类似于ADVANCED，但是其将会对每次(对消息的)访问都进行采样。这对性能将会有很大的影响，应该只在调试阶段使用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;属性表中的值可以通过： &lt;strong&gt;&lt;code&gt;java -Dio.netty.leakDetectionLevel=ADVANCED&lt;/code&gt;&lt;/strong&gt; 来进行设置。&lt;/p&gt;
+&lt;h3 id=&#34;channelpipeline-接口&#34;&gt;ChannelPipeline 接口&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 是一个拦截流经 &lt;strong&gt;&lt;code&gt;Channel&lt;/code&gt;&lt;/strong&gt; 的入站和出站事件的 &lt;strong&gt;ChannelHandler&lt;/strong&gt; 实例链。下图为 &lt;strong&gt;&lt;code&gt;Netty-4.1.17&lt;/code&gt;&lt;/strong&gt; 中给出来的示意图：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/ChannelPipelineJDK%E4%B8%AD%E7%A4%BA%E6%84%8F%E5%9B%BE.jpg?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;p&gt;每一个新创建的 &lt;strong&gt;&lt;code&gt;Channel&lt;/code&gt;&lt;/strong&gt; 都将会被分配一个新的 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 。这项关联是永久性的在整个生命周期当中。 &lt;strong&gt;&lt;code&gt;Channel&lt;/code&gt;&lt;/strong&gt; 既不能附加另外一个  &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; ，也不能分离其当前的。在 &lt;strong&gt;&lt;code&gt;Netty&lt;/code&gt;&lt;/strong&gt; 组件的生命周期中，这一项固定的操作，不需要开发人员的任何干预。&lt;/p&gt;
+&lt;p&gt;根据事件的起源( &lt;strong&gt;出站还是入站&lt;/strong&gt; ) 事件将会被 &lt;strong&gt;&lt;code&gt;ChannelInboundHandler&lt;/code&gt;&lt;/strong&gt; 或 &lt;strong&gt;&lt;code&gt;ChannelOutboundHandler&lt;/code&gt;&lt;/strong&gt;  处理。随后通过调用 &lt;strong&gt;&lt;code&gt;ChannelHandlerContext&lt;/code&gt;&lt;/strong&gt; 实现，它将被转发给同一超类型的下一个 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt;  。下图展示了事件如何在 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 中传播&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/ChannelPipeline.jpg?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 传播事件的时候，他会测试 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 的下一个 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt; 的类型是否和事件的运动方向相匹配。如果不匹配， &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 将跳过该 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt; 前进到下一个，直到找到和该事件所期望的方向相匹配的为止。 注意： &lt;strong&gt;ChannelHandler 也可以同时实现 ChannelInboundHandler 接口和 ChannelOutboundHandler 接口&lt;/strong&gt;&lt;/p&gt;
+&lt;h4 id=&#34;修改channelpipeline&#34;&gt;修改ChannelPipeline&lt;/h4&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt;  可以通过添加、删除或者替换其他的 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt; 来实时地修改 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 布局，这就是 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt; 最重要的能力之一。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;名称&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;addFrist,addBefore,addAfter,addLast&lt;/td&gt;
+&lt;td&gt;将一个ChannelHandler添加到ChannelPipeline中&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;remove&lt;/td&gt;
+&lt;td&gt;将一个 ChannelHandler 从 ChannelPipeline 中移除&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;replace&lt;/td&gt;
+&lt;td&gt;将 ChannelPipeline 中的一个 ChannelHandler 替换为另一个 ChannelHandler&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;添加处理器：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#000&#34;&gt;channel&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;pipeline&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;().&lt;/span&gt;
+&lt;span style=&#34;color:#000&#34;&gt;addLast&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;frameDecoder&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ImMessageFrameDecoder&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;()).&lt;/span&gt;
+&lt;span style=&#34;color:#000&#34;&gt;addLast&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;protoDecoder&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ProtobufDecoder&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;ImMessageProto&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;ImMessage&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;getDefaultInstance&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;())).&lt;/span&gt;
+&lt;span style=&#34;color:#000&#34;&gt;addLast&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;frameEncoder&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ProtobufVarint32LengthFieldPrepender&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;()).&lt;/span&gt;
+&lt;span style=&#34;color:#000&#34;&gt;addLast&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;protoEncoder&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ProtobufEncoder&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;()).&lt;/span&gt;
+&lt;span style=&#34;color:#000&#34;&gt;addLast&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;imHandler&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ImHandler&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;());&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;删除处理器：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt; &lt;span style=&#34;color:#000&#34;&gt;ChannelHandler&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;protoEncoder&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ctx&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;channel&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;pipeline&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;remove&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;protoEncoder&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;);&lt;/span&gt;
+ &lt;span style=&#34;color:#000&#34;&gt;ChannelHandler&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;frameEncoder&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ctx&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;channel&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;pipeline&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;remove&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;frameEncoder&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;事件触发&#34;&gt;事件触发&lt;/h4&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 的 &lt;strong&gt;API&lt;/strong&gt; 公开了用于调用入站和出站操作的附加方法。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;入站操作的方法：&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;方法：fireChannelRegistered
+作用：调用 ChannelPipeline 中下一个 ChannelInboundHandler 的channelRegistered(ChannelHandlerContext)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：fireChannelUnregistered
+作用：调用 ChannelPipeline 中下一个 ChannelInboundHandler 的 channelUnregistered(ChannelHandlerContext)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：fireChannelActive
+作用：调用 ChannelPipeline 中下一个 ChannelInboundHandler 的 channelActive(ChannelHandlerContext)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：fireChannelInactive
+作用：调用 ChannelPipeline 中下一个 ChannelInboundHandler 的channelInactive(ChannelHandlerContext)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：fireExceptionCaught
+作用：调用 ChannelPipeline 中下一个 ChannelInboundHandler 的exceptionCaught(ChannelHandlerContext, Throwable)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：fireUserEventTriggered
+作用：调用 ChannelPipeline 中下一个 ChannelInboundHandler 的userEventTriggered(ChannelHandlerContext, Object)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：fireChannelRead
+作用：调用 ChannelPipeline 中下一个 ChannelInboundHandler 的channelRead(ChannelHandlerContext, Object msg)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：fireChannelReadComplete
+作用：调用 ChannelPipeline 中下一个 ChannelInboundHandler 的channelReadComplete(ChannelHandlerContext)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：firechannelWritabilityChanged
+作用：调用 ChannelPipeline 中下一个 ChannelInboundHandler 的  channelWritabilityChanged(ChannelHandlerContext)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在出站操作这边，处理事件会将导致底层的套接字上发生一系列的动作，&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;出站操作：&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;方法：bind
+作用：将 Channel 绑定到一个本地地址，这将调用 ChannelPipeline 中的下一个ChannelOutboundHandler 的 bind(ChannelHandlerContext, SocketAddress, ChannelPromise)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：connect
+作用：将 Channel 连接到一个远程地址，这将调用 ChannelPipeline 中的下一个ChannelOutboundHandler 的 connect(ChannelHandlerContext, SocketAddress, ChannelPromise)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：disconnect
+作用：将 Channel 断开连接。这将调用 ChannelPipeline 中的下一个 ChannelOutboundHandler 的 disconnect(ChannelHandlerContext, Channel Promise)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：close
+作用：将 Channel 关闭。这将调用 ChannelPipeline 中的下一个 ChannelOutboundHandler 的 close(ChannelHandlerContext, ChannelPromise)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：deregister
+作用：将 Channel 从它先前所分配的 EventExecutor(即 EventLoop)中注销。这将调用 ChannelPipeline 中的下一个 ChannelOutboundHandler 的 deregister(ChannelHandlerContext, ChannelPromise)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：flush
+作用：冲刷 Channel 所有挂起的写入。这将调用 ChannelPipeline 中的下一个 ChannelOutboundHandler 的 flush(ChannelHandlerContext)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：write
+作用：将消息写入 Channel。这将调用 ChannelPipeline 中的下一个 ChannelOutboundHandler 的 write(ChannelHandlerContext, Object msg, ChannelPromise)方法。注意:这并不会将消息写入底层的 Socket，而只会将它放入队列中。要将它写入 Socket，需要调用 flush()或者 writeAndFlush()方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法： writeAndFlush
+作用： 这是一个先调用write()方法再接着调用flush()方法的便利方法
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;方法：read
+作用：请求从 Channel 中读取更多的数据。这将调用 ChannelPipeline 中的下一个ChannelOutboundHandler 的 read(ChannelHandlerContext)方法
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;strong&gt;总结：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/ChannelPipeline%E7%BB%A7%E6%89%BF%E5%9B%BE-netty4-1.17.jpg?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Channel创建的时候同时会创建ChannelPipeline并且进行绑定&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;ChannelPipeline 保存了与 Channel 相关联的 ChannelHandler;&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;ChannelPipeline 可以根据需要，通过添加或者删除 ChannelHandler 来动态地修改&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;ChannelPipeline 有着丰富的 API 用以被调用，以响应入站和出站事件。&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;channelhandlercontext-接口&#34;&gt;ChannelHandlerContext 接口&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;ChannelHandlerContext&lt;/code&gt;&lt;/strong&gt; 代表了 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt; 和 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 之间的关联，每当有 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt; 添加到 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 中时，都会创建 &lt;strong&gt;&lt;code&gt;ChannelHandlerContext&lt;/code&gt;&lt;/strong&gt; 。&lt;strong&gt;&lt;code&gt;ChannelHandlerContext&lt;/code&gt;&lt;/strong&gt; 的主要功能是管理它所关联的 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt; 和在同一个 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 中的其他 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt; 之间的交互。(&lt;strong&gt;只要有ChannelHandler的添加就会创建ChannelHandlerContext&lt;/strong&gt;)&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;ChannelHandlerContext&lt;/code&gt;&lt;/strong&gt; 和 &lt;strong&gt;&lt;code&gt;Channel&lt;/code&gt;&lt;/strong&gt; 以及 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 有一些相同的方法。这些方法区别在哪。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果调用 &lt;strong&gt;&lt;code&gt;Channel&lt;/code&gt;&lt;/strong&gt; 或者 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 上的这些方法，它们将沿着整个 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 进行传播。而调用位于 &lt;strong&gt;&lt;code&gt;ChannelHandlerContext&lt;/code&gt;&lt;/strong&gt; 上的相同方法，则将从当前所关联的 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt; 开始，并且只会传播给位于该 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 中的下一个能够处理该事件的 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt; 。(&lt;strong&gt;事件传播的范围不一样&lt;/strong&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;使用 &lt;strong&gt;&lt;code&gt;ChannelHandlerContext&lt;/code&gt;&lt;/strong&gt; 的 &lt;strong&gt;API&lt;/strong&gt; 的时候牢记以下两点：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;ChannelHandlerContext&lt;/code&gt;&lt;/strong&gt; 和 &lt;strong&gt;&lt;code&gt;ChannelHandler&lt;/code&gt;&lt;/strong&gt; 之间的关联(绑定)是永远不会改变的，所以缓存对它的引用是安全的。&lt;/li&gt;
+&lt;li&gt;相对于其他类的同名方法，&lt;strong&gt;&lt;code&gt;ChannelHandlerContext&lt;/code&gt;&lt;/strong&gt; 的方法将产生更短的事件流，应该尽可能地利用这个特性来获得最大的性能。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下面看一下 &lt;strong&gt;&lt;code&gt;ChannelHandlerContext&lt;/code&gt;&lt;/strong&gt; 、 &lt;strong&gt;&lt;code&gt;Channel&lt;/code&gt;&lt;/strong&gt; 和 &lt;strong&gt;&lt;code&gt;ChannelPipeline&lt;/code&gt;&lt;/strong&gt; 的关系图：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/context-Channel-pipeline%E4%B8%89%E8%80%85%E5%85%B3%E7%B3%BB%E5%9B%BE.jpg?raw=true&#34; alt=&#34;图片&#34;&gt;&lt;/p&gt;
+&lt;p&gt;下面看一下调用Channel 和 ChannelPipeline的方法导致写入事件从尾端到头部地流经 ChannelPipeline示意图：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/Channel-ChannelPipeline%E4%BA%8B%E4%BB%B6%E4%BC%A0%E6%92%AD%E5%9B%BE.jpg?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;注意：重要的是要注意到，虽然被调用的 Channel 或 ChannelPipeline 上的 write()方法将一直传播事件通&lt;/strong&gt;
+&lt;strong&gt;过整个 ChannelPipeline，但是在 ChannelHandler 的级别上，事件从一个 ChannelHandler到下一个 ChannelHandler 的移动是由 ChannelHandlerContext 上的调用完成的。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;下面看一下 &lt;strong&gt;&lt;code&gt;ChannelHandlerContext&lt;/code&gt;&lt;/strong&gt; 事件被传播示意图：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/ChannelHandlerContext%E8%A7%A6%E5%8F%91%E7%9A%84%E6%93%8D%E4%BD%9C%E6%B5%81%E7%A8%8B%E4%BA%8B%E4%BB%B6%E4%BC%A0%E6%92%AD.jpg?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;总结&#34;&gt;总结：&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Channel的生命周期以及ChannelPipeline的生命周期— 这两个生命周期是同生死&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Channel ChannelPipeline 以及 ChannelHandlerContext 事件传播范围&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Channel ChannelPipeline 以及 ChannelHandlerContext 三者之间的关系&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Middlewares: Netty优化</title>
+      <link>/middlewares/netty/netty-optimize/</link>
+      <pubDate>Fri, 07 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/middlewares/netty/netty-optimize/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;backlog的设置&#34;&gt;backlog的设置&lt;/h3&gt;
+&lt;p&gt;socket接收的所有连接都是存放在队列类型的数据结构中。其中的长度可以进行设置分别是下面的两个内核参数&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;/proc/sys/net/ipv4/tcp_max_syn_backlog&lt;/p&gt;
+&lt;p&gt;指定所能接受SYN同步包的最大客户端数量，即半连接上限。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;/proc/sys/net/core/somaxconn&lt;/p&gt;
+&lt;p&gt;指服务端所能accept即处理数据的最大客户端数量，即完成连接上限&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;CentOS7 tcp_max_syn_backlog默认值8192， somaxconn 默认值1024&lt;/p&gt;
+&lt;p&gt;Netty backlog 设置的就是最大的连接数。内核会根据传入的backlog参数与系统参数somaxconn，取二者的较小值。&lt;/p&gt;
+&lt;p&gt;注意：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;tcp_max_syn_backlog &amp;gt;= somaxconn
+&lt;/code&gt;&lt;/pre&gt;
+      </description>
+    </item>
+    
+    <item>
+      <title>Middlewares: Netty-ByteBuf组件</title>
+      <link>/middlewares/netty/netty-bytebuf/</link>
+      <pubDate>Wed, 25 Jul 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/middlewares/netty/netty-bytebuf/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;bytebuf-----netty的数据容器&#34;&gt;ByteBuf &amp;mdash; netty的数据容器&lt;/h3&gt;
+&lt;p&gt;网络通信涉及到字节序列的移动。高效易用的数据结构必不可少。&lt;/p&gt;
+&lt;h4 id=&#34;bytebuf如何工作&#34;&gt;ByteBuf如何工作&lt;/h4&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;ByteBuf&lt;/code&gt;&lt;/strong&gt; 的布局结构和状态图：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/bytebuf%E7%BB%93%E6%9E%84%E5%9B%BE.png?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;ByteBuf&lt;/code&gt;&lt;/strong&gt; &lt;strong&gt;维护了两个不同的索引&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;readerIndex：&lt;/strong&gt; 用于读取&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;writerIndex：&lt;/strong&gt; 用于写入&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当 &lt;strong&gt;readerIndex：&lt;/strong&gt; &amp;gt;  &lt;strong&gt;writerIndex&lt;/strong&gt; 的时候就会出现越界的异常。&lt;/p&gt;
+&lt;p&gt;名称已 &lt;strong&gt;&lt;code&gt;read&lt;/code&gt;&lt;/strong&gt; 和 &lt;strong&gt;&lt;code&gt;write&lt;/code&gt;&lt;/strong&gt; 开头的 &lt;strong&gt;&lt;code&gt;ByteBuf&lt;/code&gt;&lt;/strong&gt; 方法， 将会推进对应的索引。而以 &lt;strong&gt;&lt;code&gt;get&lt;/code&gt;&lt;/strong&gt; 和 &lt;strong&gt;&lt;code&gt;set&lt;/code&gt;&lt;/strong&gt; 开头的则不会。 &lt;strong&gt;&lt;code&gt;ByteBuf&lt;/code&gt;&lt;/strong&gt; 默认真的最大容量为  &lt;strong&gt;&lt;code&gt;Integer.MAX_VALUE&lt;/code&gt;&lt;/strong&gt;&lt;/p&gt;
+&lt;h3 id=&#34;bytebuf-的使用模式&#34;&gt;ByteBuf 的使用模式&lt;/h3&gt;
+&lt;h4 id=&#34;1-堆缓冲区&#34;&gt;1. 堆缓冲区&lt;/h4&gt;
+&lt;p&gt;最常用的一种模式， &lt;strong&gt;堆缓冲区&lt;/strong&gt; 。 &lt;strong&gt;&lt;code&gt;ByteBuf&lt;/code&gt;&lt;/strong&gt; 将数据存放在 &lt;strong&gt;JVM&lt;/strong&gt; 的堆空间中。这种模式被叫做 &lt;strong&gt;支撑数组。&lt;/strong&gt; 在没有使用池化的情况下提供 &lt;strong&gt;快速分配和释放。&lt;/strong&gt;&lt;/p&gt;
+&lt;h4 id=&#34;2-直接缓冲区&#34;&gt;2. 直接缓冲区&lt;/h4&gt;
+&lt;p&gt;JVM 实现通过本地调用来分配内存 ，内存不是分配在JVM的堆中。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;优点：&lt;/strong&gt; 内存分配在JVM的堆外，不受JVM的垃圾收集器的管控。有利于网络数据的传输。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;缺点：&lt;/strong&gt; 相对于JVM堆的缓冲区分配和释放比较昂贵&lt;/p&gt;
+&lt;h4 id=&#34;3-复合缓冲区&#34;&gt;3. 复合缓冲区&lt;/h4&gt;
+&lt;p&gt;第三种也是最后一种模式使用的是复合缓冲区， 它为多个 ByteBuf 提供一个聚合视图。 在这里你可以根据需要添加或者删除 ByteBuf 实例，这是一个 JDK 的 ByteBuffer 实现完全缺失的特性。Netty 通过一个 ByteBuf 子类——CompositeByteBuf——实现了这个模式， 它提供了一个将多个缓冲区表示为单个合并缓冲区的虚拟表示 。&lt;/p&gt;
+&lt;h3 id=&#34;bytebuf字节级操作&#34;&gt;ByteBuf字节级操作&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;随机访问索引&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;顺序访问索引&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;下图显示了 &lt;strong&gt;&lt;code&gt;ByteBuf&lt;/code&gt;&lt;/strong&gt; 是如何被两个索引划分成为三个区域的：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/bytebuf%E8%A2%AB%E5%88%92%E5%88%86%E4%B8%BA%E4%B8%89%E4%B8%AA%E5%8C%BA%E5%9F%9F.png?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;可丢弃字节&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;如上图中标记为可丢弃字节的分段包含了已经被读过的字节。通过调用  &lt;strong&gt;&lt;code&gt;discardReadBytes()&lt;/code&gt;&lt;/strong&gt; 方法， 可以丢弃它们并回收空间。这个分段的初始大小为 0，存储在 readerIndex 中，会随着 read 操作的执行而增加（ get*操作不会移动 readerIndex）。但是这个可以丢弃并不是字节把已经读的字段的字节不要了，而是把尚未读的字节数移到最开始。(这样做可能会导致内存复制)&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/bytebuf%E4%B8%A2%E5%BC%83%E5%B7%B2%E8%AF%BB%E5%AD%97%E6%AE%B5.png?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;可读字节&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;可写字节&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;索引管理&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;通过调用  &lt;strong&gt;&lt;code&gt;markReaderIndex()&lt;/code&gt;&lt;/strong&gt; 、  &lt;strong&gt;&lt;code&gt;markWriterIndex()&lt;/code&gt;&lt;/strong&gt; 、  &lt;strong&gt;&lt;code&gt;resetWriterIndex()&lt;/code&gt;&lt;/strong&gt; 和 &lt;strong&gt;&lt;code&gt;resetReaderIndex()&lt;/code&gt;&lt;/strong&gt; 来标记和重置  &lt;strong&gt;&lt;code&gt;ByteBuf&lt;/code&gt;&lt;/strong&gt; 的 &lt;strong&gt;&lt;code&gt;readerIndex&lt;/code&gt;&lt;/strong&gt; 和 &lt;strong&gt;&lt;code&gt;writerIndex&lt;/code&gt;&lt;/strong&gt;  。&lt;/p&gt;
+&lt;p&gt;也可以通过调用 &lt;strong&gt;&lt;code&gt;readerIndex(int)&lt;/code&gt;&lt;/strong&gt; 或者 &lt;strong&gt;&lt;code&gt;writerIndex(int)&lt;/code&gt;&lt;/strong&gt; 来将索引移动到指定位置。 试图将任何一个索引设置到一个无效的位置都将导致一个 &lt;strong&gt;&lt;code&gt;IndexOutOfBoundsException&lt;/code&gt;&lt;/strong&gt; 。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/bytebufclear%E8%B0%83%E7%94%A8%E4%B9%8B%E5%89%8D.png?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;p&gt;可以通过调用 clear()方法来将 readerIndex 和 writerIndex 都设置为 0。注意， &lt;strong&gt;这并不会清除内存中的内容。(内容还依然存并不是全部清空数据)&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/netty/bytebufclear%E8%B0%83%E7%94%A8%E5%90%8E.png?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;查找操作&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;派生缓冲区&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

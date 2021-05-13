@@ -1,0 +1,1679 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="generator" content="Hugo 0.79.1" /><META NAME="ROBOTS" CONTENT="INDEX, FOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>InnoDB表 | 蚂蚁背大象</title><meta property="og:title" content="InnoDB表" />
+<meta property="og:description" content="1. 索引组织表 在InnoDB存储引擎中，表都是根据主键顺序组织存放的，这种方式的表称为索引组织表。索引在InnoDB中每张表都有主键，如果没有显式的定义主键，InnoDB会按照如下的方式选择或创建主键：
+ 判断是否有非空的唯一索引，有该列就是为主键
+主键根据的是定义索引的顺序，而不是建表时候字段的顺序。 不满足上述条件，InnoDB自动创建一个6字节大小的指针。   说明: _rowid可以显示表的主键，这只是对单列的主键有效，对于多列组成主键就无效了。
+ 2. InnoDB逻辑存储结构 从逻辑结构来看所有的逻辑都被存放在一个空间中，称为表空间(tablespace)。表空间由如下组成：
+ 段(segment) 区(extent) 页(page)或者称为块(block)  2.1 表空间 表空间可以看做为InnoDB存储引擎逻辑结构的最高层，所有的数据都放在表空间中。
+2.2 段 段的分类：
+ 数据段 索引段 回滚段  由于InnoDB存储引擎表是索引组织的，因此数据即索引，索引即数据。那么数据段即为B&#43;树的叶子节点，索引段即为B&#43;树的非叶子节点。
+2.3 区 区是由联想页组成的空间。在任何情况下每个去的掉线都是1M。为了保证区中页的连续性，InnoDB存储引擎一次从磁盘申请多个区。默认情况下页的大小为16K,一个区就有64个连续的页。
+ 页可以通过KEY_BLOCK_SIZE来设置大小
+ 2.4 页 页是InnoDB磁盘管理的最小单位，默认每个也的大小为16KB。页的常见类型：
+ 数据页 undo页 系统页 事务数据页 插入缓冲位图页 插入缓冲空闲列表页 未压缩的二进制大对象页 压缩的二进制大对象页  2.5 行 InnoDB存储引擎是面向列，也就是数据是按行进行存放。每个页存放的行记录也是有硬性定义的，最多允许存放16K/2-200行的记录。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/other/db/mysql/mysql-innodb/innodb-table/" />
+<meta property="article:published_time" content="2021-03-22T00:00:00+00:00" />
+<meta property="article:modified_time" content="2021-05-06T21:26:34+08:00" /><meta property="og:site_name" content="蚂蚁背大象" />
+<meta itemprop="name" content="InnoDB表">
+<meta itemprop="description" content="1. 索引组织表 在InnoDB存储引擎中，表都是根据主键顺序组织存放的，这种方式的表称为索引组织表。索引在InnoDB中每张表都有主键，如果没有显式的定义主键，InnoDB会按照如下的方式选择或创建主键：
+ 判断是否有非空的唯一索引，有该列就是为主键
+主键根据的是定义索引的顺序，而不是建表时候字段的顺序。 不满足上述条件，InnoDB自动创建一个6字节大小的指针。   说明: _rowid可以显示表的主键，这只是对单列的主键有效，对于多列组成主键就无效了。
+ 2. InnoDB逻辑存储结构 从逻辑结构来看所有的逻辑都被存放在一个空间中，称为表空间(tablespace)。表空间由如下组成：
+ 段(segment) 区(extent) 页(page)或者称为块(block)  2.1 表空间 表空间可以看做为InnoDB存储引擎逻辑结构的最高层，所有的数据都放在表空间中。
+2.2 段 段的分类：
+ 数据段 索引段 回滚段  由于InnoDB存储引擎表是索引组织的，因此数据即索引，索引即数据。那么数据段即为B&#43;树的叶子节点，索引段即为B&#43;树的非叶子节点。
+2.3 区 区是由联想页组成的空间。在任何情况下每个去的掉线都是1M。为了保证区中页的连续性，InnoDB存储引擎一次从磁盘申请多个区。默认情况下页的大小为16K,一个区就有64个连续的页。
+ 页可以通过KEY_BLOCK_SIZE来设置大小
+ 2.4 页 页是InnoDB磁盘管理的最小单位，默认每个也的大小为16KB。页的常见类型：
+ 数据页 undo页 系统页 事务数据页 插入缓冲位图页 插入缓冲空闲列表页 未压缩的二进制大对象页 压缩的二进制大对象页  2.5 行 InnoDB存储引擎是面向列，也就是数据是按行进行存放。每个页存放的行记录也是有硬性定义的，最多允许存放16K/2-200行的记录。">
+<meta itemprop="datePublished" content="2021-03-22T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2021-05-06T21:26:34+08:00" />
+<meta itemprop="wordCount" content="42">
+
+
+
+<meta itemprop="keywords" content="" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="InnoDB表"/>
+<meta name="twitter:description" content="1. 索引组织表 在InnoDB存储引擎中，表都是根据主键顺序组织存放的，这种方式的表称为索引组织表。索引在InnoDB中每张表都有主键，如果没有显式的定义主键，InnoDB会按照如下的方式选择或创建主键：
+ 判断是否有非空的唯一索引，有该列就是为主键
+主键根据的是定义索引的顺序，而不是建表时候字段的顺序。 不满足上述条件，InnoDB自动创建一个6字节大小的指针。   说明: _rowid可以显示表的主键，这只是对单列的主键有效，对于多列组成主键就无效了。
+ 2. InnoDB逻辑存储结构 从逻辑结构来看所有的逻辑都被存放在一个空间中，称为表空间(tablespace)。表空间由如下组成：
+ 段(segment) 区(extent) 页(page)或者称为块(block)  2.1 表空间 表空间可以看做为InnoDB存储引擎逻辑结构的最高层，所有的数据都放在表空间中。
+2.2 段 段的分类：
+ 数据段 索引段 回滚段  由于InnoDB存储引擎表是索引组织的，因此数据即索引，索引即数据。那么数据段即为B&#43;树的叶子节点，索引段即为B&#43;树的非叶子节点。
+2.3 区 区是由联想页组成的空间。在任何情况下每个去的掉线都是1M。为了保证区中页的连续性，InnoDB存储引擎一次从磁盘申请多个区。默认情况下页的大小为16K,一个区就有64个连续的页。
+ 页可以通过KEY_BLOCK_SIZE来设置大小
+ 2.4 页 页是InnoDB磁盘管理的最小单位，默认每个也的大小为16KB。页的常见类型：
+ 数据页 undo页 系统页 事务数据页 插入缓冲位图页 插入缓冲空闲列表页 未压缩的二进制大对象页 压缩的二进制大对象页  2.5 行 InnoDB存储引擎是面向列，也就是数据是按行进行存放。每个页存放的行记录也是有硬性定义的，最多允许存放16K/2-200行的记录。"/>
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.c035f895ff4e90623da11d8179cd6258d8a7103e42d340093fffff9206ff11a0.css" as="style">
+<link href="/scss/main.min.c035f895ff4e90623da11d8179cd6258d8a7103e42d340093fffff9206ff11a0.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="https://code.jquery.com/jquery-3.5.1.min.js"
+  integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0="
+  crossorigin="anonymous"></script>
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.css" />
+
+
+  </head>
+  <body class="td-page">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 321.39 78.54"><title id="title19">DUBBO LOGO</title><path class="cls-1" d="M68.46 50.38c0 14.06 11.39 22.11 25.45 22.11s25.45-8.05 25.45-22.11V7.25H68.46zm21.24-28h8.6V31H89.7zm0 22.25h8.6v8.6H89.7zM33.24 7.25H4.06v64H33.24c10.95.0 19.3-7.18 23.29-17.15a45.12 45.12.0 002.38-14.87A45.12 45.12.0 0056.53 24.4C52.84 14.62 44.19 7.25 33.24 7.25zm.43 14.63H30.34a3.44 3.44.0 00-3.44 3.44V53.23a3.44 3.44.0 003.44 3.44h3.33v4.63h-8.3a6.87 6.87.0 01-6.87-6.87V24.12a6.87 6.87.0 016.87-6.87h8.3zM285.51 6.06c-17.05.0-30.88 10.28-30.88 33.21s13.83 33.21 30.88 33.21 30.88-10.28 30.88-33.21S302.56 6.06 285.51 6.06zm7.59 48.36a6.87 6.87.0 01-6.87 6.87h-8.3V56.67h3.33a3.44 3.44.0 003.44-3.44V25.31a3.44 3.44.0 00-3.44-3.44h-3.33V17.25h8.3a6.87 6.87.0 016.87 6.87zm-53.4-17.56A17.39 17.39.0 00227.31 7.25H195.1v64h32.21a19.44 19.44.0 0012.38-34.44zM211.63 61.29h-6.08l18.68-44h6.08zM177 36.85A17.39 17.39.0 00164.65 7.25H132.43v64h32.21A19.44 19.44.0 00177 36.85zM149 61.29h-6.08l18.68-44h6.08z" style="fill:#fff;fill-opacity:1"/></svg></span><span class="text-uppercase font-weight-bold">蚂蚁背大象</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/about/" ><span>Home</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/blog/" ><span>Java</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/spring/" ><span>Spring</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/middlewares/" ><span>Middleware</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/docs/" ><span>Documentation</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/other/" ><span class="active">Others</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/community/" ><span>Community</span></a>
+			</li>
+			
+			
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+<input type="search" class="form-control td-search-input" placeholder="&#xf002 站内搜索…" aria-label="站内搜索…" autocomplete="off">
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+<input type="search" class="form-control td-search-input" placeholder="&#xf002 站内搜索…" aria-label="站内搜索…" autocomplete="off">
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">Others</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="other">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/apache-shiro/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Shiro</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherapache-shiro">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherapache-shiroterminology" href="/other/apache-shiro/terminology/">Shiro术语</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/dubbo/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Dubbo</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdubbo">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/dubbo/source-analyse/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Dubbo源码解析</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdubbosource-analyse">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubbosource-analyseimplicit-parameter" href="/other/dubbo/source-analyse/implicit-parameter/">Dubbo隐式参数</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubbosource-analysedubbo-protocol" href="/other/dubbo/source-analyse/dubbo-protocol/">Dubbo Protocol说明</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubbosource-analyseextensionloader" href="/other/dubbo/source-analyse/extensionloader/">ExtensionLoader源码解析</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubbosource-analysereferenceconfig" href="/other/dubbo/source-analyse/referenceconfig/">ReferenceConfig分析</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubbosource-analyseserviceconfig" href="/other/dubbo/source-analyse/serviceconfig/">ServiceConfig源码分析</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubbosource-analyseadaptive-mechanism" href="/other/dubbo/source-analyse/adaptive-mechanism/">自适应机制解析</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubbodubbo-fault-tolerant-servicedir" href="/other/dubbo/dubbo-fault-tolerant-servicedir/">Dubbo容错四大利器之—服务目录</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubbodubbo-metadata" href="/other/dubbo/dubbo-metadata/">Dubbo元数据</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubbodubbo-fault-tolerant-serviceroute" href="/other/dubbo/dubbo-fault-tolerant-serviceroute/">Dubbo容错四大利器之— 服务路由</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubbodubbo-fault-tolerant-cluster" href="/other/dubbo/dubbo-fault-tolerant-cluster/">Dubbo容错四大利器之—集群</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubbodubbo-freamwork-design" href="/other/dubbo/dubbo-freamwork-design/">Dubbo框架设计</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubboconfig-model-analysis" href="/other/dubbo/config-model-analysis/">Config模块分析</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdubbodubbo-fault-tolerant-loadbalance" href="/other/dubbo/dubbo-fault-tolerant-loadbalance/">Dubbo容错四大利器之—负载均衡</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/git/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Git</a>
+  </li>
+  <ul>
+    <li class="collapse " id="othergit">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-othergitgit-version-back" href="/other/git/git-version-back/">Git版本回退</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-othergitgit-command-tag" href="/other/git/git-command-tag/">Git常用命令-Tag</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/maven/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Maven</a>
+  </li>
+  <ul>
+    <li class="collapse " id="othermaven">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-othermavenmaven-custom-archetype" href="/other/maven/maven-custom-archetype/">Maven-自定义archetype</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/mybatis/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Mybatis</a>
+  </li>
+  <ul>
+    <li class="collapse " id="othermybatis">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-othermybatismybatis-theory-sql-execute" href="/other/mybatis/mybatis-theory-sql-execute/">深入理解mybatis原理-SQL的执行过程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-othermybatismybatis-theory-mybatis-design" href="/other/mybatis/mybatis-theory-mybatis-design/">深入理解mybatis原理-MyBatis的架构设计</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-othermybatismybatis-theory-xml-parse" href="/other/mybatis/mybatis-theory-xml-parse/">深入理解mybatis原理-MyBatis配置xml文件解析</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/db/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">数据库</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="otherdb">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/db/elasticsearch/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Elasticsearch</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdbelasticsearch">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/db/elasticsearch/mapping/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Elasticsearch Mapping</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdbelasticsearchmapping">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbelasticsearchmappingelasticsearch-metadata" href="/other/db/elasticsearch/mapping/elasticsearch-metadata/">Elasticsearch-元数据</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/db/elasticsearch/search-dsl/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Elasticsearch 查询DSL</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdbelasticsearchsearch-dsl">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/db/elasticsearch/search-dsl/complex-search/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">复合查询</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdbelasticsearchsearch-dslcomplex-search">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbelasticsearchsearch-dslcomplex-searchelasticsearch-boosting-query" href="/other/db/elasticsearch/search-dsl/complex-search/elasticsearch-boosting-query/">Elasticsearch复合查询-boosting query查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbelasticsearchsearch-dslcomplex-searchelasticsearch-constant-score-query" href="/other/db/elasticsearch/search-dsl/complex-search/elasticsearch-constant-score-query/">Elasticsearch复合查询-Constant score query查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbelasticsearchsearch-dslcomplex-searchelasticsearch-boolean" href="/other/db/elasticsearch/search-dsl/complex-search/elasticsearch-boolean/">Elasticsearch复合查询-Boolean查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbelasticsearchsearch-dslcomplex-searchelasticsearch-disjunction-max-query" href="/other/db/elasticsearch/search-dsl/complex-search/elasticsearch-disjunction-max-query/">Elasticsearch复合查询-Disjunction max query</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/db/elasticsearch/index/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Elasticsearch 索引</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdbelasticsearchindex">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbelasticsearchindexelasticsearch-index-mode" href="/other/db/elasticsearch/index/elasticsearch-index-mode/">Elasticsearch-索引模式</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbelasticsearchelasticsearch-basic-conception" href="/other/db/elasticsearch/elasticsearch-basic-conception/">elasticsearch基本概念</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/db/mysql/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">mysql</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="otherdbmysql">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlcommand" href="/other/db/mysql/command/">mysql命令</a>
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/db/mysql/mysql-base/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Mysql基础知识</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdbmysqlmysql-base">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-basemysql-indexs" href="/other/db/mysql/mysql-base/mysql-indexs/">MySQL几种索引的区别</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-basemysql-index-match-principle" href="/other/db/mysql/mysql-base/mysql-index-match-principle/">Mysql的组合索引和最左匹配原则</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-baseline-overflow" href="/other/db/mysql/mysql-base/line-overflow/">行溢出</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-basestorage-engine" href="/other/db/mysql/mysql-base/storage-engine/">存储引擎</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-basecover-index" href="/other/db/mysql/mysql-base/cover-index/">覆盖索引</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-basemysql-optimize" href="/other/db/mysql/mysql-base/mysql-optimize/">MySQL的优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-basemysql-master-slave-theory" href="/other/db/mysql/mysql-base/mysql-master-slave-theory/">MySQL主从复制原理</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/db/mysql/mysql-note/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Mysql笔记</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdbmysqlmysql-note">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/db/mysql/mysql-note/index/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Mysql索引</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdbmysqlmysql-noteindex">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-noteindexhigh-performance-index" href="/other/db/mysql/mysql-note/index/high-performance-index/">高性能索引策略</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-noteindexindex-type" href="/other/db/mysql/mysql-note/index/index-type/">索引的类型</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-noteschema-datatype-optimization" href="/other/db/mysql/mysql-note/schema-datatype-optimization/">Schema与数据类型优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-notequery-optimization" href="/other/db/mysql/mysql-note/query-optimization/">查询性能优化</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/db/mysql/mysql-innodb/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">InnoDB存储引擎</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="otherdbmysqlmysql-innodb">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-innodbinnodb-index" href="/other/db/mysql/mysql-innodb/innodb-index/">mysql innodb 索引</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-innodbinnodb-cardinality" href="/other/db/mysql/mysql-innodb/innodb-cardinality/">mysql引擎InnoDB索引中的cardinality关键字</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page  active" id="m-otherdbmysqlmysql-innodbinnodb-table" href="/other/db/mysql/mysql-innodb/innodb-table/">InnoDB表</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-innodbinnodb-lock" href="/other/db/mysql/mysql-innodb/innodb-lock/">Mysql锁</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbmysqlmysql-innodbinnodb-crash-recovery" href="/other/db/mysql/mysql-innodb/innodb-crash-recovery/">InnoDb崩溃恢复</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbcreate-index-principle" href="/other/db/create-index-principle/">建立索引原则</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbdatabase-transaction" href="/other/db/database-transaction/">数据库事务</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdbform-notform" href="/other/db/form-notform/">范式和反范式</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/data-structure/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">数据结构</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdata-structure">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdata-structurebinary-search-tree" href="/other/data-structure/binary-search-tree/">二叉搜索树</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdata-structurebinary-tree" href="/other/data-structure/binary-tree/">二叉树</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdata-structurered-black-tree" href="/other/data-structure/red-black-tree/">红黑树</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/algorithm/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">算法</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otheralgorithm">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/algorithm/sort-algorithm/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">排序算法</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otheralgorithmsort-algorithm">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otheralgorithmsort-algorithmbubble-sort" href="/other/algorithm/sort-algorithm/bubble-sort/">冒泡排序</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otheralgorithmsort-algorithmsort-algorithm" href="/other/algorithm/sort-algorithm/sort-algorithm/">排序算法</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otheralgorithmsort-algorithmmerge-sort" href="/other/algorithm/sort-algorithm/merge-sort/">归并排序</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otheralgorithmsort-algorithmshell-sort" href="/other/algorithm/sort-algorithm/shell-sort/">希尔排序</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otheralgorithmsort-algorithmquick-sort" href="/other/algorithm/sort-algorithm/quick-sort/">快速排序</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otheralgorithmsort-algorithmselection-sort" href="/other/algorithm/sort-algorithm/selection-sort/">选择排序</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otheralgorithmsort-algorithminsertion-sort" href="/other/algorithm/sort-algorithm/insertion-sort/">插入排序</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/design-patterns/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">设计模式</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdesign-patterns">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/design-patterns/creational-patterns/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">创建模式</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdesign-patternscreational-patterns">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdesign-patternscreational-patternsabstract-factory-mode" href="/other/design-patterns/creational-patterns/abstract-factory-mode/">抽象工厂模式</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdesign-patternscreational-patternsfactory-methodmode" href="/other/design-patterns/creational-patterns/factory-methodmode/">工厂方法模式</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdesign-patternscreational-patternsbuilder-mode" href="/other/design-patterns/creational-patterns/builder-mode/">建造者模式</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdesign-patternscreational-patternssimple-factory-mode" href="/other/design-patterns/creational-patterns/simple-factory-mode/">简单工厂模式</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdesign-patternscreational-patternssingleton-mode" href="/other/design-patterns/creational-patterns/singleton-mode/">单例模式</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/design-patterns/behavioral-patterns/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">结构模式</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdesign-patternsbehavioral-patterns">
+      
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/design-patterns/structural-patterns/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">行为模式</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otherdesign-patternsstructural-patterns">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdesign-patternsstructural-patternsadapter-mode" href="/other/design-patterns/structural-patterns/adapter-mode/">适配器模式</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherdesign-patternsread-uml" href="/other/design-patterns/read-uml/">看懂UML图</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/other/idea/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">IntelliJ IDEA</a>
+  </li>
+  <ul>
+    <li class="collapse " id="otheridea">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-otherideaintellij-idea-setting" href="/other/idea/intellij-idea-setting/">IntelliJ IDEA常用设置</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+  
+  
+  
+  
+  
+  <div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+  
+    
+    
+      
+    
+    
+    
+    
+    
+    
+    
+
+    <a href="https://github.com/mxsm/mxsm-website/edit/main/content/en/other/db/mysql/mysql-innodb/innodb-table.md" target="_blank"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+    <a href="https://github.com/mxsm/mxsm-website/new/main/content/en/other/db/mysql/mysql-innodb/innodb-table.md?filename=change-me.md&amp;value=---%0D%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0D%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0D%0Aweight%3A&#43;100%0D%0Adescription%3A&#43;%3E-%0D%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0D%0A---%0D%0A%0D%0A%23%23&#43;Heading%0D%0A%0D%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0D%0A%0D%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0D%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0D%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0D%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0D%0A" target="_blank"><i class="fa fa-edit fa-fw"></i> 添加子页面</a>
+    <a href="https://github.com/mxsm/mxsm-website/issues/new?title=InnoDB%e8%a1%a8" target="_blank"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+    
+      
+      <a href="https://github.com/mxsm/mxsm-website/issues/new" target="_blank"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+    
+
+  
+  
+    <a id="print" href="/other/db/mysql/mysql-innodb/_print/"><i class="fa fa-print fa-fw"></i> Print entire section</a>
+  
+  </div>
+
+
+
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#1-索引组织表">1. 索引组织表</a></li>
+        <li><a href="#2-innodb逻辑存储结构">2. InnoDB逻辑存储结构</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5" role="main">
+            
+  
+
+            <nav aria-label="breadcrumb" class="d-none d-md-block d-print-none">
+	<ol class="breadcrumb spb-1">
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<li class="breadcrumb-item" >
+	<a href="/other/">Others</a>
+</li>
+
+
+
+
+<li class="breadcrumb-item" >
+	<a href="/other/db/">数据库</a>
+</li>
+
+
+
+
+<li class="breadcrumb-item" >
+	<a href="/other/db/mysql/">mysql</a>
+</li>
+
+
+
+
+<li class="breadcrumb-item" >
+	<a href="/other/db/mysql/mysql-innodb/">InnoDB存储引擎</a>
+</li>
+
+
+
+
+<li class="breadcrumb-item active" aria-current="page">
+	<a href="/other/db/mysql/mysql-innodb/innodb-table/">InnoDB表</a>
+</li>
+
+	</ol>
+</nav	>
+
+            
+<div class="td-content">
+	<h1>InnoDB表</h1>
+    
+	       
+	<h3 id="1-索引组织表">1. 索引组织表</h3>
+<p>在InnoDB存储引擎中，表都是根据主键顺序组织存放的，这种方式的表称为索引组织表。索引在InnoDB中每张表都有主键，如果没有显式的定义主键，InnoDB会按照如下的方式选择或创建主键：</p>
+<ul>
+<li>判断是否有非空的唯一索引，有该列就是为主键<br>
+主键根据的是定义索引的顺序，而不是建表时候字段的顺序。</li>
+<li>不满足上述条件，InnoDB自动创建一个6字节大小的指针。</li>
+</ul>
+<blockquote>
+<p>说明: _rowid可以显示表的主键，这只是对单列的主键有效，对于多列组成主键就无效了。</p>
+</blockquote>
+<h3 id="2-innodb逻辑存储结构">2. InnoDB逻辑存储结构</h3>
+<p>从逻辑结构来看所有的逻辑都被存放在一个空间中，称为表空间(tablespace)。表空间由如下组成：</p>
+<ul>
+<li>段(segment)</li>
+<li>区(extent)</li>
+<li>页(page)或者称为块(block)</li>
+</ul>
+<p><img src="https://github.com/mxsm/picture/blob/main/mysql/innodbtablestruct.png?raw=true" alt="组成图示"></p>
+<h4 id="21-表空间">2.1 表空间</h4>
+<p>表空间可以看做为InnoDB存储引擎逻辑结构的最高层，所有的数据都放在表空间中。</p>
+<h4 id="22-段">2.2 段</h4>
+<p>段的分类：</p>
+<ul>
+<li>数据段</li>
+<li>索引段</li>
+<li>回滚段</li>
+</ul>
+<p>由于InnoDB存储引擎表是索引组织的，因此数据即索引，索引即数据。那么数据段即为B+树的叶子节点，索引段即为B+树的非叶子节点。</p>
+<h4 id="23-区">2.3 区</h4>
+<p>区是由联想页组成的空间。在任何情况下每个去的掉线都是1M。为了保证区中页的连续性，InnoDB存储引擎一次从磁盘申请多个区。默认情况下页的大小为16K,一个区就有64个连续的页。</p>
+<blockquote>
+<p>页可以通过KEY_BLOCK_SIZE来设置大小</p>
+</blockquote>
+<h4 id="24-页">2.4 页</h4>
+<p>页是InnoDB磁盘管理的最小单位，默认每个也的大小为16KB。页的常见类型：</p>
+<ul>
+<li>数据页</li>
+<li>undo页</li>
+<li>系统页</li>
+<li>事务数据页</li>
+<li>插入缓冲位图页</li>
+<li>插入缓冲空闲列表页</li>
+<li>未压缩的二进制大对象页</li>
+<li>压缩的二进制大对象页</li>
+</ul>
+<h4 id="25-行">2.5 行</h4>
+<p>InnoDB存储引擎是面向列，也就是数据是按行进行存放。每个页存放的行记录也是有硬性定义的，最多允许存放16K/2-200行的记录。</p>
+<p><img src="https://github.com/mxsm/picture/blob/main/mysql/%E6%9F%A5%E7%9C%8B%E8%A1%A8%E7%9A%84%E7%8A%B6%E6%80%81.png?raw=true" alt="图"></p>
+
+	
+	
+		<br />
+		
+<div class="page-blank">
+
+    <div id="disqus_thread"></div>
+    <script>
+
+        
+
+        
+
+        (function() { 
+            var d = document, s = d.createElement('script');
+            s.src = 'https://' + "ljbmxsm" + '.disqus.com/embed.js';
+            s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+
+	
+	<div class="text-muted mt-5 pt-3 border-top">最后修改 2021-05-06: <a  href="https://github.com/mxsm/mxsm-website/commit/6f4ae169bdb526016496f9cc34c69efc955159af">调整目录结构 (6f4ae16)</a>
+</div>
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="User mailing list" aria-label="User mailing list">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://groups.google.com/u/1/g/ljbmxsm">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="个人掘金主页" aria-label="个人掘金主页">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://juejin.cn/user/1151943918492855">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/mxsm">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2021 The Docsy Authors All Rights Reserved</small>
+        <small class="ml-1"><a href="https://policies.google.com/privacy" target="_blank">隐私政策</a></small>
+	
+		<p class="mt-2"><a href="/about/">Home</a></p>
+	
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+
+<div>
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  <script src="https://cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js"></script>
+  <script>
+    $( "p img" ).wrap(function() {
+      return '<a data-fancybox="gallery" href="'+$( this ).attr('src')+'"></a>'
+    });
+  </script>
+</div>
+
+    </div>
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@8.8.1/dist/mermaid.min.js" integrity="sha384-to2w0I1OqmbJ9J6yTnIX+KYU8grNpZoD1dKPLjgEJvMe5L5+/7qvuNa2sQo8WAWj" crossorigin="anonymous"></script>
+
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js" integrity="sha512-tBzZQxySO5q5lqwLWfu8Q+o4VkTcRGOeQGVQ0ueJga4A1RKuzmAu5HXDOXLEjpbKyV7ow9ympVoa6wZLEzRzDg==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.15.0/flowchart.min.js" integrity="sha512-6QsSiIybtf8tuZ6xfjRTr2tdtw3Gp4q5RSCh2b6q9seoKEQmhAG1RrCA8F0kXTwivVxRVbp/YF3zOh8rvEAU7Q==" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.35d8b5e3fc03a911260cc199edf05f7fbeb6d70820792913e081a1a748fcb913.js" integrity="sha256-Ndi14/wDqREmDMGZ7fBff7621wggeSkT4IGhp0j8uRM=" crossorigin="anonymous"></script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/docsearch.js@2.6.3/dist/cdn/docsearch.min.js"></script>
+<script  type="text/javascript">
+    docsearch({
+        appId: 'JO2SY3WDAC',
+        apiKey: '324ddb3b679c1308e5aa8bf222e07f8b',
+        indexName: 'mxsm',
+        inputSelector: '.td-search-input',
+        debug: false 
+    });
+</script>
+
+
+  </body>
+</html>

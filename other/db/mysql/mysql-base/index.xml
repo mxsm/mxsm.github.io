@@ -1,0 +1,418 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>蚂蚁背大象 – Mysql基础知识</title>
+    <link>/other/db/mysql/mysql-base/</link>
+    <description>Recent content in Mysql基础知识 on 蚂蚁背大象</description>
+    <generator>Hugo -- gohugo.io</generator>
+    
+	  <atom:link href="/other/db/mysql/mysql-base/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Other: MySQL几种索引的区别</title>
+      <link>/other/db/mysql/mysql-base/mysql-indexs/</link>
+      <pubDate>Sat, 13 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/other/db/mysql/mysql-base/mysql-indexs/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;主键和唯一索引的区别&#34;&gt;主键和唯一索引的区别&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;主键是一种约束，唯一索引是一种索引。&lt;/li&gt;
+&lt;li&gt;主键创建后一定包含一个唯一索引，唯一索引并不一定就是主键&lt;/li&gt;
+&lt;li&gt;主键不能为空，唯一索引可以为空&lt;/li&gt;
+&lt;li&gt;主键可以被其他表引用为外键，而唯一索引不能&lt;/li&gt;
+&lt;li&gt;一张表只能创建一个主键，但是可以创建多个唯一索引&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;总结一下就是：主键包含唯一索引的功能，但是还有部分增强&lt;/strong&gt;&lt;/p&gt;
+&lt;h4 id=&#34;聚集索引和非聚集索引的区别&#34;&gt;聚集索引和非聚集索引的区别&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;聚集索引&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;数据行的物理顺序与列值（一般是主键的那一列）的逻辑顺序相同，一个表中只能拥有一个聚集索引
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;非聚集索引&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;该索引中索引的逻辑顺序与磁盘上行的物理存储顺序不同，一个表中可以拥有多个非聚集索引
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Other: Mysql的组合索引和最左匹配原则</title>
+      <link>/other/db/mysql/mysql-base/mysql-index-match-principle/</link>
+      <pubDate>Sat, 26 Jan 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/other/db/mysql/mysql-base/mysql-index-match-principle/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;1-什么时候创建组合索引&#34;&gt;1. 什么时候创建组合索引&lt;/h3&gt;
+&lt;p&gt;当我们的where查询存在多个条件查询的时候，我们需要对查询的列创建组合索引&lt;/p&gt;
+&lt;h3 id=&#34;2-组合索引相比每个字段索引的好处&#34;&gt;2. 组合索引相比每个字段索引的好处&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;减少开销&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;比如对col1、col2、col3创建组合索引，相当于创建了（col1）、（col1，col2）、（col1，col2，col3）3个索引。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;覆盖索引&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;通过组合索引直接查出来。假如查询SELECT col1, col2, col3 FROM 表名，由于查询的字段存在索引页中，那么可以从索引中直接获取，而不需要回表查询。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;效率高&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;对col1、col2、col3三列分别创建索引，MySQL只会选择辨识度高的一列作为索引&lt;/code&gt;&lt;/strong&gt; 。假设有100w的数据，一个索引筛选出10%的数据，那么可以筛选出10w的数据；对于组合索引而言，可以筛选出100w*10%*10%*10%=1000条数据&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id=&#34;对于查询及存在组合索引有存在单一索引数据库如何处理&#34;&gt;对于查询及存在组合索引有存在单一索引数据库如何处理？&lt;/h4&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;CREATE&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;TABLE&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;Student&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;
+  &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;id&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt; &lt;span style=&#34;color:#204a87&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;11&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;NOT&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;NULL&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;
+  &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt; &lt;span style=&#34;color:#204a87&#34;&gt;varchar&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;255&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;DEFAULT&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;NULL&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;
+  &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;classname&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt; &lt;span style=&#34;color:#204a87&#34;&gt;varchar&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;255&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;DEFAULT&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;NULL&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;
+  &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;classNumber&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt; &lt;span style=&#34;color:#204a87&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;11&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;DEFAULT&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;NULL&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;
+  &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;PRIMARY&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;KEY&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;id&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;),&lt;/span&gt;
+  &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;KEY&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;test_index&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;classname&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;classNumber&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;USING&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;BTREE&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;
+  &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;KEY&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;name_index&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;USING&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;BTREE&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;
+  &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;KEY&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;classname_index&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;classname&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;USING&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;BTREE&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;
+  &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;KEY&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;classNumber&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;classNumber&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;`&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;USING&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;BTREE&lt;/span&gt;
+&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ENGINE&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;InnoDB&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;DEFAULT&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;CHARSET&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;utf8mb4&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;表中的数据：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/indexTest.png?raw=true&#34; alt=&#34;数据&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/select1.png?raw=true&#34; alt=&#34;情况1&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/selection2.png?raw=true&#34; alt=&#34;情况2&#34;&gt;&lt;/p&gt;
+&lt;p&gt;从上图可以看出：&lt;strong&gt;最左匹配原则和字段的在前和在后面没有关系&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/selection3.png?raw=true&#34; alt=&#34;情况2&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/selection4.png?raw=true&#34; alt=&#34;情况2&#34;&gt;&lt;/p&gt;
+&lt;p&gt;从上图可以看出：&lt;strong&gt;在一个字段如果符合最左匹配原则就优先使用最左匹配原则。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;假设我们创建（col1，col2，col3）这样的一个组合索引，那么相当于对col1列进行排序，也就是我们创建组合索引，以最左边的为准，只要查询条件中带有最左边的列，那么查询就会使用到索引，和字段在where后面的位置无关。&lt;/strong&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Other: 行溢出</title>
+      <link>/other/db/mysql/mysql-base/line-overflow/</link>
+      <pubDate>Fri, 16 Nov 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/other/db/mysql/mysql-base/line-overflow/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;行溢出参考&#34;&gt;行溢出参考&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://keithlan.github.io/2016/04/07/idb_biger/&#34;&gt;行溢出参考&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Other: 存储引擎</title>
+      <link>/other/db/mysql/mysql-base/storage-engine/</link>
+      <pubDate>Thu, 16 Aug 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/other/db/mysql/mysql-base/storage-engine/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;1-myisam存储引擎&#34;&gt;1. MyISAM存储引擎&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;特点：&lt;/strong&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;不支持行锁(MyISAM只有表锁)&lt;/strong&gt;，读取时对需要读到的所有表加锁，写入时则对表加排他锁.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;不支持事务&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;不支持外键&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;不支持崩溃后的安全恢复&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;在表有读取查询的同时，支持往表中插入新纪录&lt;/li&gt;
+&lt;li&gt;支持BLOB和TEXT的前500个字符索引，&lt;strong&gt;支持全文索引&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;支持延迟更新索引&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;对于不会进行修改的表，支持 &lt;strong&gt;压缩表&lt;/strong&gt; ，极大地减少了磁盘空间的占用&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;存储格式&lt;/strong&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;.frm&lt;/code&gt;&lt;/strong&gt; 文件存储表定义&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;.MYD&lt;/code&gt;&lt;/strong&gt; 文件存储数据文件&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;.MYI&lt;/code&gt;&lt;/strong&gt; 文件存储索引文件&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;行锁表锁&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Mysql的行锁和表锁（ 锁是计算机协调多个进程或纯线程并发访问某一资源的机制）
+表级锁： 每次操作锁住整张表。开销小，加锁快；不会出现死锁；锁定粒度大，发生锁冲突的概率最高，并发度最低；
+行级锁： 每次操作锁住一行数据。开销大，加锁慢；会出现死锁；锁定粒度最小，发生锁冲突的概率最低，并发度也最高；
+&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;索引的实现：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;MyISAM 索引文件和数据文件是分离的，索引文件仅保存数据记录的地址。&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;主键索引的实现&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/myisamprimarykeyimplments.png?raw=true&#34; alt=&#34;图解&#34;&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;辅助索引：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/myisamsecondarykeyimplments.png?raw=true&#34; alt=&#34;图片&#34;&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在MyISAM中，主索引和辅助索引（Secondary key）在结构上没有任何区别。只是主索引要求key是唯一的，而辅助索引的key可以重复。&lt;strong&gt;data域保存数据记录的地址，因为数据文件和索引文件是分开的。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;MyISAM&lt;/strong&gt; 中索引检索的算法为首先按照 &lt;strong&gt;B+Tree&lt;/strong&gt; 搜索算法搜索索引，如果指定的Key存在，则取出其data域的值，然后以data域的值为地址，读取相应数据记录。&lt;/p&gt;
+&lt;p&gt;MyISAM的索引方式也叫做“&lt;strong&gt;非聚集&lt;/strong&gt;”的，之所以这么称呼是为了与InnoDB的聚集索引区分。&lt;/p&gt;
+&lt;h4 id=&#34;知识点补充&#34;&gt;知识点补充&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;什么叫非聚集索引？
+非聚集索引索引项顺序存储，但索引项对应的内容却是随机存储的；
+什么是聚集索引？
+聚集索引表记录的排列顺序与索引的排列顺序一致
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&#34;2-innodb&#34;&gt;2. InnoDB&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;特点：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;支持行锁&lt;/strong&gt;，采用MVCC来支持高并发，有可能死锁。&lt;/li&gt;
+&lt;li&gt;支持事务&lt;/li&gt;
+&lt;li&gt;支持外键&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;支持崩溃后的安全恢复&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;不支持全文索引&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;索引的实现&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;InnoDB&lt;/code&gt;&lt;/strong&gt; 和 &lt;strong&gt;&lt;code&gt;MyISAM&lt;/code&gt;&lt;/strong&gt; 一样索引都是用的 &lt;strong&gt;&lt;code&gt;B+Tree&lt;/code&gt;&lt;/strong&gt; 作为索引的结构。 但是具体的实现不一样。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;InnoDB的数据文件本身就是索引文件&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;MyISAM索引文件和数据文件是分离的，索引文件仅保存数据记录的地址。而在InnoDB中，表数据文件本身就是按B+Tree组织的一个索引结构，这棵树的叶节点data域保存了完整的数据记录。这个索引的key是数据表的主键，因此InnoDB表数据文件本身就是主索引。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://box.kancloud.cn/2015-07-07_559b7873b514d.png&#34; alt=&#34;图&#34;&gt;&lt;/p&gt;
+&lt;p&gt;从上图可以看出叶子节点包含了完整的数据记录。这种索引叫做 &lt;strong&gt;聚集索引&lt;/strong&gt; 。因为 &lt;strong&gt;&lt;code&gt;InnoDB&lt;/code&gt;&lt;/strong&gt; 的数据文件本身要按主键聚集，所以 &lt;strong&gt;&lt;code&gt;InnoDB&lt;/code&gt;&lt;/strong&gt; 要求表必须有主键（MyISAM可以没有）。所以在建表的过程中会要求我们选择一列作为主键。&lt;/p&gt;
+&lt;p&gt;第二个与MyISAM索引的不同是&lt;strong&gt;InnoDB的辅助索引data域存储相应记录主键的值而不是地址&lt;/strong&gt; 。换句话说，InnoDB的所有辅助索引都引用主键作为data域。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://box.kancloud.cn/2015-07-07_559b7873ceaf1.png&#34; alt=&#34;图&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;辅助索引搜索需要检索两遍索引：首先检索辅助索引获得主键，然后用主键到主索引中检索获得记录。&lt;/strong&gt; 为什么不建议使用过长的字段作为主键：辅助索引都引用主索引，过长的主索引会令辅助索引变得过大。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;参考：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.kancloud.cn/kancloud/theory-of-mysql-index/41851&#34;&gt;https://www.kancloud.cn/kancloud/theory-of-mysql-index/41851&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Other: 覆盖索引</title>
+      <link>/other/db/mysql/mysql-base/cover-index/</link>
+      <pubDate>Tue, 10 Jul 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/other/db/mysql/mysql-base/cover-index/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;1-什么是mysql的覆盖索引&#34;&gt;1. 什么是MySQL的覆盖索引&lt;/h3&gt;
+&lt;p&gt;覆盖索引（covering index）指一个查询语句的执行只用从索引中就能够取得，不必从数据表中读取。也可以称之为实现了索引覆盖。&lt;/p&gt;
+&lt;p&gt;如果索引包含所有满足查询需要的数据的索引成为覆盖索引(Covering Index)，也就是平时所说的不需要回表操作&lt;/p&gt;
+&lt;h3 id=&#34;2-如何判断是否为覆盖索引&#34;&gt;2. 如何判断是否为覆盖索引&lt;/h3&gt;
+&lt;p&gt;使用explain，可以通过输出的extra列来判断，对于一个索引覆盖查询，显示为&lt;strong&gt;using index&lt;/strong&gt;,MySQL查询优化器在执行查询前会决定是否有索引覆盖查询&lt;/p&gt;
+&lt;p&gt;注意：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;1、覆盖索引也并不适用于任意的索引类型，索引必须存储列的值
+2、Hash 和full-text索引不存储值，因此MySQL只能使用B-TREE
+3、并且不同的存储引擎实现覆盖索引都是不同的
+4、并不是所有的存储引擎都支持它们
+5、如果要使用覆盖索引，一定要注意SELECT 列表值取出需要的列，不可以是SELECT *，因为如果将所有字段一起做索引会导致索引文件过大，查询性能下降，不能为了利用覆盖索引而这么做
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;参考：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.jianshu.com/p/77eaad62f974&#34;&gt;https://www.jianshu.com/p/77eaad62f974&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.cnblogs.com/chenpingzhao/p/4776981.html&#34;&gt;https://www.cnblogs.com/chenpingzhao/p/4776981.html&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Other: MySQL的优化</title>
+      <link>/other/db/mysql/mysql-base/mysql-optimize/</link>
+      <pubDate>Thu, 28 Jun 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/other/db/mysql/mysql-base/mysql-optimize/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;1-mysql优化的三个方面&#34;&gt;1. MySQL优化的三个方面&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;索引优化&#34;&gt;索引优化&lt;/h4&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;表结构的优化&#34;&gt;表结构的优化&lt;/h4&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;sql慢查询的优化&#34;&gt;SQL慢查询的优化&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/MySQL%E7%9A%84%E4%BC%98%E5%8C%96%E4%B8%89%E4%B8%AA%E6%96%B9%E9%9D%A2.jpg?raw=true&#34; alt=&#34;图&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;2-索引优化&#34;&gt;2. 索引优化&lt;/h3&gt;
+&lt;h4 id=&#34;21什么是索引&#34;&gt;2.1什么是索引&lt;/h4&gt;
+&lt;p&gt;索引：简单的说，相当于图书的目录，可以帮助用户快速的找到需要的内容。索引的目的在于提高查询效率，与我们查询图书所用的目录是一个道理：先定位到章，然后定位到该章下的一个小结，然后找到页数。相似的例子还有：查字典，查地图等。&lt;/p&gt;
+&lt;h4 id=&#34;22-索引的类型&#34;&gt;2.2 索引的类型&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;普通索引&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;是最基本的索引，它没有任何限制。
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;唯一索引&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;与前面的普通索引类似，不同的就是：索引列的值必须唯一，但允许有空值。如果是组合索引，则列值的组合必须唯一。
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;组合索引&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;指多个字段上创建的索引，只有在查询条件中使用了创建索引时的第一个字段，索引才会被使用。
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;主键索引&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;是一种特殊的唯一索引，一个表只能有一个主键，不允许有空值。一般是在建表的时候同时创建主键索引
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;全文索引(InnoDB不支持)&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;主要用来查找文本中的关键字，而不是直接与索引中的值相比较。fulltext索引跟其它索引大不相同，它更像是一个搜
+索引擎，而不是简单的where语句的参数匹配。fulltext索引配合match against操作使用，而不是一般的where语
+句加like。它可以在create table，alter table ，create index使用，不过目前只有char、varchar，text
+列上可以创建全文索引。值得一提的是，在数据量较大时候，现将数据放入一个没有全局索引的表中，然后再用CREATE 
+index创建fulltext索引，要比先为一张表建立fulltext然后再将数据写入的速度快很多。
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id=&#34;23-索引的优化&#34;&gt;2.3 索引的优化&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;只要列中含有NULL值，就最好不要在此例设置索引，复合索引如果有NULL值，此列在使用时也不会使用索引。(所以在建表的过程中尽可能的不要有NULL的字段，设置相应的默认值)&lt;/li&gt;
+&lt;li&gt;尽量使用短索引，如果可以，应该制定一个前缀长度&lt;/li&gt;
+&lt;li&gt;对于经常在where子句使用的列，最好设置索引，这样会加快查找速度&lt;/li&gt;
+&lt;li&gt;对于有多个列where或者order by子句的，应该建立复合索引(这个应该是在开发后期页面展示的视图基本上确定了)&lt;/li&gt;
+&lt;li&gt;对于like语句，以%或者‘-’开头的不会使用索引，以%结尾会使用索引&lt;/li&gt;
+&lt;li&gt;尽量不要在列上进行运算（函数操作和表达式操作）(比如 &lt;strong&gt;&lt;code&gt;from_unixtime(create_time) = ’2014-05-29’&lt;/code&gt;&lt;/strong&gt; 这样的操作应该尽量避免，但是可以写成下面这样  &lt;strong&gt;&lt;code&gt;create_time= unix_timestamp(’2014-05-29’)&lt;/code&gt;&lt;/strong&gt;)&lt;/li&gt;
+&lt;li&gt;尽量不要使用not in和&amp;lt;&amp;gt;操作&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;3-sql慢查询优化&#34;&gt;3. SQL慢查询优化&lt;/h3&gt;
+&lt;p&gt;SQL慢查询优化的步骤：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/SQL%E6%85%A2%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96%E6%AD%A5%E9%AA%A4.jpg?raw=true&#34; alt=&#34;图&#34;&gt;&lt;/p&gt;
+&lt;h4 id=&#34;31-如何捕获低效sql&#34;&gt;3.1 如何捕获低效SQL&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;slow_query_log&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这个参数设置为ON，可以捕获执行时间超过一定数值的SQL语句。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;long_query_time&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;当SQL语句执行时间超过此数值时，就会被记录到日志中，建议设置为1或者更短&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;slow_query_log_file&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;记录日志的文件名。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;log_queries_not_using_indexes&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这个参数设置为ON，可以捕获到所有未使用索引的SQL语句，尽管这个SQL语句有可能执行得挺快。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id=&#34;32-慢查询优化的基本步骤&#34;&gt;3.2 慢查询优化的基本步骤&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;先运行看看是否真的很慢，注意设置SQL_NO_CACHE&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;SELECT SQL_NO_CACHE yz_id FROM dev_item_backlog WHERE yz_id NOT IN (&amp;lsquo;xZeT3PHc&amp;rsquo;,&amp;lsquo;WcUVNWEq&amp;rsquo;);&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;where条件单表查，锁定最小返回记录表&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;查询语句的where都应用到表中返回的记录数最小的表开始查起，单表每个字段分别查询，看哪个字段的区分度最高&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;explain查看执行计划&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;order by limit 形式的sql语句让排序的表优先查&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;加索引时参照建索引的几大原则&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id=&#34;33-优化原则&#34;&gt;3.3 优化原则&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;*&lt;em&gt;查询时，能不要 * 就不用 &lt;em&gt;，尽量写全字段名&lt;/em&gt;&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;大部分情况连接效率远大于子查询换一句话说就是 少用子查询&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;多使用explain和profile分析查询语句&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;查看慢查询日志，找出执行时间长的sql语句优化&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;多表连接时，尽量小表驱动大表，即小表 join 大表&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;在千万级分页时使用limit&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;对于经常使用的查询，可以开启缓存&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;4-数据库表的优化&#34;&gt;4. 数据库表的优化&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;表的字段尽可能用NOT NULL，或者是最好字段都不存在NULL。因为NULL不走索引。所以最好设置非NULL的默认值&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;将表拆分，垂直拆分或者水平拆分&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Other: MySQL主从复制原理</title>
+      <link>/other/db/mysql/mysql-base/mysql-master-slave-theory/</link>
+      <pubDate>Fri, 16 Feb 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/other/db/mysql/mysql-base/mysql-master-slave-theory/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;1-mysql的主从形式&#34;&gt;1. MySQL的主从形式&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;一主一从&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/%E4%B8%80%E4%B8%BB%E4%B8%80%E4%BB%8E.jpg?raw=true&#34; alt=&#34;图&#34;&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;一主多从&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E.jpg?raw=true&#34; alt=&#34;图&#34;&gt;&lt;/p&gt;
+&lt;p&gt;一主一从和一主多从是最常见的主从架构，实施起来简单并且有效，不仅可以实现HA，而且还能读写分离，进而提升集群的并发能力。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;多主一从(5.7开始支持)&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/%E5%A4%9A%E4%B8%BB%E4%B8%80%E4%BB%8E.jpg?raw=true&#34; alt=&#34;图&#34;&gt;&lt;/p&gt;
+&lt;p&gt;多主一从可以将多个mysql数据库备份到一台存储性能比较好的服务器上&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;双主复制&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/%E5%8F%8C%E4%B8%BB%E5%A4%8D%E5%88%B6.jpg?raw=true&#34; alt=&#34;图&#34;&gt;&lt;/p&gt;
+&lt;p&gt;双主复制，也就是互做主从复制，每个master既是master，又是另外一台服务器的slave。这样任何一方所做的变更，都会通过复制应用到另外一方的数据库中。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;级联复制&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/%E7%BA%A7%E8%81%94%E5%A4%8D%E5%88%B6.jpg?raw=true&#34; alt=&#34;图&#34;&gt;&lt;/p&gt;
+&lt;p&gt;级联复制模式下，部分slave的数据同步不连接主节点，而是连接从节点。因为如果主节点有太多的从节点，就会损耗一部分性能用于replication，其它从节点作为二级或者三级与从节点连接，好处：&lt;strong&gt;缓解主节点的压力，并且对数据一致性没有负面影响。&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;2-主从复制的原理&#34;&gt;2. 主从复制的原理&lt;/h3&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/document/blob/master/image/database/masterslave%E5%8E%9F%E7%90%86%E5%9B%BE.jpg?raw=true&#34; alt=&#34;图&#34;&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;当从节点连接主节点时，主节点会创建一个log dump 线程，用于发送bin-log的内容。在读取bin-log中的操作时，此线程会对主节点上的bin-log加锁，当读取完成，甚至在发动给从节点之前，锁会被释放。&lt;/li&gt;
+&lt;li&gt;当从节点上执行&lt;code&gt;start slave&lt;/code&gt;命令之后，从节点会创建一个I/O线程用来连接主节点，请求主库中更新的bin-log。I/O线程接收到主节点binlog dump 进程发来的更新之后，保存在本地relay-log中。(这个线程不会对事件进行轮询。如果该线程追赶上了主库，他将进入睡眠状态，知道主库发送信号量通知其有新的事件产生时才会被唤醒)&lt;/li&gt;
+&lt;li&gt;SQL线程负责读取relay log中的内容，解析成具体的操作并执行，最终保证主从数据的一致性。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;ol&gt;
+&lt;li&gt;在主库上把数据更改记录到二进制日志(Binary Log)中。&lt;/li&gt;
+&lt;li&gt;备库将主库上的日志复制到自己的中继日志(Relay Log)中&lt;/li&gt;
+&lt;li&gt;备库读取中继日志中的实践，将其重放到备库数据之上&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/blockquote&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

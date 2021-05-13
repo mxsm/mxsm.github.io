@@ -1,0 +1,124 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>蚂蚁背大象 – Java Web</title>
+    <link>/blog/java-web/</link>
+    <description>Recent content in Java Web on 蚂蚁背大象</description>
+    <generator>Hugo -- gohugo.io</generator>
+    
+	  <atom:link href="/blog/java-web/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Blog: Servlet3.1</title>
+      <link>/blog/java-web/servlet3.1/</link>
+      <pubDate>Sat, 19 May 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/blog/java-web/servlet3.1/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;1-什么是servlet&#34;&gt;1. 什么是Servlet&lt;/h3&gt;
+&lt;p&gt;Servlet 是基于 Java 技术的 web 组件，容器托管的，用于生成动态内容。像其他基于 Java 的组件技术一样，&lt;/p&gt;
+&lt;p&gt;Servlet 也是基于平台无关的 Java 类格式，被编译为平台无关的字节码，可以被基于 Java 技术的 web server&lt;/p&gt;
+&lt;p&gt;动态加载并运行。容器，有时候也叫做 servlet 引擎，是 web server 为支持 servlet 功能扩展的部分。客户端&lt;/p&gt;
+&lt;p&gt;通过 Servlet 容器实现的请求/应答模型与 Servlet 交互。&lt;/p&gt;
+&lt;h3 id=&#34;2-servlet-接口&#34;&gt;2. &lt;strong&gt;Servlet&lt;/strong&gt; 接口&lt;/h3&gt;
+&lt;p&gt;Servlet 接口是 Java Servlet API 的核心抽象。所有 Servlet 类必须直接或间接的实现该接口，或者更通常做法&lt;/p&gt;
+&lt;p&gt;是通过继承一个实现了该接口的类从而复用许多共性功能。目前有 GenericServlet 和 HttpServlet 这两个类实&lt;/p&gt;
+&lt;p&gt;现了 Servlet 接口。大多数情况下，开发者只需要继承 HttpServlet 去实现自己的 Servlet 即可:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;interface&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;Servlet&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;{&lt;/span&gt;
+
+    &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;init&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;ServletConfig&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;config&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;throws&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ServletException&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;;&lt;/span&gt;
+    
+    &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ServletConfig&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;getServletConfig&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;();&lt;/span&gt;
+
+    &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;service&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;ServletRequest&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;req&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ServletResponse&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;res&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+        
+	&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;throws&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ServletException&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;IOException&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;;&lt;/span&gt;
+	
+    &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;String&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;getServletInfo&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;();&lt;/span&gt;
+    
+    &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;destroy&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;();&lt;/span&gt;
+&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: Servlet3异步请求</title>
+      <link>/blog/java-web/servlet3-async/</link>
+      <pubDate>Tue, 16 Mar 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/blog/java-web/servlet3-async/</guid>
+      <description>
+        
+        
+        &lt;h3 id=&#34;1-背景&#34;&gt;1. 背景&lt;/h3&gt;
+&lt;p&gt;在研究长轮询的实现过程，有使用到Servlet3的异步请求。下面就来学习一下Servlet3的异步请求&lt;/p&gt;
+&lt;h3 id=&#34;2-servlet同步请求&#34;&gt;2. Servlet同步请求&lt;/h3&gt;
+&lt;p&gt;以Tomcat服务器为例：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Http请求到达Tomcat&lt;/li&gt;
+&lt;li&gt;Tomcat从线程池中取出线程处理到达Tomcat的请求&lt;/li&gt;
+&lt;li&gt;将请求Http解析为HttpServletRequest&lt;/li&gt;
+&lt;li&gt;分发到具体Servlet处理对应的业务&lt;/li&gt;
+&lt;li&gt;通过HttpServletResponse返回处理的数据&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/picture/blob/main/javaweb/Servlet%E5%90%8C%E6%AD%A5%E8%AF%B7%E6%B1%82%E7%A4%BA%E6%84%8F%E5%9B%BE.png?raw=true&#34; alt=&#34;image&#34;&gt;&lt;br&gt;
+正常情况下请求模型和上面的模型一样，所有的请求交给Tomcat服务器的线程池处理，整个动作处理完成才释放回线程池。&lt;br&gt;
+这里就存在了一个问题如果后期的业务处理时间比较长。那么处理请求的线程就会被一直占用。当请求越来越多被占用的线程也会越来越多。直到被耗尽线程池中所有的线程。后续进来的就一直被阻塞等待线程来处理。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;当用户不关心提交的返回可以定义业务处理线程池，前端请求提交后，Tomcat线程将处理提交给业务线程池立即返回。Spring 中的异步任务(@Async)就是这样的。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;3-servlet异步请求&#34;&gt;3. Servlet异步请求&lt;/h3&gt;
+&lt;p&gt;同样以Tomcat服务为例：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;将请求Http解析为HttpServletRequest&lt;/li&gt;
+&lt;li&gt;分发到具体Servlet处理，将业务提交给自定义业务线程池，Tomcat线程立刻被释放。&lt;/li&gt;
+&lt;li&gt;当业务线程将任务执行结束，将会将结果转交给Tomcat线程池。&lt;/li&gt;
+&lt;li&gt;通过HttpServletResponse返回处理的数据&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;引入异步Servlet3整体流程：&lt;br&gt;
+&lt;img src=&#34;https://github.com/mxsm/picture/blob/main/javaweb/%E5%BC%82%E6%AD%A5Servlet3%E6%95%B4%E4%BD%93%E6%B5%81%E7%A8%8B.png?raw=true&#34; alt=&#34;image&#34;&gt;&lt;/p&gt;
+&lt;p&gt;使用异步 Servelt，Tomcat 线程仅仅处理请求解析动作，所有耗时较长的业务操作全部交给业务线程池，所以相比同步请求， Tomcat 线程可以处理 更多请求。虽然将业务交给了业务流程处理，但是前端还在等待结果返回(同步等待返回)。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;异步处理，前端会同步等待结果返回。很多人会觉得异步请求会返回更快。其实不然由于异步存在线程的切换。所有返回时间会比同步的慢。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;虽然没有降低相应时间但是还是有其他明显的优点:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;可以处理更高并发连接数，提高系统整体吞吐量&lt;/li&gt;
+&lt;li&gt;请求解析与业务处理完全分离，职责单一&lt;/li&gt;
+&lt;li&gt;自定义业务线程池，我们可以更容易对其监控，降级等处理&lt;/li&gt;
+&lt;li&gt;可以根据不同业务，自定义不同线程池，相互隔离，不用互相影响&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;4-异步servlet使用方法&#34;&gt;4. 异步Servlet使用方法&lt;/h3&gt;
+&lt;p&gt;使用异步Servlet只需要三步：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;em&gt;&lt;strong&gt;HttpServletRequest#startAsync()&lt;/strong&gt;&lt;/em&gt; 获取 &lt;em&gt;&lt;strong&gt;AsyncContext&lt;/strong&gt;&lt;/em&gt; 异步上下文&lt;/li&gt;
+&lt;li&gt;使用自定义业务线程池处理业务&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;&lt;strong&gt;AsyncContext#getResponse()&lt;/strong&gt;&lt;/em&gt; 返回处理结果给前端，然后调用 &lt;em&gt;&lt;strong&gt;AsyncContext#complete()&lt;/strong&gt;&lt;/em&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&#34;5-spring中的实现例子&#34;&gt;5. Spring中的实现例子&lt;/h3&gt;
+&lt;p&gt;代码如下图：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/picture/blob/main/javaweb/servlet%E5%BC%82%E6%AD%A5%E4%BB%A3%E7%A0%81%E5%9B%BE%E7%89%87.png?raw=true&#34; alt=&#34;图&#34;&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;开启异步Servlet&lt;/li&gt;
+&lt;li&gt;模拟业务执行&lt;/li&gt;
+&lt;li&gt;返回结果给前端&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;前面有说过前端是一直在同步等待的我们通过运行代码来验证一下。结果如下图：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://github.com/mxsm/picture/blob/main/javaweb/servlet%E5%BC%82%E6%AD%A5%E6%89%A7%E8%A1%8C%E5%89%8D%E7%AB%AF%E5%90%8C%E6%AD%A5%E7%AD%89%E5%BE%85%E9%AA%8C%E8%AF%81%E7%BB%93%E6%9E%9C%E5%9B%BE.gif?raw=true&#34; alt=&#34;图&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;代码地址：https://github.com/mxsm/spring-sample/blob/master/spring-boot/src/main/java/com/github/mxsm/controller/AsyncController.java&lt;/p&gt;
+&lt;/blockquote&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>
