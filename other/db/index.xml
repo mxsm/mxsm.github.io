@@ -1,0 +1,134 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – 数据库</title><link>/other/db/</link><description>Recent content in 数据库 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/db/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: Elasticsearch</title><link>/other/db/elasticsearch/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/other/db/elasticsearch/</guid><description/></item><item><title>Other: mysql</title><link>/other/db/mysql/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/other/db/mysql/</guid><description/></item><item><title>Other: 建立索引原则</title><link>/other/db/create-index-principle/</link><pubDate>Sun, 13 Oct 2019 00:00:00 +0000</pubDate><guid>/other/db/create-index-principle/</guid><description>
+&lt;h3 id="建索引的原则">建索引的原则&lt;/h3>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>最左前缀匹配原则&lt;/strong>&lt;/p>
+&lt;p>mysql会一直向右匹配直到&lt;strong>遇到范围查询(&amp;gt;、&amp;lt;、between、like)就停止匹配&lt;/strong>，比如a= 1 and b = 2 and c &amp;gt; 3 and d = 4 如果建立(a,b,c,d)顺序的索引，d是用不到索引的，如果建立(a,b,d,c)的索引则都可以用到，a,b,d的顺序可以任意调整。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>=和in可以乱序&lt;/strong>&lt;/p>
+&lt;p>比如a = 1 and b = 2 and c = 3 建立(a,b,c)索引可以任意顺序，mysql的查询优化器会帮你优化成索引可以识别的形式。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>尽量选择区分度高的列作为索引&lt;/strong>&lt;/p>
+&lt;p>什么叫做区分度高说白了就是重复少。比如表的主键。区分度的公式是 &lt;strong>&lt;code>count(distinct col)/count(*)&lt;/code>&lt;/strong> ，表示字段不重复的比例，比例越大我们扫描的记录数越少，唯一键的区分度是1，而一些状态、性别字段可能在大数据面前区分度就是0&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>索引列不能参与计算，保持列“干净”&lt;/strong>&lt;/p>
+&lt;p>比如 &lt;strong>&lt;code>from_unixtime(create_time) = ’2014-05-29’&lt;/code>&lt;/strong> 就不能使用到索引，原因很简单，b+树中存的都是数据表中的字段值，但进行检索时，需要把所有元素都应用函数才能比较，显然成本太大。所以语句应该写成 &lt;strong>&lt;code>create_time= unix_timestamp(’2014-05-29’);&lt;/code>&lt;/strong>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>尽量的扩展索引，不要新建索引。&lt;/strong>&lt;/p>
+&lt;p>比如表中已经有a的索引，现在要加(a,b)的索引，那么只需要修改原来的索引即可&lt;/p>
+&lt;/li>
+&lt;/ul></description></item><item><title>Other: 数据库事务</title><link>/other/db/database-transaction/</link><pubDate>Wed, 31 Oct 2018 00:00:00 +0000</pubDate><guid>/other/db/database-transaction/</guid><description>
+&lt;h3 id="数据库事务的四大特性acid">数据库事务的四大特性(ACID)&lt;/h3>
+&lt;ul>
+&lt;li>&lt;strong>原子性(atomicity):一个事务必须视为一个不可分割的最小单元，整个事务中的所有操作要么全部提交成功，要么全部失败回滚，对于一个事务来说，不可能只执行成功其中的一部分操作，这就是事务的原子性.&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>一致性(consistency)：数据总是从一个一致性的状态转换到另一个一致性的状态。&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>隔离性（isolation）：一个事务所做的修改在最终提交以前，对其他事务是不可见的，多个并发事务之间是相互隔离的。关于事务的隔离性，MySQL提供了四种隔离级别。&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>持久性（durability）：一旦事务提交，所做的修改会永久保存到数据库中。即使系统崩溃，修改的数据也不会丢失。&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;h3 id="不考虑隔离性可能产生的问题">不考虑隔离性可能产生的问题&lt;/h3>
+&lt;ul>
+&lt;li>
+&lt;h4 id="脏读">脏读&lt;/h4>
+&lt;p>脏读是指在一个事务处理过程中读取了另一个未提交的事务中的数据。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;h4 id="不可重复读">不可重复读&lt;/h4>
+&lt;p>不可重复读是指对于数据库中的某个数据，一个事务内多次查询却返回了不同的数据值，这是由于在事务执行过程中，数据被另一个事务修改并提交了。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;h4 id="幻读">幻读&lt;/h4>
+&lt;p>幻读是事务非独立执行时发生的一种现象。例如，事务T1对一个表中所有的行的某个字段做了从“1”修改为“2”的操作，这时事务T2又插入了一条新的记录，而该字段的值为“1”并且提交给数据库。这时，操作事务T1的用户如果再查看刚刚修改的数据，会发现还有一行没有修改，其实这行是从事务T2中添加的，就好像产生幻觉一样，这就是产生了幻读。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="幻读和不可重复读的区别">幻读和不可重复读的区别：&lt;/h4>
+&lt;ul>
+&lt;li>&lt;strong>幻读针对的是一批数据（比如数据的个数）重点在于新增或者删除操作&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>不可重复读查询的都是同一个数据项 重点在于更新操作&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>相同点都是读取了另一条提交的事物&lt;/strong>&lt;/p>
+&lt;h3 id="事务的隔离级别">事务的隔离级别&lt;/h3>
+&lt;ul>
+&lt;li>
+&lt;h5 id="serializable串行化可避免脏读不可重复读幻读的发生级别最高">Serializable（串行化）：可避免脏读、不可重复读、幻读的发生。（级别最高）&lt;/h5>
+&lt;/li>
+&lt;li>
+&lt;h5 id="repeatable-read可重复读可避免脏读不可重复读的发生">Repeatable-read（可重复读）：可避免脏读、不可重复读的发生。&lt;/h5>
+&lt;/li>
+&lt;li>
+&lt;h5 id="read-committed读已提交可避免脏读的发生">Read-committed（读已提交）：可避免脏读的发生。&lt;/h5>
+&lt;/li>
+&lt;li>
+&lt;h5 id="read-uncommitted读未提交最低级别任何情况都无法保证级别最低">Read-uncommitted（读未提交）：最低级别，任何情况都无法保证。（级别最低）&lt;/h5>
+&lt;/li>
+&lt;/ul>
+&lt;p>MySQL的InnoDB默认为 &lt;strong>&lt;code>Repeatable-read&lt;/code>&lt;/strong>&lt;/p></description></item><item><title>Other: 范式和反范式</title><link>/other/db/form-notform/</link><pubDate>Tue, 29 May 2018 00:00:00 +0000</pubDate><guid>/other/db/form-notform/</guid><description>
+&lt;h3 id="1-第一范式1nf">1. 第一范式(1NF)&lt;/h3>
+&lt;p>1NF是对属性的&lt;strong>原子性&lt;/strong>，要求属性具有原子性，不可再分解；&lt;/p>
+&lt;pre>&lt;code>表：字段1、 字段2(字段2.1、字段2.2)、字段3 ......
+&lt;/code>&lt;/pre>&lt;h3 id="2-第二范式2nf">2. 第二范式(2NF)&lt;/h3>
+&lt;p>2NF是对记录的&lt;strong>惟一性&lt;/strong>，要求记录有惟一标识，即实体的惟一性，即不存在部分依赖；&lt;/p>
+&lt;pre>&lt;code>表：学号、课程号、姓名、学分;
+&lt;/code>&lt;/pre>&lt;p>这个表明显说明了两个事务:学生信息, 课程信息;由于非主键字段必须依赖主键，这里&lt;strong>学分依赖课程号&lt;/strong>，&lt;strong>姓名依赖与学号&lt;/strong>，所以不符合二范式。&lt;/p>
+&lt;p>&lt;strong>可能会存在问题：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>数据冗余:&lt;/code>，每条记录都含有相同信息；&lt;/li>
+&lt;li>&lt;code>删除异常：&lt;/code>删除所有学生成绩，就把课程信息全删除了；&lt;/li>
+&lt;li>&lt;code>插入异常：&lt;/code>学生未选课，无法记录进数据库；&lt;/li>
+&lt;li>&lt;code>更新异常：&lt;/code>调整课程学分，所有行都调整&lt;/li>
+&lt;/ul>
+&lt;h3 id="3-第三范式3nf">3. 第三范式(3NF)&lt;/h3>
+&lt;p>3NF是对字段的&lt;strong>冗余性&lt;/strong>，要求任何字段不能由其他字段派生出来，它要求字段没有冗余，即不存在传递依赖；&lt;/p>
+&lt;pre>&lt;code>表: 学号, 姓名, 年龄, 学院名称, 学院电话
+&lt;/code>&lt;/pre>&lt;p>因为存在&lt;strong>依赖传递&lt;/strong>: (学号) → (学生)→(所在学院) → (学院电话) 。&lt;/p>
+&lt;p>&lt;strong>可能会存在问题：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>数据冗余:&lt;/code>有重复值；&lt;/li>
+&lt;li>&lt;code>更新异常：&lt;/code>有重复的冗余信息，修改时需要同时修改多条记录，否则会出现&lt;strong>数据不一致的情况&lt;/strong> 。&lt;/li>
+&lt;/ul>
+&lt;h3 id="4-反范式">4. 反范式&lt;/h3>
+&lt;p>没有冗余的数据库设计可以做到。但是，没有冗余的数据库未必是最好的数据库，有时为了提高运行效率，就必须降低范式标准，适当保留冗余数据。具体做法是：在概念数据模型设计时遵守第三范式，降低范式标准的工作放到物理数据模型设计时考虑。降低范式就是增加字段，允许冗余，&lt;strong>达到以空间换时间的目的&lt;/strong>。&lt;/p>
+&lt;p>例子：&lt;/p>
+&lt;pre>&lt;code>比如订单表中加入商品的金额，为什么加入金额这样违反了第二范式，但是由于商品金额改变并不会影响当时购买时候的金
+额。所以用冗余的办法来达到空间换时间的目的就不需要去联表查询
+&lt;/code>&lt;/pre>&lt;h3 id="5-范式和反范式的优缺点对比">5. 范式和反范式的优缺点对比&lt;/h3>
+&lt;ul>
+&lt;li>
+&lt;h4 id="范式">范式&lt;/h4>
+&lt;ul>
+&lt;li>&lt;strong>优点&lt;/strong>
+&lt;ul>
+&lt;li>减少数据冗余，数据表更新小&lt;/li>
+&lt;li>更新操作范式更快&lt;/li>
+&lt;li>范式化的表比反范式更小&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;strong>缺点&lt;/strong>
+&lt;ul>
+&lt;li>查询需要进行多表关联查询可能导致性能降低&lt;/li>
+&lt;li>更难进行索引的优化&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;h4 id="反范式">反范式&lt;/h4>
+&lt;ul>
+&lt;li>&lt;strong>优点&lt;/strong>
+&lt;ul>
+&lt;li>可以减少联表查询提高查询效率&lt;/li>
+&lt;li>更好的进行索引的优化&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;strong>缺点&lt;/strong>
+&lt;ul>
+&lt;li>如果冗余的数据需要随着更新，数据的维护比较难&lt;/li>
+&lt;li>对数据的修改成本很高，因为需要修改很多记录&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul></description></item></channel></rss>

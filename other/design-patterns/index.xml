@@ -1,0 +1,40 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – 设计模式</title><link>/other/design-patterns/</link><description>Recent content in 设计模式 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/design-patterns/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: 创建模式</title><link>/other/design-patterns/creational-patterns/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/other/design-patterns/creational-patterns/</guid><description>
+&lt;p>创建型模式提供了创建对象的机制， 能够提升已有代码的灵活性和可复用性。&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/designmode/%E5%88%9B%E5%BB%BA%E8%80%85%E6%A8%A1%E5%BC%8F.png?raw=true" alt="">&lt;/p></description></item><item><title>Other: 结构模式</title><link>/other/design-patterns/behavioral-patterns/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/other/design-patterns/behavioral-patterns/</guid><description>
+&lt;p>结构型模式介绍如何将对象和类组装成较大的结构， 并同时保持结构的灵活和高效。&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/designmode/%E7%BB%93%E6%9E%84%E6%A8%A1%E5%BC%8F.png?raw=true" alt="">&lt;/p></description></item><item><title>Other: 行为模式</title><link>/other/design-patterns/structural-patterns/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/other/design-patterns/structural-patterns/</guid><description>
+&lt;p>行为模式负责对象间的高效沟通和职责委派。&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/designmode/%E8%A1%8C%E4%B8%BA%E6%A8%A1%E5%BC%8F.png?raw=true" alt="">&lt;/p></description></item><item><title>Other: 看懂UML图</title><link>/other/design-patterns/read-uml/</link><pubDate>Wed, 11 Dec 2019 00:00:00 +0000</pubDate><guid>/other/design-patterns/read-uml/</guid><description>
+&lt;h3 id="1-类uml图">1. 类UML图&lt;/h3>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/designmode/uml_class_struct.jpg?raw=true" alt="图">&lt;/p>
+&lt;ul>
+&lt;li>车的类图结构为&amp;laquo;abstract&amp;raquo;(Java可以是interface)，表示车是一个抽象类；&lt;/li>
+&lt;li>它有两个继承类：小汽车和自行车；它们之间的关系为实现关系，使用带空心箭头的虚线表示；&lt;/li>
+&lt;li>小汽车为与SUV之间也是继承关系，它们之间的关系为泛化关系，使用带空心箭头的实线表示；&lt;/li>
+&lt;li>小汽车与发动机之间是组合关系，使用带实心箭头的实线表示；&lt;/li>
+&lt;li>学生与班级之间是聚合关系，使用带空心箭头的实线表示；&lt;/li>
+&lt;li>学生与身份证之间为关联关系，使用一根实线表示&lt;/li>
+&lt;li>学生上学需要用到自行车，与自行车是一种依赖关系，使用带箭头的虚线表示；&lt;/li>
+&lt;/ul>
+&lt;h3 id="2-类与类之间关系的表示方式">2. 类与类之间关系的表示方式&lt;/h3>
+&lt;h4 id="21-关联关系">2.1 关联关系&lt;/h4>
+&lt;p>关联关系又可进一步分为单向关联、双向关联和自关联。&lt;/p>
+&lt;h5 id="1单向关联">（1）单向关联&lt;/h5>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/designmode/%E5%8D%95%E9%A1%B9%E5%85%B3%E8%81%94.png?raw=true" alt="">&lt;/p>
+&lt;h5 id="2-双向关联">(2) 双向关联&lt;/h5>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/designmode/%E5%8F%8C%E5%90%91%E5%85%B3%E8%81%94.png?raw=true" alt="">&lt;/p>
+&lt;h5 id="3-自关联">(3) 自关联&lt;/h5>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/designmode/%E8%87%AA%E5%85%B3%E8%81%94.png?raw=true" alt="">&lt;/p>
+&lt;h4 id="22-聚合关系">2.2 聚合关系&lt;/h4>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/designmode/%E8%81%9A%E5%90%88%E5%85%B3%E7%B3%BB.png?raw=true" alt="">&lt;/p>
+&lt;h4 id="23-组合关系">2.3 组合关系&lt;/h4>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/designmode/%E7%BB%84%E5%90%88%E5%85%B3%E7%B3%BB.png?raw=true" alt="">&lt;/p>
+&lt;blockquote>
+&lt;p>聚合关系强调是“整体”包含“部分”，但是“部分”可以脱离“整体”而单独存在。组合关系与聚合关系见得最大不同在于：这里的“部分”脱离了“整体”便不复存在。&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="24-依赖关系">2.4 依赖关系&lt;/h4>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/designmode/%E4%BE%9D%E8%B5%96.png?raw=true" alt="">&lt;/p>
+&lt;h4 id="25-继承关系">2.5 继承关系&lt;/h4>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/designmode/%E7%BB%A7%E6%89%BF%E5%85%B3%E7%B3%BB.png?raw=true" alt="">&lt;/p>
+&lt;h4 id="26-接口实现关系">2.6 接口实现关系&lt;/h4>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/designmode/%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0.png?raw=true" alt="">&lt;/p></description></item></channel></rss>

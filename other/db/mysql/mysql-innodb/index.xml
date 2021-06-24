@@ -1,0 +1,287 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – InnoDB存储引擎</title><link>/other/db/mysql/mysql-innodb/</link><description>Recent content in InnoDB存储引擎 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/db/mysql/mysql-innodb/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: mysql innodb 索引</title><link>/other/db/mysql/mysql-innodb/innodb-index/</link><pubDate>Thu, 25 Feb 2021 00:00:00 +0000</pubDate><guid>/other/db/mysql/mysql-innodb/innodb-index/</guid><description>
+&lt;h3 id="innodb存储引擎索引">Innodb存储引擎索引&lt;/h3>
+&lt;ul>
+&lt;li>B+树索引&lt;/li>
+&lt;li>全文索引&lt;/li>
+&lt;li>Hash索引&lt;/li>
+&lt;/ul>
+&lt;h3 id="b树索引">B+树索引&lt;/h3>
+&lt;p>B+树索引就是传统意义上的索引，这是目前关系型数据库中查找最为常用和最为有效的索引。B+树索引的构造类似于二叉树，根据键值快速找到数据。&lt;/p>
+&lt;blockquote>
+&lt;p>B+树中的B不是代表二叉，而是代表平衡。 B+树索引不能找到一个给定键值的具体行。B+树索引能找到的只是被查找数据行所在的页。然后数据库通过把页读入内存，再在内存中进行查找，最后得到要查找的数据。&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="b树数据结构">B+树数据结构&lt;/h3>
+&lt;h3 id="b树索引-1">B+树索引&lt;/h3>
+&lt;p>B+树索引本质就是B+树在数据库中的实现。但是B+树索引在数据库中有一个特点是高扇出性。一般数据库中，B+树的高度一般都在2-4层。也就是说查找某个键值的行记录时最多需要2到4次IO。&lt;br>
+索引的分类：&lt;/p>
+&lt;ul>
+&lt;li>聚集索引&lt;/li>
+&lt;li>辅助索引&lt;br>
+不管是聚集索引还是辅助索引，内部都是B+树，也就是高度平衡，叶子节点存放着数据。不同的是:叶子节点存放的是否是一整行的信息数据。&lt;/li>
+&lt;/ul>
+&lt;h3 id="聚集索引">聚集索引&lt;/h3>
+&lt;p>InnoDB存储引擎表是索引组织表，表中数据按照主键顺序存放。聚集索引就是按照每张表的主键构造一颗B+树，同时叶子节点中存放的即为整张表的行记录数据，聚集索引的这个特性决定了组织表中数据也是索引的一部分。同B+树数据结构一样。每个数据也通过一个双向链表来进行连接。&lt;/p>
+&lt;blockquote>
+&lt;p>每张表只能拥有一个聚集索引(主键只能一个)&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="聚集索引的好处">聚集索引的好处&lt;/h4>
+&lt;ol>
+&lt;li>由于定义了数据的逻辑顺序，聚集索引能够特别快的方位针对范围值的查询&lt;/li>
+&lt;li>主键的排序查找和范围查找速度特别快。&lt;/li>
+&lt;/ol>
+&lt;h3 id="辅助索引">辅助索引&lt;/h3>
+&lt;p>叶子节点不包含行记录的全部数据。叶子节点除了包含键值以外每个叶子节点的索引中还包含了一个书签，该书签用来告诉InnoDB哪里可以找到与索引相对应的行数据。&lt;/p>
+&lt;blockquote>
+&lt;p>由于InnoDB表是索引组织表，因此InnoDB辅助索引的书签就是相对应行数据的聚集索引键&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/mysql/%E8%BE%85%E5%8A%A9%E7%B4%A2%E5%BC%95%E5%92%8C%E8%81%9A%E9%9B%86%E7%B4%A2%E5%BC%95%E7%9A%84%E5%85%B3%E7%B3%BB.png?raw=true" alt="辅助索引与聚集索引的关系">&lt;/p>
+&lt;p>辅助索引的存在并不影响数据在聚集索引中的组织，因此每张表上可以有多个辅助索引。通过辅助索引来查找数据时，InnoDB存储引擎会遍历辅助索引并通过叶级别的指针获取指向主键索引的主键键值，然后通过主键索引来找到完整的行记录。&lt;br>
+例如：一棵高度为3的辅助索引树中查找数据，那么需要对这颗树遍历3次找到指定主键键值。如果聚集索引同样高度为3，那么对聚集索引树进行3次查找，最终找到文字的数据所在页，因此一共需要6次逻辑IO访问得到最终的一个数据页。&lt;/p>
+&lt;h3 id="hash索引">Hash索引&lt;/h3>
+&lt;p>InnoDB存储引擎使用哈希算法来对字典来进行查找，其冲突机制采用链表方式，哈希函数采用除法散列方式。&lt;/p>
+&lt;h3 id="全文检索">全文检索&lt;/h3>
+&lt;p>全文检索通过使用倒排索引来实现。&lt;/p></description></item><item><title>Other: mysql引擎InnoDB索引中的cardinality关键字</title><link>/other/db/mysql/mysql-innodb/innodb-cardinality/</link><pubDate>Thu, 25 Feb 2021 00:00:00 +0000</pubDate><guid>/other/db/mysql/mysql-innodb/innodb-cardinality/</guid><description>
+&lt;h3 id="什么是cardinality">什么是Cardinality&lt;/h3>
+&lt;p>cardinality用来统计字段的可选择性。例如：&lt;br>
+类似于姓名字段，表中都不相同的，属于高选择性，适用于添加索引&lt;br>
+类似于性别字段，只有男，女的，属于低选择性，则不适用于添加索引&lt;/p>
+&lt;blockquote>
+&lt;p>在一定基数下重复少的字段选择性就高，重复数多选择性就低。&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="innodb存储引擎cardinality统计">InnoDB存储引擎Cardinality统计&lt;/h3>
+&lt;p>cardinality值消耗是非常大的，InnoDB一般选择在下边两种情况更新cardinality信息：&lt;/p>
+&lt;ul>
+&lt;li>表中数据1/16数据发生变化&lt;/li>
+&lt;li>stat_modified_counter&amp;gt;2,000,000,000&lt;/li>
+&lt;/ul>
+&lt;p>第一种策略为自从上次统计Cardinality信息后，表中1/16的数据已经发生过变化，这个时候需要更新Cardinality信息。&lt;br>
+第二种策略考虑的是，如果对表中某一行数据频繁的进行更新操作，这时表中的数据并没增加，实际发生变化的还是这一行数据。&lt;br>
+InnoDB通过采样的方法，默认InnoDB存储引擎对8个叶子节点( Leaf Page)进行采用。采样的过程如下：&lt;/p>
+&lt;ul>
+&lt;li>取得B+树索引中叶子节点的数量,记为A。&lt;/li>
+&lt;li>随机取得B+树索引中的8个叶子节点。统计每个页不同记录的个数,即为P1,P2,&amp;hellip;,P8。&lt;/li>
+&lt;li>根据采样信息给出 Cardinality的预估值: Cardinality=(P1+P2+…+P8)*A/8。&lt;/li>
+&lt;/ul>
+&lt;h3 id="怎么查看cardinality">怎么查看Cardinality&lt;/h3>
+&lt;p>访问infomation_schema架构下的表tables和statistics时以及执行下面SQL&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-sql" data-lang="sql">&lt;span style="color:#204a87;font-weight:bold">show&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#204a87;font-weight:bold">index&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#204a87;font-weight:bold">from&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#a40000">表名&lt;/span>&lt;span style="color:#000;font-weight:bold">;&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">show&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#204a87;font-weight:bold">table&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#000">status&lt;/span>&lt;span style="color:#000;font-weight:bold">;&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">analyze&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#204a87;font-weight:bold">table&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#a40000">表名&lt;/span>&lt;span style="color:#000;font-weight:bold">;&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>会导致InnoDB存储引擎去重新计算索引的Cardinality值。&lt;/p>
+&lt;blockquote>
+&lt;p>注意：表中的数据量非常大，并且表中存在多个辅助索引的时候，执行上述操作可能会很慢。&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/mysql/showindexfrom.png?raw=true" alt="">&lt;/p>
+&lt;h3 id="添加索引的策略">添加索引的策略&lt;/h3>
+&lt;p>Cardinality表示的是某个字段的选择性的高低，数值越大选择性越高，数值越小选择性越低。根据建立索引的原理，我们应该尽量选择选择性越高的列(或者组合列)进行索引的建立。&lt;/p>
+&lt;p>公式： Cardinality/总的数据行数和1做对比，越接近于1越适合建立索引。&lt;/p></description></item><item><title>Other: InnoDB表</title><link>/other/db/mysql/mysql-innodb/innodb-table/</link><pubDate>Mon, 22 Mar 2021 00:00:00 +0000</pubDate><guid>/other/db/mysql/mysql-innodb/innodb-table/</guid><description>
+&lt;h3 id="1-索引组织表">1. 索引组织表&lt;/h3>
+&lt;p>在InnoDB存储引擎中，表都是根据主键顺序组织存放的，这种方式的表称为索引组织表。索引在InnoDB中每张表都有主键，如果没有显式的定义主键，InnoDB会按照如下的方式选择或创建主键：&lt;/p>
+&lt;ul>
+&lt;li>判断是否有非空的唯一索引，有该列就是为主键&lt;br>
+主键根据的是定义索引的顺序，而不是建表时候字段的顺序。&lt;/li>
+&lt;li>不满足上述条件，InnoDB自动创建一个6字节大小的指针。&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>说明: _rowid可以显示表的主键，这只是对单列的主键有效，对于多列组成主键就无效了。&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="2-innodb逻辑存储结构">2. InnoDB逻辑存储结构&lt;/h3>
+&lt;p>从逻辑结构来看所有的逻辑都被存放在一个空间中，称为表空间(tablespace)。表空间由如下组成：&lt;/p>
+&lt;ul>
+&lt;li>段(segment)&lt;/li>
+&lt;li>区(extent)&lt;/li>
+&lt;li>页(page)或者称为块(block)&lt;/li>
+&lt;/ul>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/mysql/innodbtablestruct.png?raw=true" alt="组成图示">&lt;/p>
+&lt;h4 id="21-表空间">2.1 表空间&lt;/h4>
+&lt;p>表空间可以看做为InnoDB存储引擎逻辑结构的最高层，所有的数据都放在表空间中。&lt;/p>
+&lt;h4 id="22-段">2.2 段&lt;/h4>
+&lt;p>段的分类：&lt;/p>
+&lt;ul>
+&lt;li>数据段&lt;/li>
+&lt;li>索引段&lt;/li>
+&lt;li>回滚段&lt;/li>
+&lt;/ul>
+&lt;p>由于InnoDB存储引擎表是索引组织的，因此数据即索引，索引即数据。那么数据段即为B+树的叶子节点，索引段即为B+树的非叶子节点。&lt;/p>
+&lt;h4 id="23-区">2.3 区&lt;/h4>
+&lt;p>区是由联想页组成的空间。在任何情况下每个去的掉线都是1M。为了保证区中页的连续性，InnoDB存储引擎一次从磁盘申请多个区。默认情况下页的大小为16K,一个区就有64个连续的页。&lt;/p>
+&lt;blockquote>
+&lt;p>页可以通过KEY_BLOCK_SIZE来设置大小&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="24-页">2.4 页&lt;/h4>
+&lt;p>页是InnoDB磁盘管理的最小单位，默认每个也的大小为16KB。页的常见类型：&lt;/p>
+&lt;ul>
+&lt;li>数据页&lt;/li>
+&lt;li>undo页&lt;/li>
+&lt;li>系统页&lt;/li>
+&lt;li>事务数据页&lt;/li>
+&lt;li>插入缓冲位图页&lt;/li>
+&lt;li>插入缓冲空闲列表页&lt;/li>
+&lt;li>未压缩的二进制大对象页&lt;/li>
+&lt;li>压缩的二进制大对象页&lt;/li>
+&lt;/ul>
+&lt;h4 id="25-行">2.5 行&lt;/h4>
+&lt;p>InnoDB存储引擎是面向列，也就是数据是按行进行存放。每个页存放的行记录也是有硬性定义的，最多允许存放16K/2-200行的记录。&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/mysql/%E6%9F%A5%E7%9C%8B%E8%A1%A8%E7%9A%84%E7%8A%B6%E6%80%81.png?raw=true" alt="图">&lt;/p></description></item><item><title>Other: Mysql锁</title><link>/other/db/mysql/mysql-innodb/innodb-lock/</link><pubDate>Mon, 22 Mar 2021 00:00:00 +0000</pubDate><guid>/other/db/mysql/mysql-innodb/innodb-lock/</guid><description>
+&lt;h3 id="1-什么是锁">1. 什么是锁&lt;/h3>
+&lt;p>锁机制用于管理对共享资源的并发访问，提供数据的完整性和一致性。&lt;/p>
+&lt;h3 id="2-lock与latch">2. lock与latch&lt;/h3>
+&lt;ul>
+&lt;li>latch&lt;br>
+闩锁(轻量级的锁)作用对象是并发线程，要求锁定的时间要非常短。持续时间太长则性能就会非常差。在InnoDb中latch又分为两种：mutex(互斥量)和rwlock（读写锁）。作用用来保证并发线程操作临界资源的正确性(没有死锁的检查机制)&lt;/li>
+&lt;li>lock&lt;br>
+lock作用对象是事务，用来锁定数据库中的对象(表、页、行)并且一般lock的对象仅在事务commit或rollback后进行释放(不同的事务隔离级别释放的时间可能不同)，有死锁的检测机制&lt;/li>
+&lt;/ul>
+&lt;p>区别列表：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>&lt;/th>
+&lt;th>lock&lt;/th>
+&lt;th>latch&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>对象&lt;/td>
+&lt;td>事务&lt;/td>
+&lt;td>线程&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>保护&lt;/td>
+&lt;td>数据库内容&lt;/td>
+&lt;td>内存数据结构&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>持续时间&lt;/td>
+&lt;td>整个事务过程&lt;/td>
+&lt;td>临界资源&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>模式&lt;/td>
+&lt;td>行锁、表锁、意向锁&lt;/td>
+&lt;td>读写锁、互斥量&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>死锁&lt;/td>
+&lt;td>通过waits-for graph、time out等机制进行死锁检测处理&lt;/td>
+&lt;td>无死锁的检测与处理机制&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>存在于&lt;/td>
+&lt;td>Lock Mannager的哈希表中&lt;/td>
+&lt;td>每个数据结构的对象&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;blockquote>
+&lt;p>latch查看命令：show engine innodb mutex;&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="3-innodb存储引擎中的锁">3. InnoDB存储引擎中的锁&lt;/h3>
+&lt;p>锁定的类型：&lt;/p>
+&lt;ul>
+&lt;li>行级锁&lt;/li>
+&lt;li>表级锁&lt;/li>
+&lt;/ul>
+&lt;h4 id="行级锁">行级锁&lt;/h4>
+&lt;p>InnoDb存储引擎实现了如下两种标准的行级锁：&lt;/p>
+&lt;ol>
+&lt;li>共享锁(S Lock),允许事务读一行数据&lt;/li>
+&lt;li>排他锁(X Lock)，允许事务删除或者更新一行数据&lt;/li>
+&lt;/ol>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th style="text-align:center">&lt;/th>
+&lt;th style="text-align:center">X&lt;/th>
+&lt;th style="text-align:center">S&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td style="text-align:center">X&lt;/td>
+&lt;td style="text-align:center">不兼容&lt;/td>
+&lt;td style="text-align:center">不兼容&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td style="text-align:center">S&lt;/td>
+&lt;td style="text-align:center">不兼容&lt;/td>
+&lt;td style="text-align:center">兼容&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;blockquote>
+&lt;p>如果一个事务T1已经获得了行R的共享锁，那么另一个事务T2可以立刻获得行R的共享锁，这种情况为锁兼容。但T3事务想获取拍他锁则必须等待事务T1、T2释放R行上的共享锁。这种情况称为锁不兼容。从表格可以看出来X锁不和任何锁兼容，只有S锁和S锁兼容。&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="表级锁意向锁">表级锁(意向锁)&lt;/h4>
+&lt;p>InnoDB存储引擎支持多粒度锁定，这种锁定允许事务在行级上的锁和表级上的锁同时存在。为了支持不同粒度上进行加锁操作，InnoDB支持一种额外的锁方式。称之为意向锁。&lt;/p>
+&lt;ol>
+&lt;li>意向共享锁&lt;/li>
+&lt;li>意向排他锁&lt;/li>
+&lt;/ol>
+&lt;p>由于InnoDB存储支持的是行级别的锁，以此意向锁其实不会阻塞除全表扫描以外的任何请求。故表级意向锁与行级锁的兼容性如下：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th style="text-align:center">&lt;/th>
+&lt;th style="text-align:center">X&lt;/th>
+&lt;th style="text-align:center">IX&lt;/th>
+&lt;th style="text-align:center">S&lt;/th>
+&lt;th style="text-align:center">IS&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td style="text-align:center">X&lt;/td>
+&lt;td style="text-align:center">不兼容&lt;/td>
+&lt;td style="text-align:center">不兼容&lt;/td>
+&lt;td style="text-align:center">不兼容&lt;/td>
+&lt;td style="text-align:center">不兼容&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td style="text-align:center">IX&lt;/td>
+&lt;td style="text-align:center">不兼容&lt;/td>
+&lt;td style="text-align:center">兼容&lt;/td>
+&lt;td style="text-align:center">不兼容&lt;/td>
+&lt;td style="text-align:center">兼容&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td style="text-align:center">S&lt;/td>
+&lt;td style="text-align:center">不兼容&lt;/td>
+&lt;td style="text-align:center">不兼容&lt;/td>
+&lt;td style="text-align:center">兼容&lt;/td>
+&lt;td style="text-align:center">兼容&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td style="text-align:center">IS&lt;/td>
+&lt;td style="text-align:center">不兼容&lt;/td>
+&lt;td style="text-align:center">兼容&lt;/td>
+&lt;td style="text-align:center">兼容&lt;/td>
+&lt;td style="text-align:center">兼容&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;blockquote>
+&lt;p>查看当前锁的信息命令：show engine innodb status;&lt;br>
+通过information_schema中的表innodb_trx、innodb_locks、innodb_lock_waits通过三张表来分析可能出在锁的问题。&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="4-一致性非锁定读">4. 一致性非锁定读&lt;/h3>
+&lt;p>InnoDB存储引擎通过行多版本控制的方式来去读当前执行时间数据库中行的数据。如果读取的行正在执行DELETE或者UPDATE操作，这时读取操作不会因此去等待行上锁的释放。相反的InnoDB会去读取行的一个快照数据。&lt;br>
+非锁定读机制极大的提高了数据库的并发，InnoDB存储引擎默认设置就是非锁定读。但是在不同的事务隔离级别下读取方式不同。并不是每个事务隔离级别下都采用的非锁定的一致性读。&lt;/p>
+&lt;blockquote>
+&lt;p>一个记录可能有不止一个快照数据，一般称这种技术为多版本控制技术。由此带来的并发控制，称之为多版本并发控制也就是MVCC&lt;/p>
+&lt;/blockquote>
+&lt;p>在事务隔离级别READ COMMITTED和REPEATABLE READ(InnoDB存储引擎的默认事务隔离级别)下InnoDB存储引擎使用非锁定的一致性读。然而对于快照数据的定义却不相同。&lt;/p>
+&lt;ul>
+&lt;li>Read Committed事务隔离下，对于快照数据，非一致性读总是读取被锁定行的最新一份快照数据&lt;/li>
+&lt;li>Repeatable read事务隔离级别对于快照数据，非一致性读总是读取事务开始时的行数据版本。&lt;/li>
+&lt;/ul>
+&lt;p>例子：&lt;/p>
+&lt;h3 id="5-一致性锁定读">5. 一致性锁定读&lt;/h3>
+&lt;p>在默认配置下，事务隔离级别为Repeatable read模式下，InnoDB存储引擎的SELECT操作使用一致性非锁定读，但是在某些情况下需要显示的对数据库读取操作进行加锁以保证数据库逻辑的一致性，这就要求数据库支持加锁语句，InnoDB存储引擎对Select语句支持两种一致性的锁定读操作：&lt;/p>
+&lt;ol>
+&lt;li>SELECT &amp;hellip;. FOR UPDATE&lt;/li>
+&lt;li>SELECT &amp;hellip;. LOCK IN SHARE MODE.&lt;/li>
+&lt;/ol></description></item><item><title>Other: InnoDb崩溃恢复</title><link>/other/db/mysql/mysql-innodb/innodb-crash-recovery/</link><pubDate>Sun, 17 Nov 2019 00:00:00 +0000</pubDate><guid>/other/db/mysql/mysql-innodb/innodb-crash-recovery/</guid><description>
+&lt;p>参考文章：&lt;/p>
+&lt;p>&lt;a href="http://mysql.taobao.org/monthly/2017/07/01/">http://mysql.taobao.org/monthly/2017/07/01/&lt;/a>&lt;/p></description></item></channel></rss>

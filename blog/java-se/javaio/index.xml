@@ -1,0 +1,76 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Java IO</title><link>/blog/java-se/javaio/</link><description>Recent content in Java IO on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/blog/java-se/javaio/index.xml" rel="self" type="application/rss+xml"/><item><title>Blog: IO详解--分类</title><link>/blog/java-se/javaio/io-explain/</link><pubDate>Mon, 02 Sep 2019 00:00:00 +0000</pubDate><guid>/blog/java-se/javaio/io-explain/</guid><description>
+&lt;h3 id="1-io流分类">1 IO流分类&lt;/h3>
+&lt;ol>
+&lt;li>
+&lt;p>&lt;strong>字节流&lt;/strong>&lt;/p>
+&lt;p>顾名思义用来处理字节的相关类&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>字符流&lt;/strong>&lt;/p>
+&lt;p>处理字符相关的类&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;h3 id="2-字节流">2 字节流&lt;/h3>
+&lt;p>下面介绍字节流的相关常用的类&amp;ndash;基于JDK11&lt;/p>
+&lt;h4 id="21-输入字节流">2.1 输入字节流&lt;/h4>
+&lt;p>输入字节流的父类&lt;code>InputStream&lt;/code>是一个抽象类不能实例化&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/JSE/InputStream.png?raw=true" alt="图解">&lt;/p></description></item><item><title>Blog: BIO NIO AIO</title><link>/blog/java-se/javaio/bio-nio-aio/</link><pubDate>Mon, 13 May 2019 00:00:00 +0000</pubDate><guid>/blog/java-se/javaio/bio-nio-aio/</guid><description>
+&lt;h3 id="几个概念">几个概念&lt;/h3>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>同步与异步&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>同步：&lt;/strong> 同步就是发起一个调用后，被调用者未处理完请求之前，调用不返回。&lt;/li>
+&lt;li>&lt;strong>异步：&lt;/strong> 异步就是发起一个调用后，立刻得到被调用者的回应表示已接收到请求，但是被调用者并没有返回结果，此时我们可以处理其他的请求，被调用者通常依靠事件，回调等机制来通知调用者其返回结果。&lt;/li>
+&lt;/ul>
+&lt;p>同步和异步的区别最大在于异步的话调用者不需要等待处理结果，被调用者会通过回调等机制来通知调用者其返回结果。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>阻塞和非阻塞&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>阻塞：&lt;/strong> 阻塞就是发起一个请求，调用者一直等待请求结果返回。线程被挂起&lt;/li>
+&lt;li>**非阻塞：**阻塞就是发起一个请求，调用者一直等待请求结果返回。继续执行其他的代码&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="bio">BIO&lt;/h3>
+&lt;p>同步阻塞I/O模式，数据的读取写入必须阻塞在一个线程内等待其完成。&lt;/p>
+&lt;p>&lt;img src="https://camo.githubusercontent.com/5ef6de9824ae82bb0c403522a647953d1193a362/68747470733a2f2f6d792d626c6f672d746f2d7573652e6f73732d636e2d6265696a696e672e616c6979756e63732e636f6d2f322e706e67" alt="图片">&lt;/p>
+&lt;p>通过优化，把Socket封装成一个Task放到线程池中去进行处理，线程池维护一个消费队列和N个活跃的线程。对消息队列的连接进行处理。由于线程池可以设置消息队列的大小和最大线程数，因此，它的资源占用是可控的，无论多少个客户端并发访问，都不会导致资源的耗尽和宕机。&lt;/p>
+&lt;p>&lt;img src="https://camo.githubusercontent.com/04b258a50ca7f9762f43d64e70f4489440bae4eb/68747470733a2f2f6d792d626c6f672d746f2d7573652e6f73732d636e2d6265696a696e672e616c6979756e63732e636f6d2f332e706e67" alt="图解">&lt;/p>
+&lt;p>&lt;strong>缺点：&lt;/strong> 单纯使用多线程处理每次进来一个连接新建一个线程，这样会导致大量的线程存在，消耗内存和CPU资源。如果使用线程池同样会存在当线程数到达一定数量的时候会导致线程切换很频繁。&lt;/p>
+&lt;h3 id="nio">NIO&lt;/h3>
+&lt;p>NIO是一种同步非阻塞的I/O模型，在Java 1.4 中引入了NIO框架，对应 java.nio 包，提供了 Channel , Selector，Buffer等抽象。&lt;/p>
+&lt;p>它支持面向缓冲的，基于通道的I/O操作。NIO提供了与传统BIO模型中的 &lt;code>Socket&lt;/code> 和 &lt;code>ServerSocket&lt;/code> 相对应的 &lt;code>SocketChannel&lt;/code> 和 &lt;code>ServerSocketChannel&lt;/code> 两种不同的套接字通道实现,两种通道都支持阻塞和非阻塞两种模式。&lt;/p>
+&lt;h3 id="nio和bio的区别">NIO和BIO的区别&lt;/h3>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>NIO是非阻塞IO，BIO是阻塞IO&lt;/strong>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>BIO面向流，NIO面向的缓冲区&lt;/strong>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>NIO的三个重要组件&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>channel(通道)&lt;/strong> : 通道是双向的可以进行读写，通道只能与Buffer进行交互&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>Selectors(选择器)：&lt;/strong> 使用单线程处理多个通道来减少线程的切换&lt;/p>
+&lt;p>&lt;img src="https://camo.githubusercontent.com/3a68153ce17be90275df07a47409afaea91aff83/68747470733a2f2f6d792d626c6f672d746f2d7573652e6f73732d636e2d6265696a696e672e616c6979756e63732e636f6d2f323031392d322f536c6563746f722e706e67" alt="图解">&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>Buffer(缓冲区)：&lt;/strong> 数据的读写操作全部在缓冲区&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>优点：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>使用较少的线程便可以处理许多连接。因此减少了内存管理和上下文切换带来的时间消耗&lt;/li>
+&lt;li>当没有I/O操作的时候线程池也可以被用于其他的工作&lt;/li>
+&lt;/ul>
+&lt;p>&lt;a href="http://wiki.jikexueyuan.com/project/java-nio-zh/java-nio-selector.html">http://wiki.jikexueyuan.com/project/java-nio-zh/java-nio-selector.html&lt;/a>&lt;/p>
+&lt;p>&lt;a href="https://www.cnblogs.com/nullzx/p/8932977.html">https://www.cnblogs.com/nullzx/p/8932977.html&lt;/a>&lt;/p>
+&lt;p>&lt;a href="https://blog.csdn.net/u010412719/article/details/52819191">https://blog.csdn.net/u010412719/article/details/52819191&lt;/a>&lt;/p></description></item></channel></rss>

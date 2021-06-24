@@ -1,0 +1,4 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – IntelliJ IDEA</title><link>/other/idea/</link><description>Recent content in IntelliJ IDEA on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/idea/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: IntelliJ IDEA常用设置</title><link>/other/idea/intellij-idea-setting/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/other/idea/intellij-idea-setting/</guid><description>
+&lt;h3 id="1-设置代码的格式显示">1. 设置代码的格式显示&lt;/h3>
+&lt;p>idea 中 大于等于，不等于、小于等于等等这些符号发生了改变问题解决方法&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/idea/%E8%AE%BE%E7%BD%AE%E7%AC%A6%E5%8F%B7%E6%98%BE%E7%A4%BA%E6%A0%BC%E5%BC%8F1.png?raw=true" alt="">&lt;/p></description></item></channel></rss>
