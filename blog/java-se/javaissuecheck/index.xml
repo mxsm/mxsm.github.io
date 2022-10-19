@@ -1,0 +1,260 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Java问题排查</title><link>/blog/java-se/javaissuecheck/</link><description>Recent content in Java问题排查 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/blog/java-se/javaissuecheck/index.xml" rel="self" type="application/rss+xml"/><item><title>Blog: JVM常用的命令-JDK8</title><link>/blog/java-se/javaissuecheck/common-jdk-command/</link><pubDate>Fri, 02 Aug 2019 00:00:00 +0000</pubDate><guid>/blog/java-se/javaissuecheck/common-jdk-command/</guid><description>
+&lt;h3 id="1-jdk常用的工具--jdk8">1. JDK常用的工具&amp;ndash;JDK8&lt;/h3>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>工具名称&lt;/th>
+&lt;th>用途&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>jps&lt;/td>
+&lt;td>列出已装载的JVM &amp;mdash; 常用&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>jstack&lt;/td>
+&lt;td>打印线程堆栈信息 &amp;ndash; 常用&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>jstat&lt;/td>
+&lt;td>JVM监控统计信息 &amp;ndash; 常用&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>jmap&lt;/td>
+&lt;td>打印JVM堆内对象情况 &amp;ndash; 常用&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>jinfo&lt;/td>
+&lt;td>输出JVM配置信息&amp;ndash; 常用&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>jconsole&lt;/td>
+&lt;td>GUI监控工具&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>jvisualvm&lt;/td>
+&lt;td>GUI监控工具&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>jhat&lt;/td>
+&lt;td>堆离线分析工具&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>jdb&lt;/td>
+&lt;td>java进程调试工具&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>jstatd&lt;/td>
+&lt;td>远程JVM监控统计信息&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;h3 id="2-jps命令">2. jps命令&lt;/h3>
+&lt;p>下面是我在自己Linux服务器上运行的(服务器上面跑了一个Tomcat)&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-bash" data-lang="bash">&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>root@iZwz9jcjzd6wfh44nnnsv4Z ~&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&lt;span style="color:#8f5902;font-style:italic"># jps&lt;/span>
+&lt;span style="color:#0000cf;font-weight:bold">25057&lt;/span> Bootstrap
+&lt;span style="color:#0000cf;font-weight:bold">25116&lt;/span> Jps
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="3-jstack命令">3. jstack命令&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-bash" data-lang="bash">&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>root@iZwz9jcjzd6wfh44nnnsv4Z ~&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&lt;span style="color:#8f5902;font-style:italic"># jstack --help&lt;/span>
+Usage:
+jstack &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-l&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &amp;lt;pid&amp;gt;
+&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>to connect to running process&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+jstack -F &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-m&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-l&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &amp;lt;pid&amp;gt;
+&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>to connect to a hung process&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+jstack &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-m&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-l&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &amp;lt;executable&amp;gt; &amp;lt;core&amp;gt;
+&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>to connect to a core file&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+jstack &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-m&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-l&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>server_id@&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&amp;lt;remote server IP or hostname&amp;gt;
+&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>to connect to a remote debug server&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+Options:
+-F to force a thread dump. Use when jstack &amp;lt;pid&amp;gt; does not respond &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>process is hung&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+-m to print both java and native frames &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>mixed mode&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+-l long listing. Prints additional information about locks
+-h or -help to print this &lt;span style="color:#204a87">help&lt;/span> message
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>上面是使用的说明，下面来看一下实际的使用的打印情况&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-bash" data-lang="bash">&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>root@iZwz9jcjzd6wfh44nnnsv4Z ~&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&lt;span style="color:#8f5902;font-style:italic"># jstack -l 25057&lt;/span>
+2019-03-17 10:25:00
+Full thread dump Java HotSpot&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>TM&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> 64-Bit Server VM &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>25.131-b11 mixed mode&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>:
+&lt;span style="color:#4e9a06">&amp;#34;Attach Listener&amp;#34;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">#44 daemon prio=9 os_prio=0 tid=0x00007f3738001800 nid=0x6253 waiting on condition [0x0000000000000000]&lt;/span>
+java.lang.Thread.State: RUNNABLE
+Locked ownable synchronizers:
+- None
+&lt;span style="color:#4e9a06">&amp;#34;ajp-nio-8009-Acceptor-0&amp;#34;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">#42 daemon prio=5 os_prio=0 tid=0x00007f376c6ff800 nid=0x620e runnable [0x00007f373c4bf000]&lt;/span>
+java.lang.Thread.State: RUNNABLE
+at sun.nio.ch.ServerSocketChannelImpl.accept0&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>Native Method&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+at sun.nio.ch.ServerSocketChannelImpl.accept&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>ServerSocketChannelImpl.java:422&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+at sun.nio.ch.ServerSocketChannelImpl.accept&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>ServerSocketChannelImpl.java:250&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+- locked &amp;lt;0x00000000c5a99fc8&amp;gt; &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>a java.lang.Object&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+at org.apache.tomcat.util.net.NioEndpoint.serverSocketAccept&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>NioEndpoint.java:448&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+at org.apache.tomcat.util.net.NioEndpoint.serverSocketAccept&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>NioEndpoint.java:70&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+at org.apache.tomcat.util.net.Acceptor.run&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>Acceptor.java:95&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+at java.lang.Thread.run&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>Thread.java:748&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+Locked ownable synchronizers:
+- None
+&lt;span style="color:#4e9a06">&amp;#34;ajp-nio-8009-ClientPoller-1&amp;#34;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">#41 daemon prio=5 os_prio=0 tid=0x00007f376c6fd800 nid=0x620d runnable [0x00007f373c5c0000]&lt;/span>
+java.lang.Thread.State: RUNNABLE
+at sun.nio.ch.EPollArrayWrapper.epollWait&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>Native Method&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+at sun.nio.ch.EPollArrayWrapper.poll&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>EPollArrayWrapper.java:269&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+at sun.nio.ch.EPollSelectorImpl.doSelect&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>EPollSelectorImpl.java:93&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+at sun.nio.ch.SelectorImpl.lockAndDoSelect&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>SelectorImpl.java:86&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+- locked &amp;lt;0x00000000f4475350&amp;gt; &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>a sun.nio.ch.Util&lt;span style="color:#000">$3&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+- locked &amp;lt;0x00000000f4475340&amp;gt; &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>a java.util.Collections&lt;span style="color:#000">$UnmodifiableSet&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+- locked &amp;lt;0x00000000f4475208&amp;gt; &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>a sun.nio.ch.EPollSelectorImpl&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+at sun.nio.ch.SelectorImpl.select&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>SelectorImpl.java:97&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+at org.apache.tomcat.util.net.NioEndpoint&lt;span style="color:#000">$Poller&lt;/span>.run&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>NioEndpoint.java:743&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+at java.lang.Thread.run&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>Thread.java:748&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+Locked ownable synchronizers:
+- None
+&lt;/code>&lt;/pre>&lt;/div>&lt;pre>&lt;code>jstack 可以用来定位死锁、死循环、线程阻塞等问题
+&lt;/code>&lt;/pre>&lt;h3 id="4-jstat命令">4. jstat命令&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-bash" data-lang="bash">&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>root@iZwz9jcjzd6wfh44nnnsv4Z ~&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&lt;span style="color:#8f5902;font-style:italic"># jstat -help&lt;/span>
+Usage: jstat -help&lt;span style="color:#000;font-weight:bold">|&lt;/span>-options
+jstat -&amp;lt;option&amp;gt; &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-t&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-h&amp;lt;lines&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &amp;lt;vmid&amp;gt; &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&amp;lt;interval&amp;gt; &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&amp;lt;count&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">]]&lt;/span>
+Definitions:
+&amp;lt;option&amp;gt; An option reported by the -options option
+&amp;lt;vmid&amp;gt; Virtual Machine Identifier. A vmid takes the following form:
+&amp;lt;lvmid&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>@&amp;lt;hostname&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>:&amp;lt;port&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">]]&lt;/span>
+Where &amp;lt;lvmid&amp;gt; is the &lt;span style="color:#204a87">local&lt;/span> vm identifier &lt;span style="color:#204a87;font-weight:bold">for&lt;/span> the target
+Java virtual machine, typically a process id&lt;span style="color:#000;font-weight:bold">;&lt;/span> &amp;lt;hostname&amp;gt; is
+the name of the host running the target Java virtual machine&lt;span style="color:#000;font-weight:bold">;&lt;/span>
+and &amp;lt;port&amp;gt; is the port number &lt;span style="color:#204a87;font-weight:bold">for&lt;/span> the rmiregistry on the
+target host. See the jvmstat documentation &lt;span style="color:#204a87;font-weight:bold">for&lt;/span> a more &lt;span style="color:#204a87">complete&lt;/span>
+description of the Virtual Machine Identifier.
+&amp;lt;lines&amp;gt; Number of samples between header lines.
+&amp;lt;interval&amp;gt; Sampling interval. The following forms are allowed:
+&amp;lt;n&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;ms&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">|&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;s&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>
+Where &amp;lt;n&amp;gt; is an integer and the suffix specifies the units as
+milliseconds&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;ms&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> or seconds&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;s&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>. The default units are &lt;span style="color:#4e9a06">&amp;#34;ms&amp;#34;&lt;/span>.
+&amp;lt;count&amp;gt; Number of samples to take before terminating.
+-J&amp;lt;flag&amp;gt; Pass &amp;lt;flag&amp;gt; directly to the runtime system.
+&lt;/code>&lt;/pre>&lt;/div>&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-bash" data-lang="bash">&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>root@iZwz9jcjzd6wfh44nnnsv4Z ~&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&lt;span style="color:#8f5902;font-style:italic"># jstat -options&lt;/span>
+-class
+-compiler
+-gc
+-gccapacity
+-gccause
+-gcmetacapacity
+-gcnew
+-gcnewcapacity
+-gcold
+-gcoldcapacity
+-gcutil
+-printcompilation
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>使用例子：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-bash" data-lang="bash">&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>root@iZwz9jcjzd6wfh44nnnsv4Z ~&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&lt;span style="color:#8f5902;font-style:italic"># jstat -gc 25057&lt;/span>
+S0C S1C S0U S1U EC EU OC OU MC MU CCSC CCSU YGC YGCT FGC FGCT GCT
+9216.0 9216.0 1248.1 0.0 121856.0 79308.8 40960.0 15612.7 18560.0 18067.8 2176.0 1998.5 &lt;span style="color:#0000cf;font-weight:bold">8&lt;/span> 0.089 &lt;span style="color:#0000cf;font-weight:bold">0&lt;/span> 0.000 0.089
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="5-jmap命令">5. jmap命令&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-bash" data-lang="bash">&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>root@iZwz9jcjzd6wfh44nnnsv4Z ~&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&lt;span style="color:#8f5902;font-style:italic"># jmap&lt;/span>
+Usage:
+jmap &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>option&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &amp;lt;pid&amp;gt;
+&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>to connect to running process&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+jmap &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>option&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &amp;lt;executable &amp;lt;core&amp;gt;
+&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>to connect to a core file&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+jmap &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>option&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>server_id@&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&amp;lt;remote server IP or hostname&amp;gt;
+&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>to connect to remote debug server&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+where &amp;lt;option&amp;gt; is one of:
+&amp;lt;none&amp;gt; to print same info as Solaris pmap
+-heap to print java heap summary
+-histo&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>:live&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> to print histogram of java object heap&lt;span style="color:#000;font-weight:bold">;&lt;/span> &lt;span style="color:#204a87;font-weight:bold">if&lt;/span> the &lt;span style="color:#4e9a06">&amp;#34;live&amp;#34;&lt;/span>
+suboption is specified, only count live objects
+-clstats to print class loader statistics
+-finalizerinfo to print information on objects awaiting finalization
+-dump:&amp;lt;dump-options&amp;gt; to dump java heap in hprof binary format
+dump-options:
+live dump only live objects&lt;span style="color:#000;font-weight:bold">;&lt;/span> &lt;span style="color:#204a87;font-weight:bold">if&lt;/span> not specified,
+all objects in the heap are dumped.
+&lt;span style="color:#000">format&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>b binary format
+&lt;span style="color:#000">file&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&amp;lt;file&amp;gt; dump heap to &amp;lt;file&amp;gt;
+Example: jmap -dump:live,format&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>b,file&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>heap.bin &amp;lt;pid&amp;gt;
+-F force. Use with -dump:&amp;lt;dump-options&amp;gt; &amp;lt;pid&amp;gt; or -histo
+to force a heap dump or histogram when &amp;lt;pid&amp;gt; does not
+respond. The &lt;span style="color:#4e9a06">&amp;#34;live&amp;#34;&lt;/span> suboption is not supported
+in this mode.
+-h &lt;span style="color:#000;font-weight:bold">|&lt;/span> -help to print this &lt;span style="color:#204a87">help&lt;/span> message
+-J&amp;lt;flag&amp;gt; to pass &amp;lt;flag&amp;gt; directly to the runtime system
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>看一下使用&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-bash" data-lang="bash">&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>root@iZwz9jcjzd6wfh44nnnsv4Z ~&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&lt;span style="color:#8f5902;font-style:italic"># jmap -heap 25057&lt;/span>
+Attaching to process ID 25057, please wait...
+Debugger attached successfully.
+Server compiler detected.
+JVM version is 25.131-b11
+using thread-local object allocation.
+Parallel GC with &lt;span style="color:#0000cf;font-weight:bold">2&lt;/span> thread&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>s&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+Heap Configuration:
+&lt;span style="color:#000">MinHeapFreeRatio&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">0&lt;/span>
+&lt;span style="color:#000">MaxHeapFreeRatio&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">100&lt;/span>
+&lt;span style="color:#000">MaxHeapSize&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">994050048&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>948.0MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">NewSize&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">20971520&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>20.0MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">MaxNewSize&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">331350016&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>316.0MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">OldSize&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">41943040&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>40.0MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">NewRatio&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">2&lt;/span>
+&lt;span style="color:#000">SurvivorRatio&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">8&lt;/span>
+&lt;span style="color:#000">MetaspaceSize&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">21807104&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>20.796875MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">CompressedClassSpaceSize&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">1073741824&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>1024.0MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">MaxMetaspaceSize&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">17592186044415&lt;/span> MB
+&lt;span style="color:#000">G1HeapRegionSize&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">0&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>0.0MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+Heap Usage:
+PS Young Generation
+Eden Space:
+&lt;span style="color:#000">capacity&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">124780544&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>119.0MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">used&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">84413336&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>80.5028305053711MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">free&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">40367208&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>38.497169494628906MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+67.64943739947151% used
+From Space:
+&lt;span style="color:#000">capacity&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">9437184&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>9.0MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">used&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">1278016&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>1.21881103515625MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">free&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">8159168&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>7.78118896484375MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+13.542344835069445% used
+To Space:
+&lt;span style="color:#000">capacity&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">9437184&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>9.0MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">used&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">0&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>0.0MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">free&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">9437184&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>9.0MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+0.0% used
+PS Old Generation
+&lt;span style="color:#000">capacity&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">41943040&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>40.0MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">used&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">15987400&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>15.246772766113281MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">free&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">25955640&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>24.75322723388672MB&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+38.1169319152832% used
+&lt;span style="color:#0000cf;font-weight:bold">12505&lt;/span> interned Strings occupying &lt;span style="color:#0000cf;font-weight:bold">1754736&lt;/span> bytes.
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="6-总结">6 总结&lt;/h3>
+&lt;p>上面是一些常用的命令用来查看JVM在运行过程中的一些状态和查询问题。除了使用Java自带的命令还可以借助一些工具，例如：&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://arthas.aliyun.com/doc/">阿里Arthas&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://visualvm.github.io/">visualvm&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://www.ej-technologies.com/products/jprofiler/overview.html">JProfiler&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;p>以上工具都能提供更好的分析，命令可以在简单问题排查提供便利不需要进行下载其他的工具。&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢！&lt;/p>
+&lt;/blockquote></description></item><item><title>Blog: Java程序中获取当前进程的进程ID(Pid)</title><link>/blog/java-se/javaissuecheck/java-application-get-pid/</link><pubDate>Sun, 02 Feb 2020 00:00:00 +0000</pubDate><guid>/blog/java-se/javaissuecheck/java-application-get-pid/</guid><description>
+&lt;h3 id="java如何获取pid">Java如何获取Pid&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">getPid&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">try&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">jvmName&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">ManagementFactory&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getRuntimeMXBean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">getName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">jvmName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">split&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;@&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)[&lt;/span>&lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">];&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">catch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Throwable&lt;/span> &lt;span style="color:#000">ex&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>上面的代码来着SpringBoot的ApplicationPid的代码。通过这段代码就可以获取到Pid&lt;/p></description></item><item><title>Blog: 查看线程的CPU使用</title><link>/blog/java-se/javaissuecheck/show-thread-use-cpu/</link><pubDate>Tue, 29 May 2018 00:00:00 +0000</pubDate><guid>/blog/java-se/javaissuecheck/show-thread-use-cpu/</guid><description>
+&lt;h4 id="1-查看java程序运行的进程号">1 查看Java程序运行的进程号&lt;/h4>
+&lt;pre>&lt;code>jps
+或者
+top 命令查看
+或者
+ps -ef | grep java
+&lt;/code>&lt;/pre>&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/JSE/%E7%BA%BF%E4%B8%8A%E6%9F%A5%E9%97%AE%E9%A2%98/jps%E5%91%BD%E4%BB%A4.jpg?raw=true" alt="图解">&lt;/p>
+&lt;h4 id="2-查看java进程下面的线程">2 查看Java进程下面的线程&lt;/h4>
+&lt;pre>&lt;code>top -p pid -H
+&lt;/code>&lt;/pre>&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/JSE/%E7%BA%BF%E4%B8%8A%E6%9F%A5%E9%97%AE%E9%A2%98/%E6%9F%A5%E7%9C%8BJava%E8%BF%9B%E7%A8%8B%E4%B8%8B%E7%9A%84%E7%BA%BF%E7%A8%8B.jpg?raw=true" alt="图">&lt;/p>
+&lt;h4 id="3-用jstack命令查询">3 用jstack命令查询&lt;/h4>
+&lt;pre>&lt;code>jstack pid | grep -A 10 线程的Id
+&lt;/code>&lt;/pre>&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/JSE/%E7%BA%BF%E4%B8%8A%E6%9F%A5%E9%97%AE%E9%A2%98/%E6%9F%A5%E7%9C%8Bjava%E7%BA%BF%E7%A8%8B%E7%9A%84%E6%83%85%E5%86%B5.jpg?raw=true" alt="图">&lt;/p>
+&lt;p>以上的截图都是基于阿里云的ESC服务器，和有些需要转换成16进制的有点不一样。大体的解决思路是一样的。分为三步：&lt;/p>
+&lt;ol>
+&lt;li>&lt;strong>获取需要关注的Java工程的运行PID&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>查看用&lt;code>top -p pid -H&lt;/code>Java线程下面进程的情况，主要关注CPU的使用率&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>用&lt;code>jstack pid | grep -A 10&lt;/code> 线程的Id 命令找到对应的在Java中的位置&lt;/strong>&lt;/li>
+&lt;/ol></description></item></channel></rss>

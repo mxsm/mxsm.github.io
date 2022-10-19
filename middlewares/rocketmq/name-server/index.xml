@@ -1,0 +1,525 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – RocketMQ Name Server</title><link>/middlewares/rocketmq/name-server/</link><description>Recent content in RocketMQ Name Server on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Mon, 10 May 2021 00:00:00 +0000</lastBuildDate><atom:link href="/middlewares/rocketmq/name-server/index.xml" rel="self" type="application/rss+xml"/><item><title>Middlewares: NameServer</title><link>/middlewares/rocketmq/name-server/nameserver/</link><pubDate>Sat, 07 Dec 2019 00:00:00 +0000</pubDate><guid>/middlewares/rocketmq/name-server/nameserver/</guid><description>
+&lt;h3 id="1-什么是nameserver">1. 什么是NameServer?&lt;/h3>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/MQ/RocketMQ/RocketMQ%E7%89%A9%E7%90%86%E9%83%A8%E7%BD%B2%E5%9B%BE.jpg?raw=true" alt="图解">&lt;/p>
+&lt;p>&lt;strong>&lt;code>NameServer&lt;/code>&lt;/strong> 就是一个保存Broker状态的一个服务和Broker管理。&lt;/p>
+&lt;p>&lt;strong>NameServer 的特点：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>NameServer 和 每一台Broker 服务器保持长连接，并间隔30s检测一次Broker是否存活。&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>检测到 Broker右机 ， 则从路由注册表中将其移除 。 但是路由变化不会马上通知消息生产者。— 降低 NameServer实现的复杂性，在消息发送端提供容错机制来保证消息发送的高可用性&lt;/strong>。&lt;/li>
+&lt;li>&lt;strong>NameServer本身的高可用可通过部 署多台 NameServerr服务器来实现，但彼此之间互不通信，也就是 NameServer服务器之间在某一时刻的数据并不会完全相同&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>作用&lt;/strong>：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>消息生产者 和 消息消费者提供关 于主题 Topic 的路由信息&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>NameServer存储路由 的基础信息&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>管理 Broker节点，包括路由 注册、路由删除等功能&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;h3 id="2-nameserver-路由注册故障剔除">2. NameServer 路由注册、故障剔除&lt;/h3>
+&lt;h4 id="21-nameserver-存储了哪些信息">2.1 NameServer 存储了哪些信息&lt;/h4>
+&lt;ul>
+&lt;li>Topic 消息队列路由信息。消息发送时根据路由表进行负 载均衡。&lt;/li>
+&lt;li>Broker 基础信息， 包含 brokerName、 所属集群名称 、 主备 Broker 地址&lt;/li>
+&lt;li>Broker 集群信息，存储集群中所有 Broker 名称&lt;/li>
+&lt;li>Broker 状态信息 。NameServer 每次收到心跳包时会替换该信息&lt;/li>
+&lt;li>Broker上的 FilterServer列表，用于类模式消息过滤&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>RocketMQ 基于订阅发布机制 ， 一个Topic拥有多个消息队列 ，一个Broker为每一主题默认创建 4 个读队列 4 个写队列。多个Broker组成一个集群， BrokerName由相同的多台Broker组成Master-Slave架构。brokerId 为0代表 Master， 大于0表示Slave。 BrokerLivelnfo中的lastUpdateTimestamp 存储上次收到 Broker 心跳包的时间&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="22-路由注册">2.2 路由注册&lt;/h4>
+&lt;p>路由注册的步骤：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Broker发送心跳包&lt;/strong>
+&lt;ul>
+&lt;li>Header
+&lt;ul>
+&lt;li>Broker地址&lt;/li>
+&lt;li>BrokerId, 0:Master; 大于0:slave&lt;/li>
+&lt;li>Broker名称&lt;/li>
+&lt;li>集群名称&lt;/li>
+&lt;li>master地址，初次请求时为空，slave向NameServer注册后返回&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>Body
+&lt;ul>
+&lt;li>消息过滤服务器列表&lt;/li>
+&lt;li>主题的配置&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;strong>NameServer 心跳包处理&lt;/strong>
+&lt;ul>
+&lt;li>路由 注册需要加写锁 ，防止并发修改 RoutelnfoManager 中的路由 表 。Broker 所属 集群是否存在， 如果不存在，则创 建，然 后将 broker 名加入到集群Broker集合中&lt;/li>
+&lt;li>维护 BrokerData信息。&lt;/li>
+&lt;li>如果Broker为Master，并且BrokerTopic配置信息发生变化或者是初次注册，则需要创建或更新 Topic路由元数据，填充 topicQueueTable， 其实就是为默认主题自动注册路由信息，其中包含 MixAII.DEFAULT TOPIC 的路由信息。 当消息生产者发送主题时，如果该主题未创建并且BrokerConfig 的autoCreateTopicEnable为true时， 将返回MixAII.DEFAULT TOPIC的路由信息。&lt;/li>
+&lt;li>更新 BrokerLivelnfo，存活 Broker信息表， BrokeLivelnfo是执行路由删除的重要依据&lt;/li>
+&lt;li>注册 Broker 的过滤器 Server地址列表 ，一个 Broker上会关联多个 FilterServer消息过滤服务器&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>NameServer和Broker保持长连接，Broker状态存储在brokerLiveTable中，NameServer收到每一个心跳包将更新brokerLiveTable中关于Broker的状态信息以及路由表(topicQueueTable、brokerAddrTable、
+brokerLiveTable、filterServerTable)&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="23-路由删除">2.3 路由删除&lt;/h4>
+&lt;p>对于Broker来说每隔30秒想NameServer发送一个心跳包来维持Broker在NameServer中的状态。&lt;/p>
+&lt;p>对于NameServer来说会每隔10秒扫描一次brokerLiveTable状态表，如果发现Broker的lastUpdateTimestamp的时间戳距当前超过120S，这样认为Broker已经失效，移除Broker,关闭与Broker的连接。同时更新对应的信息。&lt;/p>
+&lt;p>&lt;strong>触发路由删除：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>NameServer定时扫描 brokerLiveTable检测上次心跳包与 当前系统时间的时间差如果时间戳大于 120s，则需要移除该 Broker 信息 。&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>Broker在正常被关闭的情况下，会执行 unregisterBroker指令。&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;h4 id="24-路由发现">2.4 路由发现&lt;/h4>
+&lt;p>RocketMQ 路由发现是非实时的，NameServer不会主动推送给客户端。而是由客户端定时拉去主题最新的路由。&lt;/p>
+&lt;h3 id="3-总结">3. 总结&lt;/h3>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/MQ/RocketMQ/NameServer%E8%B7%AF%E7%94%B1%E6%B3%A8%E5%86%8C%E5%88%A0%E9%99%A4%E5%8F%91%E7%8E%B0%E6%9C%BA%E5%88%B6.jpg?raw=true" alt="图解">&lt;/p>
+&lt;p>NameServer路由发现与删除机制就介绍到这里了，我们会发现这种设计会存在这样一种情况: NameServer需要等 Broker失效至少 120s才能将该 Broker从路由表中移除掉，那如果在 Broker故障期间，消息生产者 Producer根据主题获取到的路由信息包含已经看机的Broker，会导致消息发送失败，那这种情况 怎么办。&lt;/p></description></item><item><title>Middlewares: RocketMQ源码解析-NameServer启动</title><link>/middlewares/rocketmq/name-server/rocketmq-analysis-nameserver-start/</link><pubDate>Wed, 11 Mar 2020 00:00:00 +0000</pubDate><guid>/middlewares/rocketmq/name-server/rocketmq-analysis-nameserver-start/</guid><description>
+&lt;blockquote>
+&lt;p>以下源码基于Rocket MQ 4.7.0&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="1-nameserver">1. NameServer&lt;/h3>
+&lt;p>NameServer是一个非常简单的Topic路由注册中心，其角色类似Dubbo中的zookeeper，支持Broker的动态注册与发现。主要包括两个功能：&lt;/p>
+&lt;ul>
+&lt;li>Broker管理，NameServer接受Broker集群的注册信息并且保存下来作为路由信息的基本数据。然后提供心跳检测机制，检查Broker是否还存活(代码中通过定时扫描BrokerLiveInfo的信息来管理)；&lt;/li>
+&lt;li>路由信息管理，每个NameServer将保存关于Broker集群的整个路由信息和用于客户端查询的队列信息。然后Producer和Conumser通过NameServer就可以知道整个Broker集群的路由信息，从而进行消息的投递和消费。&lt;/li>
+&lt;/ul>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/MQ/RocketMQ/NameServer%E7%9A%84%E5%8A%9F%E8%83%BD.png?raw=true" alt="">&lt;/p>
+&lt;p>NameServer通常也是集群的方式部署，各实例间相互不进行信息通讯。Broker是向每一台NameServer注册自己的路由信息，所以每一个NameServer实例上面都保存一份完整的路由信息。当某个NameServer因某种原因下线了，Broker仍然可以向其它NameServer同步其路由信息，Producer,Consumer仍然可以动态感知Broker的路由的信息。&lt;/p>
+&lt;blockquote>
+&lt;p>NameServer各个实例之间互不通讯&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="2-源码分析">2. 源码分析&lt;/h3>
+&lt;h4 id="21-remoting通信类结构">2.1 Remoting通信类结构&lt;/h4>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/MQ/RocketMQ/RemotingService.png?raw=true" alt="">&lt;/p>
+&lt;h4 id="22-nameserver-启动">2.2 NameServer 启动&lt;/h4>
+&lt;p>&lt;strong>org.apache.rocketmq.namesrv.NamesrvStartup&lt;/strong> 是NameServer的启动类&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java"> &lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">main&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">main0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#000">NamesrvController&lt;/span> &lt;span style="color:#000">main0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">try&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">NamesrvController&lt;/span> &lt;span style="color:#000">controller&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">createNamesrvController&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">start&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">controller&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">tip&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;The Name Server boot success. serializeType=&amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">RemotingCommand&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getSerializeTypeConfigInThisServer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">log&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">info&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">tip&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">printf&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;%s%n&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">tip&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">controller&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">catch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Throwable&lt;/span> &lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">printStackTrace&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">exit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(-&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>通过 &lt;strong>&lt;code>createNamesrvController&lt;/code>&lt;/strong> 创建 &lt;strong>&lt;code>NamesrvController&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/MQ/RocketMQ/createNamesrvController.png?raw=true" alt="">&lt;/p>
+&lt;p>NameServer 启动时首先判断是否传入了命令行参数。从代码可以看到有两个参数：&lt;/p>
+&lt;ul>
+&lt;li>-c可以指定 NameServer 的配置文件，如果不指定，则使用默认值&lt;/li>
+&lt;li>-p 打印 NameServer 的配置参数信息。打印完参数后退出进程&lt;/li>
+&lt;/ul>
+&lt;p>下面就是打印的配置参数&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">22:06:51.794 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">rocketmqHome&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>D:&lt;span style="color:#4e9a06">\d&lt;/span>ev&lt;span style="color:#4e9a06">\g&lt;/span>itproject&lt;span style="color:#4e9a06">\r&lt;/span>ocketmq&lt;span style="color:#4e9a06">\d&lt;/span>istribution
+22:06:51.857 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">kvConfigPath&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>C:&lt;span style="color:#4e9a06">\U&lt;/span>sers&lt;span style="color:#4e9a06">\m&lt;/span>xsm&lt;span style="color:#4e9a06">\n&lt;/span>amesrv&lt;span style="color:#4e9a06">\k&lt;/span>vConfig.json
+22:06:51.858 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">configStorePath&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>C:&lt;span style="color:#4e9a06">\U&lt;/span>sers&lt;span style="color:#4e9a06">\m&lt;/span>xsm&lt;span style="color:#4e9a06">\n&lt;/span>amesrv&lt;span style="color:#4e9a06">\n&lt;/span>amesrv.properties
+22:06:51.858 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">productEnvName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>center
+22:06:51.859 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">clusterTest&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#204a87">false&lt;/span>
+22:06:51.859 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">orderMessageEnable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#204a87">false&lt;/span>
+22:06:51.860 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">listenPort&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">9876&lt;/span>
+22:06:51.862 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">serverWorkerThreads&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">8&lt;/span>
+22:06:51.864 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">serverCallbackExecutorThreads&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">0&lt;/span>
+22:06:51.864 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">serverSelectorThreads&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">3&lt;/span>
+22:06:51.864 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">serverOnewaySemaphoreValue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">256&lt;/span>
+22:06:51.865 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">serverAsyncSemaphoreValue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">64&lt;/span>
+22:06:51.865 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">serverChannelMaxIdleTimeSeconds&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">120&lt;/span>
+22:06:51.865 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">serverSocketSndBufSize&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">65535&lt;/span>
+22:06:51.865 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">serverSocketRcvBufSize&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">65535&lt;/span>
+22:06:51.865 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">serverPooledByteBufAllocatorEnable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#204a87">true&lt;/span>
+22:06:51.865 &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>main&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> INFO RocketmqNamesrvConsole - &lt;span style="color:#000">useEpollNativeSelector&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#204a87">false&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>下面的代码就是在 &lt;strong>&lt;code>createNamesrvController&lt;/code>&lt;/strong> 中创建 &lt;strong>&lt;code>NamesrvController&lt;/code>&lt;/strong>&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">NamesrvController&lt;/span> &lt;span style="color:#000">controller&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">NamesrvController&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">namesrvConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">nettyServerConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">// remember all configs to prevent discard
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>&lt;span style="color:#000">controller&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getConfiguration&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">registerConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">properties&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="23-namesrvcontroller初始化">2.3 NamesrvController初始化&lt;/h4>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/MQ/RocketMQ/NamesrvControllerStart.png?raw=true" alt="">&lt;/p>
+&lt;p>&lt;strong>&lt;code>NamesrvStartup.start&lt;/code>&lt;/strong> 主要初始化NamesrvController和启动&lt;/p>
+&lt;ol>
+&lt;li>调用NamesrvController.initialize方法初始化&lt;/li>
+&lt;li>调用NamesrvController.start方法启动&lt;/li>
+&lt;/ol>
+&lt;blockquote>
+&lt;p>在上图的代码中可以看到还注册了Hook，如果使用kill -9 的方式杀死进程就不会执行Hook中的代码&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="24-namesrvcontrollerinitialize">2.4 NamesrvController.initialize&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java"> &lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">initialize&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//从${user.home}/namesrv/kvConfig.json加载配置NameServer的配置
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">kvConfigManager&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">load&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//1
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//创建Netty Server
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">remotingServer&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">NettyRemotingServer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">nettyServerConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">brokerHousekeepingService&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//2
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//创建一个固定线程池
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">remotingExecutor&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>
+&lt;span style="color:#000">Executors&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">newFixedThreadPool&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">nettyServerConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getServerWorkerThreads&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(),&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">ThreadFactoryImpl&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;RemotingExecutorThread_&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">));&lt;/span>&lt;span style="color:#8f5902;font-style:italic">//3
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">////注册NameServer服务接受请求的处理类
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">registerProcessor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//4
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//定时清理失效的Broker
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">scheduledExecutorService&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">scheduleAtFixedRate&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Runnable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">NamesrvController&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">routeInfoManager&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">scanNotActiveBroker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">},&lt;/span> &lt;span style="color:#000">5&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">10&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">TimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">SECONDS&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//5
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//定时打印NameServer配置
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">scheduledExecutorService&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">scheduleAtFixedRate&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Runnable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">NamesrvController&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">kvConfigManager&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">printAllPeriodically&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">},&lt;/span> &lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">10&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">TimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">MINUTES&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//6
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//7
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">TlsSystemConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">tlsMode&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">!=&lt;/span> &lt;span style="color:#000">TlsMode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">DISABLED&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//................
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;ol>
+&lt;li>
+&lt;p>从${user.home}/namesrv/kvConfig.json加载配置NameServer的配置&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>创建NettyServer来提供服务&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>创建NettyServer执行使用的线程池&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>给NettyServer注入请求处理器&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>创建一个定时清理超时的 Broker 定时任务&lt;/p>
+&lt;p>每十秒钟扫描一下Broker的窗台，删除2分钟没有更新状态的Broker,关闭对应的Netty的Channel&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java"> &lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">scanNotActiveBroker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Iterator&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">Entry&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">BrokerLiveInfo&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&amp;gt;&lt;/span> &lt;span style="color:#000">it&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">brokerLiveTable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">entrySet&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">iterator&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">while&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">it&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">hasNext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">())&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Entry&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">BrokerLiveInfo&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">next&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">it&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">last&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getValue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">getLastUpdateTimestamp&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">((&lt;/span>&lt;span style="color:#000">last&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">BROKER_CHANNEL_EXPIRED_TIME&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span> &lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">currentTimeMillis&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">())&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//关闭Channel
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">RemotingUtil&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">closeChannel&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getValue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">getChannel&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#000">it&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">remove&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">log&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">warn&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;The broker channel expired, {} {}ms&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getKey&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(),&lt;/span> &lt;span style="color:#000">BROKER_CHANNEL_EXPIRED_TIME&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">onChannelDestroy&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getKey&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(),&lt;/span> &lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getValue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">getChannel&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;/li>
+&lt;li>
+&lt;p>创建一个打印 NameServer 配置的定时任务&lt;/p>
+&lt;p>每隔10分钟打印一次NameServer的配置参数。即KVConfigManager.configTable变量的内容。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>SSL的启用&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;h4 id="25-namesrvcontrollerregisterprocessor">2.5 NamesrvController.registerProcessor&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#8f5902;font-style:italic">//注册接收请求的类
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">registerProcessor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">namesrvConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">isClusterTest&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">())&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">remotingServer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">registerDefaultProcessor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">ClusterTestRequestProcessor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">namesrvConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getProductEnvName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()),&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">remotingExecutor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">else&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">remotingServer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">registerDefaultProcessor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">DefaultRequestProcessor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">),&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">remotingExecutor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>默认注入的请求类 &lt;strong>&lt;code>DefaultRequestProcessor&lt;/code>&lt;/strong> 。&lt;/p>
+&lt;h4 id="26-defaultrequestprocessor">2.6 DefaultRequestProcessor&lt;/h4>
+&lt;p>通过 &lt;strong>&lt;code>DefaultRequestProcessor.processRequest&lt;/code>&lt;/strong> 方法来处理客户端的请求。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">RemotingCommand&lt;/span> &lt;span style="color:#000">processRequest&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ChannelHandlerContext&lt;/span> &lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>
+&lt;span style="color:#000">RemotingCommand&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">RemotingCommandException&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//打印请求的信息
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">!=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">log&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">debug&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;receive request, {} {} {}&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>
+&lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(),&lt;/span>
+&lt;span style="color:#000">RemotingHelper&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">parseChannelRemoteAddr&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">channel&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()),&lt;/span>
+&lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">switch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">())&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">PUT_KV_CONFIG&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">putKVConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">GET_KV_CONFIG&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getKVConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">DELETE_KV_CONFIG&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">deleteKVConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">QUERY_DATA_VERSION&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">queryBrokerTopicConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">REGISTER_BROKER&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#000">Version&lt;/span> &lt;span style="color:#000">brokerVersion&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">MQVersion&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">value2Version&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getVersion&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">brokerVersion&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">ordinal&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;=&lt;/span> &lt;span style="color:#000">MQVersion&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">Version&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">V3_0_11&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">ordinal&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">())&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">registerBrokerWithFilterServer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">else&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">registerBroker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">UNREGISTER_BROKER&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">unregisterBroker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">GET_ROUTEINTO_BY_TOPIC&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getRouteInfoByTopic&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">GET_BROKER_CLUSTER_INFO&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getBrokerClusterInfo&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">WIPE_WRITE_PERM_OF_BROKER&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">wipeWritePermOfBroker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">GET_ALL_TOPIC_LIST_FROM_NAMESERVER&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">getAllTopicListFromNameserver&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">DELETE_TOPIC_IN_NAMESRV&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">deleteTopicInNamesrv&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">GET_KVLIST_BY_NAMESPACE&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getKVListByNamespace&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">GET_TOPICS_BY_CLUSTER&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getTopicsByCluster&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">GET_SYSTEM_TOPIC_LIST_FROM_NS&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getSystemTopicListFromNs&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">GET_UNIT_TOPIC_LIST&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getUnitTopicList&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">GET_HAS_UNIT_SUB_TOPIC_LIST&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getHasUnitSubTopicList&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">GET_HAS_UNIT_SUB_UNUNIT_TOPIC_LIST&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getHasUnitSubUnUnitTopicList&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">UPDATE_NAMESRV_CONFIG&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">updateConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">case&lt;/span> &lt;span style="color:#000">RequestCode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">GET_NAMESRV_CONFIG&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">default&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">break&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>所有的请求类型定义在 &lt;strong>RequestCode&lt;/strong> 中：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>RequestCode&lt;/th>
+&lt;th>说明&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>PUT_KV_CONFIG&lt;/td>
+&lt;td>向Namesrv追加KV配置&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>GET_KV_CONFIG&lt;/td>
+&lt;td>从Namesrv获取KV配置&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>DELETE_KV_CONFIG&lt;/td>
+&lt;td>从Namesrv获取KV配置&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>QUERY_DATA_VERSION&lt;/td>
+&lt;td>获取版本信息&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>REGISTER_BROKER&lt;/td>
+&lt;td>注册一个Broker，数据都是持久化的，如果存在则覆盖配置&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>UNREGISTER_BROKER&lt;/td>
+&lt;td>卸载一个Broker，数据都是持久化的&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>GET_ROUTEINTO_BY_TOPIC&lt;/td>
+&lt;td>根据Topic获取Broker Name、topic配置信息&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>GET_BROKER_CLUSTER_INFO&lt;/td>
+&lt;td>获取注册到Name Server的所有Broker集群信息-客户端获取&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>WIPE_WRITE_PERM_OF_BROKER&lt;/td>
+&lt;td>去掉BrokerName的写权限&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>GET_ALL_TOPIC_LIST_FROM_NAMESERVER&lt;/td>
+&lt;td>从Name Server获取完整Topic列表&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>DELETE_TOPIC_IN_NAMESRV&lt;/td>
+&lt;td>从Namesrv删除Topic配置&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>GET_KVLIST_BY_NAMESPACE&lt;/td>
+&lt;td>通过NameSpace获取所有的KV List&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>GET_TOPICS_BY_CLUSTER&lt;/td>
+&lt;td>获取指定集群下的所有 topic&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>GET_SYSTEM_TOPIC_LIST_FROM_NS&lt;/td>
+&lt;td>获取所有系统内置 Topic 列表&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>GET_UNIT_TOPIC_LIST&lt;/td>
+&lt;td>单元化相关 topic&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>GET_HAS_UNIT_SUB_TOPIC_LIST&lt;/td>
+&lt;td>获取含有单元化订阅组的 Topic 列表&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>GET_HAS_UNIT_SUB_UNUNIT_TOPIC_LIST&lt;/td>
+&lt;td>获取含有单元化订阅组的非单元化&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>UPDATE_NAMESRV_CONFIG&lt;/td>
+&lt;td>更新Name Server配置&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>GET_NAMESRV_CONFIG&lt;/td>
+&lt;td>获取Name Server配置&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/MQ/RocketMQ/RequestCode.png?raw=true" alt="">&lt;/p>
+&lt;blockquote>
+&lt;p>以上RequestCode分为两类：&lt;/p>
+&lt;ol>
+&lt;li>路由信息&lt;/li>
+&lt;li>NameServer的配置&lt;/li>
+&lt;/ol>
+&lt;/blockquote>
+&lt;h4 id="27-routeinfomanager">2.7 RouteInfoManager&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">RouteInfoManager&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">InternalLogger&lt;/span> &lt;span style="color:#000">log&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">InternalLoggerFactory&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getLogger&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">LoggerName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">NAMESRV_LOGGER_NAME&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">BROKER_CHANNEL_EXPIRED_TIME&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">1000&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">*&lt;/span> &lt;span style="color:#000">60&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">*&lt;/span> &lt;span style="color:#000">2&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">ReadWriteLock&lt;/span> &lt;span style="color:#000">lock&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">ReentrantReadWriteLock&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">HashMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/* topic */&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">List&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">QueueData&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&amp;gt;&lt;/span> &lt;span style="color:#000">topicQueueTable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">HashMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/* brokerName */&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">BrokerData&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">brokerAddrTable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">HashMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/* clusterName */&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">Set&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/* brokerName */&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&amp;gt;&lt;/span> &lt;span style="color:#000">clusterAddrTable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">HashMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/* brokerAddr */&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">BrokerLiveInfo&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">brokerLiveTable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">HashMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/* brokerAddr */&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">List&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/* Filter Server */&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">filterServerTable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h5 id="topicqueuetable">topicQueueTable&lt;/h5>
+&lt;p>key：存储的是topic, value:QueueData的列表。QueueData 的集合 size 等于 Topic 对应的 Broker Master 的个数。下面来看一下QueueData数据结构：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">QueueData&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">Comparable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">QueueData&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">brokerName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//broker 名字
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">readQueueNums&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//可读 queue 数
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">writeQueueNums&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//可写 queue 数
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">perm&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//读写权限
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">topicSynFlag&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//同步标识
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//............
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h5 id="brokeraddrtable">brokerAddrTable&lt;/h5>
+&lt;p>key：broker的名称&lt;/p>
+&lt;p>value: broker的相关信息&lt;/p>
+&lt;p>下面来看一下BrokerData数据结构：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">BrokerData&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">Comparable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">BrokerData&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">cluster&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//集群名称
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">brokerName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//broker名称
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//brokerId和broker的地址
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">HashMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">Long&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/* brokerId */&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">String&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/* broker address */&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">brokerAddrs&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//............
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h5 id="clusteraddrtable">clusterAddrTable&lt;/h5>
+&lt;p>key存储的是 clusterName 的名称， value 存储的是 brokerName 的集合&lt;/p>
+&lt;h5 id="brokerlivetable">brokerLiveTable&lt;/h5>
+&lt;p>key 存储的是 brokerAddr(IP:port) 信息，value 存储的是 BrokerLiveInfo 信息，BrokerLiveInfo 中存储了 Broker 的实时状态。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">BrokerLiveInfo&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">lastUpdateTimestamp&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//最新更新时间
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">DataVersion&lt;/span> &lt;span style="color:#000">dataVersion&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//数据版本
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">Channel&lt;/span> &lt;span style="color:#000">channel&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">haServerAddr&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>NamesrvController.initialize() 中有一个schedule定时任务，每个10秒钟定时调用 scanNotActiveBroker() 方法进行扫描不活动的 Broker，并把不活动的 Broker 删除掉，就是判断的 这个 lastUpdateTimestamp 这个数据。如果超过两分钟没有更新lastUpdateTimestamp这个值。就认为当前这个Broker不可用。&lt;/p>
+&lt;h5 id="filterservertable">filterServerTable&lt;/h5>
+&lt;p>key 存储的是 brokerAddr 信息，value 存储的是 Filter Server 信息。Filter Server 是消息的过滤服务器，一个 Broker 可以对应多个 Filter Server。&lt;/p>
+&lt;h4 id="28-namesrvcontrollerstart">2.8 NamesrvController.start&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java"> &lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">start&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">Exception&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//启动监听服务
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">remotingServer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">start&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">fileWatchService&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">!=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">fileWatchService&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">start&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="3-总结">3. 总结&lt;/h3>
+&lt;p>通过分析启动流程图如下：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/MQ/RocketMQ/NameServerStartProcess.png?raw=true" alt="">&lt;/p></description></item><item><title>Middlewares: RocketMQ源码解析-NameServer对Broker的管理</title><link>/middlewares/rocketmq/name-server/rocketmq-analysis-broker-manage/</link><pubDate>Wed, 12 May 2021 00:00:00 +0000</pubDate><guid>/middlewares/rocketmq/name-server/rocketmq-analysis-broker-manage/</guid><description>
+&lt;blockquote>
+&lt;p>以下源码基于Rocket MQ 4.8.0&lt;/p>
+&lt;/blockquote>
+&lt;p>前面的 &lt;a href="https://blog.ljbmxsm.com/middlewares/rocketmq/name-server/rocketmq-analysis-nameserver-start/">RocketMQ源码解析-NameServer启动&lt;/a>已经知道NameServer的两大功能：&lt;/p>
+&lt;ul>
+&lt;li>Broker管理&lt;/li>
+&lt;li>路由管理&lt;/li>
+&lt;/ul>
+&lt;p>NameServer可以部署多个，相互之间独立，其他角色同时向多个NameServer上报状态信息，从而达到热备份的目的。NameServer本身是无状态的，也就是说NameServer中的Broker、Topic等信息都不会持久化，都是由各个角色定时上报并存储到内存中的（NameServer支持参数的持久化，一般用不到）。&lt;/p>
+&lt;p>下面就来结合源码以及项目运行添加打印日志来具体分析一下NameServer是如何对Broker进行管理的。&lt;/p>
+&lt;h3 id="1-broker元数据">1. Broker元数据&lt;/h3>
+&lt;p>当Broker启动，会向NameServer注册当前broker的信息。在NameServer通过 &lt;strong>&lt;code>BrokerData&lt;/code>&lt;/strong> 来保存Broker的元数据信息：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">BrokerData&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">Comparable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">BrokerData&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">cluster&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//broker集群名称
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">brokerName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//broker名称
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">HashMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">Long&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/* brokerId */&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">String&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/* broker address */&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">brokerAddrs&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//broker Id和broker地址的映射关系
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>我们通过打印日志来看一下这个里面的数据具体包含了那些数据，日志添加在 &lt;strong>&lt;code>RouteInfoManager#registerBroker&lt;/code>&lt;/strong> 方法中：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/rocketmq/nameserverborker%E5%85%83%E6%95%B0%E6%8D%AE%E6%B7%BB%E5%8A%A0%E6%97%A5%E5%BF%97.png?raw=true" alt="">&lt;/p>
+&lt;p>添加好后我们配置好broker的配置文件：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/rocketmq/brokerconfig%E9%85%8D%E7%BD%AE.png?raw=true" alt="">&lt;/p>
+&lt;p>然后首先启动NameServer，再启动broker如下图：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/rocketmq/brokerdata%E5%85%83%E6%95%B0%E6%8D%AE%E6%89%93%E5%8D%B0%E9%AA%8C%E8%AF%81.gif?raw=true" alt="">&lt;/p>
+&lt;p>打印的元数据如下：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">打印BrokerData元数据信息:&lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;brokerAddrs&amp;#34;&lt;/span>:&lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>0:&lt;span style="color:#4e9a06">&amp;#34;169.254.144.194:10911&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>,&lt;span style="color:#4e9a06">&amp;#34;brokerName&amp;#34;&lt;/span>:&lt;span style="color:#4e9a06">&amp;#34;mxsm-1&amp;#34;&lt;/span>,&lt;span style="color:#4e9a06">&amp;#34;cluster&amp;#34;&lt;/span>:&lt;span style="color:#4e9a06">&amp;#34;MxsmClusterName&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="2-broker存活状态管理">2. Broker存活状态管理&lt;/h3>
+&lt;p>Broker的存活状态管理分为两种：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>Broker正常下线&lt;/strong>&lt;/p>
+&lt;p>Broker正常下线会给NameServer发送一个 &lt;strong>&lt;code>RequestCode.UNREGISTER_BROKER&lt;/code>&lt;/strong> 。然后调用最终调用 &lt;strong>&lt;code>RouteInfoManager#unregisterBroker&lt;/code>&lt;/strong> 方法来注销&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>Broker异常下线，NameServer通过定时任务扫描&lt;/strong>&lt;/p>
+&lt;p>定时任务在NameServer启动的时候创建&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">scheduledExecutorService&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">scheduleAtFixedRate&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Runnable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">NamesrvController&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">routeInfoManager&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">scanNotActiveBroker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">},&lt;/span> &lt;span style="color:#000">5&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">10&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">TimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">SECONDS&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>每10秒执行一次。调用 &lt;strong>&lt;code>RouteInfoManager#scanNotActiveBroker&lt;/code>&lt;/strong>&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">scanNotActiveBroker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Iterator&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">Entry&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">BrokerLiveInfo&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&amp;gt;&lt;/span> &lt;span style="color:#000">it&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">brokerLiveTable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">entrySet&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">iterator&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">while&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">it&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">hasNext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">())&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Entry&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">BrokerLiveInfo&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">next&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">it&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">last&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getValue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">getLastUpdateTimestamp&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//private final static long BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">((&lt;/span>&lt;span style="color:#000">last&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">BROKER_CHANNEL_EXPIRED_TIME&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span> &lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">currentTimeMillis&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">())&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">RemotingUtil&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">closeChannel&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getValue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">getChannel&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#000">it&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">remove&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">log&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">warn&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;The broker channel expired, {} {}ms&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getKey&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(),&lt;/span> &lt;span style="color:#000">BROKER_CHANNEL_EXPIRED_TIME&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">onChannelDestroy&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getKey&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(),&lt;/span> &lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getValue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">getChannel&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>通过上面的代码可以发现120秒没有更新NameServer中当Broker的状态。后将连接关闭，同时需要清除这些已关闭连接的 broker 的路由信息。这部分则是在&lt;code>onChannelDestroy&lt;/code>方法中&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="3-topic的信息">3. Topic的信息&lt;/h3>
+&lt;p>在 &lt;strong>&lt;code>RouteInfoManager&lt;/code>&lt;/strong> 类中有一个变量 &lt;strong>&lt;code>topicQueueTable&lt;/code>&lt;/strong> 这个变量用来保存Topic和Broker之间的读写队列数和权限。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">HashMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/* topic */&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">List&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">QueueData&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&amp;gt;&lt;/span> &lt;span style="color:#000">topicQueueTable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">QueueData&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">Comparable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">QueueData&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//broker名称
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">brokerName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//读的队列数
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">readQueueNums&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//写的队列数
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">writeQueueNums&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//读写权限
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">perm&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">topicSynFlag&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div></description></item></channel></rss>

@@ -1,0 +1,51 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – 单点登录</title><link>/other/sso/</link><description>Recent content in 单点登录 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/sso/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: CAS Docker部署</title><link>/other/sso/cas-docker-deploye/</link><pubDate>Wed, 02 Feb 2022 00:00:00 +0000</pubDate><guid>/other/sso/cas-docker-deploye/</guid><description>
+&lt;blockquote>
+&lt;p>CAS版本：6.4.5&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="1-cas-docker镜像拉取">1. CAS Docker镜像拉取&lt;/h3>
+&lt;p>Docker进行拉取有两种方式：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>直接用命令拉取&lt;/strong>&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">docker pull apereo/cas:6.4.5
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/sso/image-20220202175512114.png" alt="image-20220202175512114">&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>通过Dockerfile构建&lt;/strong>&lt;/p>
+&lt;ol>
+&lt;li>
+&lt;p>拉取&lt;strong>cas-webapp-docker&lt;/strong> 项目&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell"> git clone https://github.com/apereo/cas-webapp-docker.git
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/sso/image-20220202181238894.png" alt="image-20220202181238894">&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>本地构建镜像&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">&lt;span style="color:#204a87">cd&lt;/span> cas-webapp-docker
+docker build --build-arg &lt;span style="color:#000">cas_version&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>6.4 . -t cas/local:6.4
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/sso/image-20220202185138205.png" alt="image-20220202185138205">&lt;/p>
+&lt;p>或者直接调用&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">./build.sh 6.4
+&lt;/code>&lt;/pre>&lt;/div>&lt;/li>
+&lt;/ol>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="2-ssl配置">2. SSL配置&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">keytool -genkeypair -alias cas -keyalg RSA -keypass changeit &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> -storepass changeit -keystore ./thekeystore &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> -dname &lt;span style="color:#4e9a06">&amp;#34;CN=cas.ljbmxsm.com,OU=ljbmxsm,OU=com,C=AU&amp;#34;&lt;/span> &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> -ext &lt;span style="color:#000">SAN&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;dns:cas.ljbmxsm.com,dns:localhost,ip:127.0.0.1&amp;#34;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="3-运行cas">3. 运行CAS&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#000">docker&lt;/span> &lt;span style="color:#000">run&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span>&lt;span style="color:#000">d&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span>&lt;span style="color:#000">p&lt;/span> &lt;span style="color:#000">8080&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>&lt;span style="color:#000">8080&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span>&lt;span style="color:#000">p&lt;/span> &lt;span style="color:#000">8443&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>&lt;span style="color:#000">8443&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">--&lt;/span>&lt;span style="color:#000">name&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;cas&amp;#34;&lt;/span> &lt;span style="color:#000">apereo&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">/&lt;/span>&lt;span style="color:#000">cas&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span>&lt;span style="color:#000">v6&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">4&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>由于没有在container中有private key所有会报错：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/sso/image-20220202204335527.png" alt="image-20220202204335527">&lt;/p>
+&lt;p>将生产的thekeystore复制到容器中&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#000">docker&lt;/span> &lt;span style="color:#000">cp&lt;/span> &lt;span style="color:#000">thekeystore&lt;/span> &lt;span style="color:#000">cas&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:/&lt;/span>&lt;span style="color:#000">etc&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">/&lt;/span>&lt;span style="color:#000">cas&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">/&lt;/span>&lt;span style="color:#000">thekeystore&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>然后重启&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">docker restart cas
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>查看日志：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">docker logs cas
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/sso/image-20220202204904231.png" alt="image-20220202204904231">&lt;/p>
+&lt;p>登录地址：https://172.24.174.149:8443/cas/login&lt;/p>
+&lt;p>默认登录名密码：casuser/Mellon&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/sso/cas%E7%99%BB%E5%BD%95.gif" alt="cas登录">&lt;/p>
+&lt;p>到这里基础环境已经搭建起来了&lt;/p></description></item></channel></rss>

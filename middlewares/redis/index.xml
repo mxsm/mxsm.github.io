@@ -1,0 +1,177 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Redis</title><link>/middlewares/redis/</link><description>Recent content in Redis on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/middlewares/redis/index.xml" rel="self" type="application/rss+xml"/><item><title>Middlewares: Redis底层-数据结构</title><link>/middlewares/redis/redis-data-struct/</link><pubDate>Fri, 08 Jun 2018 00:00:00 +0000</pubDate><guid>/middlewares/redis/redis-data-struct/</guid><description>
+&lt;h3 id="什么是简单动态字符串">什么是简单动态字符串？&lt;/h3>
+&lt;p>没有用C的语言的传统字符串表示，而是自己建立了一种简单动态字符串(&lt;strong>simple dynamic string&lt;/strong>)的抽象类型来用作Redis默认字符串的表示。数据结构：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-c" data-lang="c">&lt;span style="color:#204a87;font-weight:bold">struct&lt;/span> &lt;span style="color:#000">sdshdr&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">// buf 已占用长度等于SDS保存的字符串长度
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">len&lt;/span>&lt;span style="color:#000;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">// buf 剩余可用长度
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">free&lt;/span>&lt;span style="color:#000;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">// 实际保存字符串数据的地方
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">char&lt;/span> &lt;span style="color:#000">buf&lt;/span>&lt;span style="color:#000;font-weight:bold">[];&lt;/span>
+&lt;span style="color:#000;font-weight:bold">};&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>SDS遵循C语言字符串以空字符串结尾的惯例。保存空字符串的一个空间不计算在len字段里面。&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>使用动态字符串的好处：&lt;/strong>
+&lt;ul>
+&lt;li>&lt;strong>常数的获取字符串的长度&lt;/strong>。时间复杂度为O(1)。在C语言中字符串并不记录自身的长度信息，所以为了获取一个字符串的长度需要遍历整个字符串。操作复杂度为O(n)。&lt;/li>
+&lt;li>&lt;strong>杜绝缓冲区溢出&lt;/strong>。每次进行字符拼接的时候回去检查是否分配了足够的空间。通过free字段就能很容易的知道。&lt;/li>
+&lt;li>&lt;strong>减少修改字符串带来的内存重新分配次数。&lt;/strong> 使用空间预分配和惰性空间释放&lt;/li>
+&lt;li>&lt;strong>二进制安全&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>兼容部分C字符串函数&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="链表数据结构">链表数据结构&lt;/h3>
+&lt;h3 id="字典">字典&lt;/h3>
+&lt;p>字典在高级语言如&lt;strong>Java&lt;/strong>叫做&lt;strong>Map&lt;/strong> ，&lt;strong>Redis&lt;/strong> 字典实现使用的&lt;strong>哈希表&lt;/strong>作为底层的实现，一个哈希表里面可以有多个哈希表节点，而每个哈希表节点就保存了字典中的一个键值对。&lt;/p>
+&lt;h3 id="跳跃表">跳跃表&lt;/h3>
+&lt;p>跳跃表是一种有序的数据结构，他通过在每一个节点中维持多个指向其他的节点的指针，来达到快速访问的节点的目的。&lt;/p>
+&lt;p>跳表的支持平均O(logN),最坏O(N)的复杂度的节点查找，跳跃表可以和平衡树媲美，并且跳跃表的实现比平衡树简单。所以有不少程序用跳跃表来代替平衡树。Redis跳跃表来实现有效集合键的底层实现。&lt;/p>
+&lt;p>&lt;strong>跳跃表在Redis里面只有两个地方用到：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>实现有序集合键&lt;/li>
+&lt;li>集群节点中作用内部数据结构&lt;/li>
+&lt;/ul>
+&lt;p>&lt;a href="http://blog.jobbole.com/111731/">一篇关于跳表的漫画解析&lt;/a>&lt;/p>
+&lt;h3 id="整数集合">整数集合&lt;/h3>
+&lt;h3 id="压缩列表">压缩列表&lt;/h3>
+&lt;p>参考：&lt;/p>
+&lt;p>&lt;a href="https://www.cnblogs.com/ysocean/p/9080942.html">https://www.cnblogs.com/ysocean/p/9080942.html&lt;/a>&lt;/p></description></item><item><title>Middlewares: Redis持久化</title><link>/middlewares/redis/redis-persistence/</link><pubDate>Thu, 17 Oct 2019 00:00:00 +0000</pubDate><guid>/middlewares/redis/redis-persistence/</guid><description>
+&lt;h3 id="rdb-持久化---redis默认">RDB 持久化 &amp;ndash;Redis默认&lt;/h3>
+&lt;p>在指定的时间间隔能对你的数据进行快照存储。&lt;strong>RDB&lt;/strong>是默认的持久方式&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>RDB持久化的步骤&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Redis&lt;/strong>主进程会fork一个子进程出来。&lt;/li>
+&lt;li>由子进程将内存中的所有数据写入到一个临时的 &lt;strong>RDB&lt;/strong> 文件中。&lt;/li>
+&lt;li>完成写入操作后，旧的会被新的RDB文件替换。&lt;/li>
+&lt;/ul>
+&lt;p>Copy-On-Write的模型&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>优点：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>RDB是一个非常紧凑的文件，适合灾难恢复。&lt;/li>
+&lt;li>RDB在保存RDB文件时父进程唯一需要做的就是fork出一个子进程,接下来的工作全部由子进程来做，父进程不需要再做其他IO操作，所以RDB持久化方式可以最大化redis的性能.&lt;/li>
+&lt;li>与AOF相比,在恢复大的数据集的时候，RDB方式会更快一些.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>缺点：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>在 Linux 系统中，fork 会拷贝进程的 page table。随着进程占用的内存越大，进程的 page table 也会越大，那么 fork 也会占用更多的时间。 如果 Redis 占用的内存很大 (例如 20 GB)，那么在 fork 子进程时，会出现明显的停顿现象（无法处理 client 的请求）。另外，在不同机器上，fork 的性能是不同的，可以参见 &lt;a href="https://redis.io/topics/latency#fork-time-in-different-systems">Fork time in different systems&lt;/a>。&lt;/li>
+&lt;li>Linux fork 子进程采用的是 copy-on-write 的方式。在 Redis 执行 RDB 持久化期间，如果 client 写入数据很频繁，那么将增加 Redis 占用的内存，最坏情况下，内存的占用将达到原先的两倍。&lt;/li>
+&lt;li>如果业务场景很看重数据的持久性 (durability)，那么不应该采用 RDB 持久化。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="aof-持久化">AOF 持久化&lt;/h3>
+&lt;p>可以使用&lt;code>appendonly yes&lt;/code>配置项来开启 AOF 持久化。Redis 执行 AOF 持久化时，会将接收到的写命令追加到 AOF 文件的末尾，因此 Redis 只要对 AOF 文件中的命令进行回放，就可以将数据库还原到原先的状态。
+　　与 RDB 持久化相比，AOF 持久化的一个明显优势就是，它可以提高数据的持久性 (durability)。因为在 AOF 模式下，Redis 每次接收到 client 的写命令，就会将命令&lt;code>write()&lt;/code>到 AOF 文件末尾。
+　　然而，在 Linux 中，将数据&lt;code>write()&lt;/code>到文件后，数据并不会立即刷新到磁盘，而会先暂存在 OS 的文件系统缓冲区。在合适的时机，OS 才会将缓冲区的数据刷新到磁盘（如果需要将文件内容刷新到磁盘，可以调用&lt;code>fsync()&lt;/code>或&lt;code>fdatasync()&lt;/code>）。
+　　通过&lt;code>appendfsync&lt;/code>配置项，可以控制 Redis 将命令同步到磁盘的频率：&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>always&lt;/code>：每次 Redis 将命令&lt;code>write()&lt;/code>到 AOF 文件时，都会调用&lt;code>fsync()&lt;/code>，将命令刷新到磁盘。这可以保证最好的数据持久性，但却会给系统带来极大的开销。&lt;/li>
+&lt;li>&lt;code>no&lt;/code>：Redis 只将命令&lt;code>write()&lt;/code>到 AOF 文件。这会让 OS 决定何时将命令刷新到磁盘。&lt;/li>
+&lt;li>&lt;code>everysec&lt;/code>：除了将命令&lt;code>write()&lt;/code>到 AOF 文件，Redis 还会每秒执行一次&lt;code>fsync()&lt;/code>。在实践中，推荐使用这种设置，一定程度上可以保证数据持久性，又不会明显降低 Redis 性能。&lt;/li>
+&lt;/ul>
+&lt;p>　　然而，AOF 持久化并不是没有缺点的：Redis 会不断将接收到的写命令追加到 AOF 文件中，导致 AOF 文件越来越大。过大的 AOF 文件会消耗磁盘空间，并且导致 Redis 重启时更加缓慢。为了解决这个问题，在适当情况下，Redis 会对 AOF 文件进行重写，去除文件中冗余的命令，以减小 AOF 文件的体积。在重写 AOF 文件期间， Redis 会启动一个子进程，由子进程负责对 AOF 文件进行重写。
+　　可以通过下面两个配置项，控制 Redis 重写 AOF 文件的频率：&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>auto-aof-rewrite-min-size 64mb&lt;/code>&lt;/li>
+&lt;li>&lt;code>auto-aof-rewrite-percentage 100&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>　　上面两个配置的作用：当 AOF 文件的体积大于 64MB，并且 AOF 文件的体积比上一次重写之后的体积大了至少一倍，那么 Redis 就会执行 AOF 重写。&lt;/p>
+&lt;h3 id="持久化选择">持久化选择&lt;/h3>
+&lt;ul>
+&lt;li>如果数据库的数据没有什么重要的就不需要持久化&lt;/li>
+&lt;li>如果能容忍一定程度的丢失就用RDB的持久化模式&lt;/li>
+&lt;li>如果不能容忍丢失就用AOF+RDB两种一起的模式&lt;/li>
+&lt;/ul></description></item><item><title>Middlewares: Redis集群</title><link>/middlewares/redis/redis-cluster/</link><pubDate>Fri, 29 Mar 2019 00:00:00 +0000</pubDate><guid>/middlewares/redis/redis-cluster/</guid><description>
+&lt;h3 id="redis集群的介绍">Redis集群的介绍&lt;/h3>
+&lt;p>Redis 集群是一个提供在&lt;strong>多个Redis间节点间共享数据&lt;/strong>的程序集。&lt;/p>
+&lt;p>Redis集群并不支持处理多个keys的命令,因为这需要在不同的节点间移动数据,从而达不到像Redis那样的性能,在高负载的情况下可能会导致不可预料的错误.&lt;/p>
+&lt;p>Redis 集群通过分区来提供&lt;strong>一定程度的可用性&lt;/strong>,在实际环境中当某个节点宕机或者不可达的情况下继续处理命令. Redis 集群的优势:&lt;/p>
+&lt;ul>
+&lt;li>自动分割数据到不同的节点上。&lt;/li>
+&lt;li>整个集群的部分节点失败或者不可达的情况下能够继续处理命令。&lt;/li>
+&lt;/ul>
+&lt;h3 id="redis集群数据分片">Redis集群数据分片&lt;/h3>
+&lt;p>Redis 集群没有使用一致性hash, 而是引入了 &lt;strong>哈希槽&lt;/strong>的概念。&lt;/p>
+&lt;p>Redis 集群有16384个哈希槽,每个key通过CRC16校验后对16384取模来决定放置哪个槽.集群的每个节点负责一部分hash槽,举个例子,比如当前集群有3个节点,那么:&lt;/p>
+&lt;ul>
+&lt;li>节点 A 包含 0 到 5500号哈希槽.&lt;/li>
+&lt;li>节点 B 包含5501 到 11000 号哈希槽.&lt;/li>
+&lt;li>节点 C 包含11001 到 16384号哈希槽.&lt;/li>
+&lt;/ul>
+&lt;p>这种结构很容易添加或者删除节点. 比如如果我想新添加个节点D, 我需要从节点 A, B, C中得部分槽到D上. 如果我想移除节点A,需要将A中的槽移到B和C节点上,然后将没有任何槽的A节点从集群中移除即可. 由于从一个节点将哈希槽移动到另一个节点并不会停止服务,所以无论添加删除或者改变某个节点的哈希槽的数量都不会造成集群不可用的状态.&lt;/p>
+&lt;p>整理一下集群数据存放的步骤：&lt;/p>
+&lt;pre>&lt;code>1 对key进行CRC16的算法校验获得一个整形
+2 对整数进行对16384取模。
+3 放入对应的机器上面
+&lt;/code>&lt;/pre>&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/cache/rediscluster.png?raw=true" alt="集群图解">&lt;/p>
+&lt;ul>
+&lt;li>所有的节点彼此间互联(&lt;code>PING&lt;/code>-&lt;code>PONG&lt;/code>机制)，内部使用二进制协议优化传输速度和带宽。&lt;/li>
+&lt;li>节点的&lt;code>fail&lt;/code>是通过集群中超过半数的节点检测失效时才生效。(集群中超过半数以上的节点对该节点没有回复)&lt;/li>
+&lt;li>客户端与&lt;code>redis&lt;/code>节点直连,不需要中间&lt;code>proxy&lt;/code>层.客户端不需要连接集群所有节点,连接集群中任何一个可用节点即可。&lt;/li>
+&lt;li>&lt;code>redis-cluster&lt;/code>把所有的物理节点映射到[&lt;code>0-16383&lt;/code>]&lt;code>slot&lt;/code>上,&lt;code>cluster&lt;/code> 负责维护&lt;code>node&lt;/code>&amp;lt;-&amp;gt;&lt;code>slot&lt;/code>&amp;lt;-&amp;gt;&lt;code>value&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;h4 id="redis-cluster投票容错">Redis-cluster投票容错：&lt;/h4>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/cache/redisfailcluster.png?raw=true" alt="图解">&lt;/p>
+&lt;p>&lt;strong>投票的过程原理：&lt;/strong> 集群中所有的master参与，如果半数以上的master节点与要被检测的master通讯超时(cluster-node-timeout),认为当前master节点挂了。&lt;/p>
+&lt;p>&lt;strong>什么时候整个集群不可用？&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>集群任意master挂掉且当前没有slave.集群进入fail状态。也可以理解为16K哈希筒不完整的情况。&lt;/li>
+&lt;li>如果超过一半以上的master挂掉，不论是否有slave，集群进入fail状态。&lt;/li>
+&lt;/ul>
+&lt;h3 id="主从复制">主从复制&lt;/h3>
+&lt;p>&lt;strong>复制的机制&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>master和slave正常连接情况下：&lt;/strong> master会发送一些列命令流来保持对slave的更新。以便将master自身数据集的改变复制到给slave。&lt;/li>
+&lt;li>&lt;strong>master和slave断开之后(网络问题，主从意识连接超时)：&lt;/strong> slave重新连接上master并会尝试部分同步。&lt;/li>
+&lt;li>&lt;strong>不能进行部分同步的时候，slave会请求全量同步&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;h4 id="redis-复制的非常重要的事实">Redis 复制的非常重要的事实&lt;/h4>
+&lt;ul>
+&lt;li>master和slave之间使用的异步复制&lt;/li>
+&lt;li>master和slave是一个一对多的关系&lt;/li>
+&lt;li>slave 可以接受其他 slave 的连接。&lt;/li>
+&lt;li>Redis 复制在 master 侧是非阻塞的。&lt;/li>
+&lt;li>复制在 slave 侧大部分也是非阻塞的。&lt;/li>
+&lt;li>复制既可以被用在可伸缩性，以便只读查询可以有多个 slave 进行&lt;/li>
+&lt;li>可以使用复制来避免 master 将全部数据集写入磁盘造成的开销&lt;/li>
+&lt;/ul>
+&lt;h4 id="redis复制的工作原理">Redis复制的工作原理&lt;/h4>
+&lt;ol>
+&lt;li>slave连接master的时候，会使用&lt;strong>PSYNC&lt;/strong>命令发送slave纪录的旧的master replication ID 和 slave至今处理的偏移量。&lt;/li>
+&lt;li>master发送给slave所需的增量部分&lt;/li>
+&lt;li>如果是master缓冲区没有足够的命令积压或者slave引用了不知道的历史纪录。进行全量同步&lt;/li>
+&lt;/ol>
+&lt;h4 id="全量同步">全量同步&lt;/h4>
+&lt;ul>
+&lt;li>master 开启一个后台保存进程，以便于生产一个 RDB 文件，同时它开始缓冲所有从客户端接收到的新的写入命令(产生RDB文件的时候发生客户端的操作，保证数据的一致性问题)&lt;/li>
+&lt;li>master 将数据集文件传输给 slave&lt;/li>
+&lt;li>slave接受master发送过来的数据。&lt;/li>
+&lt;li>slave载入rdb文件&lt;/li>
+&lt;/ul></description></item><item><title>Middlewares: Redis三种集群策略</title><link>/middlewares/redis/redis-cluster-strategy/</link><pubDate>Thu, 12 Jul 2018 00:00:00 +0000</pubDate><guid>/middlewares/redis/redis-cluster-strategy/</guid><description>
+&lt;p>&lt;a href="https://blog.csdn.net/q649381130/article/details/79931791">https://blog.csdn.net/q649381130/article/details/79931791&lt;/a>&lt;/p></description></item><item><title>Middlewares: Redis数据淘汰策略</title><link>/middlewares/redis/redis-data-elimination-strategy/</link><pubDate>Sun, 01 Jul 2018 00:00:00 +0000</pubDate><guid>/middlewares/redis/redis-data-elimination-strategy/</guid><description>
+&lt;h3 id="redis数据回收">Redis数据回收&lt;/h3>
+&lt;p>当Redis被当做缓存来使用，当你新增数据时，让它自动地回收旧数据是件很方便的事情。&lt;strong>LRU(Least recently used，最近最少使用)&lt;strong>是&lt;/strong>Redis&lt;/strong>唯一支持的回收方法。&lt;/p>
+&lt;h3 id="maxmemory配置指令">Maxmemory配置指令&lt;/h3>
+&lt;p>&lt;code>maxmemory&lt;/code>配置指令用于配置Redis存储数据时指定限制的内存大小。通过redis.conf可以设置该指令，或者之后使用CONFIG SET命令来进行运行时配置。&lt;/p>
+&lt;p>例如为了配置内存限制为100mb，以下的指令可以放在&lt;code>redis.conf&lt;/code>文件中。&lt;/p>
+&lt;pre>&lt;code>maxmemory 100mb
+&lt;/code>&lt;/pre>&lt;p>设置&lt;code>maxmemory&lt;/code>为0代表没有内存限制。对于64位的系统这是个默认值，对于32位的系统默认内存限制为3GB。&lt;/p>
+&lt;p>当指定的内存限制大小达到时，需要选择不同的行为，也就是&lt;strong>策略&lt;/strong>。 Redis可以仅仅对命令返回错误，这将使得内存被使用得更多，或者回收一些旧的数据来使得添加数据时可以避免内存限制。&lt;/p>
+&lt;h3 id="回收策略">回收策略&lt;/h3>
+&lt;p>当maxmemory限制达到的时候Redis会使用的行为由 Redis的maxmemory-policy配置指令来进行配置。&lt;/p>
+&lt;p>&lt;strong>有六种回收策略&lt;/strong>：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>noeviction：&lt;/strong> 返回错误当内存限制达到并且客户端尝试执行会让更多内存被使用的命令（大部分的写入指令，但DEL和几个例外）&lt;/li>
+&lt;li>&lt;strong>allkeys-lru&lt;/strong>: 尝试回收最少使用的键（LRU），使得新添加的数据有空间存放。&lt;/li>
+&lt;li>&lt;strong>volatile-lru&lt;/strong>: 尝试回收最少使用的键（LRU），但仅限于在过期集合的键,使得新添加的数据有空间存放。&lt;/li>
+&lt;li>&lt;strong>allkeys-random&lt;/strong>: 回收随机的键使得新添加的数据有空间存放。&lt;/li>
+&lt;li>&lt;strong>volatile-random&lt;/strong>: 回收随机的键使得新添加的数据有空间存放，但仅限于在过期集合的键。&lt;/li>
+&lt;li>&lt;strong>volatile-ttl&lt;/strong>: 回收在过期集合的键，并且优先回收存活时间（TTL）较短的键,使得新添加的数据有空间存放。&lt;/li>
+&lt;/ul></description></item></channel></rss>

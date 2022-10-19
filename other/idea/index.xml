@@ -1,0 +1,35 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – IntelliJ IDEA</title><link>/other/idea/</link><description>Recent content in IntelliJ IDEA on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/idea/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: IntelliJ IDEA常用设置</title><link>/other/idea/intellij-idea-setting/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/other/idea/intellij-idea-setting/</guid><description>
+&lt;h3 id="1-设置代码的格式显示">1. 设置代码的格式显示&lt;/h3>
+&lt;p>idea 中 大于等于，不等于、小于等于等等这些符号发生了改变问题解决方法&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/idea/%E8%AE%BE%E7%BD%AE%E7%AC%A6%E5%8F%B7%E6%98%BE%E7%A4%BA%E6%A0%BC%E5%BC%8F1.png?raw=true" alt="">&lt;/p>
+&lt;h3 id="2-idea设置方法自动显示参数提示">2. IDEA设置方法自动显示参数提示&lt;/h3>
+&lt;p>增加构造函数的多个提示&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/idea/IDEA%E8%AE%BE%E7%BD%AE%E6%96%B9%E6%B3%95%E8%87%AA%E5%8A%A8%E6%98%BE%E7%A4%BA%E5%8F%82%E6%95%B0%E6%8F%90%E7%A4%BA.png?raw=true" alt="">&lt;/p>
+&lt;h3 id="3-自动导入包的设置">3. 自动导入包的设置&lt;/h3>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/idea/%E8%87%AA%E5%8A%A8%E5%AF%BC%E5%8C%85%E8%AE%BE%E7%BD%AE.png?raw=true" alt="">&lt;/p></description></item><item><title>Other: IntelliJ IDEA那些不常用但很有用技巧</title><link>/other/idea/intellij-idea-skills/</link><pubDate>Wed, 26 Jan 2022 00:00:00 +0000</pubDate><guid>/other/idea/intellij-idea-skills/</guid><description>
+&lt;p>IntelliJ IDEA作为开发工具的一霸这个是没有争议的，作为一个Java开发者用习惯了这个软件就没办法用其他的了(正版有点小贵)，今天来说一下我自己在使用IntelliJ IDEA中一些小的功能和技巧，不常用但是很有用的技巧&lt;/p>
+&lt;h3 id="1-debug断点按条件过滤">1. Debug断点按条件过滤&lt;/h3>
+&lt;p>想必大家肯定会遇到这样的情况，例如：一个for循环从0到100，但是我观察的时候可能需要只需要观察30这个数值的后续操作。一般的人操作如下图：&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CDesktop%5Cpic%5Cdebug1.gif" alt="debug1">&lt;/p>
+&lt;p>就会不停的按F8进行下一步。但是在IDEA中有一个Debug的小技巧就是在断点处右键出现下图所示：&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220126170446784.png" alt="image-20220126170446784">&lt;/p>
+&lt;p>弹出标号1所示的弹窗，然后你在标号2处就可以增加条件来过滤不符合条件的数据。上图所示的条件表示：i等于30的时候匹配到断点。&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CDesktop%5Cpic%5Cdebug2.gif" alt="debug1">&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 这里只是一个简单的例子，条件可以根据自己的需要定。当为true的话就会匹配到&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="2-debug实时插入打印">2. Debug实时插入打印&lt;/h3>
+&lt;p>在开发过程Debug程序的时候需要打印一些列数据，但是引入的Jar包又不能修改源码的情况，在IDEA中有一个很好用的功能就能够解决，第一步在需要打印数据的地方右键鼠标：&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220126173648141.png" alt="image-20220126173648141">&lt;/p>
+&lt;p>然后点击 &lt;strong>Add Inline Watch&lt;/strong>：&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220126173815363.png" alt="image-20220126173815363">&lt;/p>
+&lt;p>然后确定。接下来我new 一个Date试下&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220126173922182.png" alt="image-20220126173922182">&lt;/p>
+&lt;h3 id="3-一键去除无用导入类">3. 一键去除无用导入类&lt;/h3>
+&lt;p>在Java开发中有的时候在一个类中导入类，但是可能又没用到，如果没有良好的习惯一般情况下很多类中都会存在这个情况。一个个去检查渠道很是麻烦，哪怕用快捷键 &lt;strong>&lt;code>Ctrl+alt+o&lt;/code>&lt;/strong> （windows，别喷我没有Mac）。 我们可以使用鼠标左键选择要一键清除多余的类的项目或者包都可以。然后使用 &lt;strong>&lt;code>Ctrl+alt+o&lt;/code>&lt;/strong> 就可以一键清除下面所有的文件中导入的无用的类。&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CDesktop%5Cpic%5Cdebug3.gif" alt="debug3">&lt;/p>
+&lt;h3 id="4-类的使用处过滤">4. 类的使用处过滤&lt;/h3>
+&lt;p>在源码阅读的时候选择某个类然后 &lt;strong>&lt;code>Ctrl+左键&lt;/code>&lt;/strong> 就会有弹框出来，显示该类在哪些类中被应用引用了&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CDesktop%5Cpic%5C%E7%B1%BB%E5%BC%95%E7%94%A8.gif" alt="类引用">&lt;/p>
+&lt;p>这里出现了很多一些我们不希望看到的使用的地方，包括测试类等等。可以通过选择下拉来过滤自己的需要&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CDesktop%5Cpic%5C%E7%B1%BB%E5%BC%95%E7%94%A81.gif" alt="类引用1">&lt;/p></description></item></channel></rss>

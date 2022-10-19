@@ -1,0 +1,73 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Apache RocketMQ5</title><link>/middlewares/rocketmq5/</link><description>Recent content in Apache RocketMQ5 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/middlewares/rocketmq5/index.xml" rel="self" type="application/rss+xml"/><item><title>Middlewares: RocketMQ5.0 Quick start</title><link>/middlewares/rocketmq5/quick-start/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/middlewares/rocketmq5/quick-start/</guid><description>
+&lt;p>主要说明如何快速开始使用一些RocketMQ5.0版本一些新的特性。以及如何快速开启在本地进行开发联调的说明。这个也是笔者在参与RocketMQ5开发的过程中使用的方法。这里主要针对两大平台：&lt;code>Windows&lt;/code> 和 &lt;code>Linux(MacOS)&lt;/code>&lt;/p></description></item><item><title>Middlewares: RocketMQ5.0 Store</title><link>/middlewares/rocketmq5/store/</link><pubDate>Mon, 29 Aug 2022 00:00:00 +0000</pubDate><guid>/middlewares/rocketmq5/store/</guid><description/></item><item><title>Middlewares: RocketMQ5.0主备自动切换模式Broker选主详解</title><link>/middlewares/rocketmq5/ha/broker-elect-master/</link><pubDate>Wed, 19 Oct 2022 00:00:00 +0000</pubDate><guid>/middlewares/rocketmq5/ha/broker-elect-master/</guid><description>
+&lt;p>RocketMQ5.0增加了主备自动切换模式，这个模式是基于新开发的模块DLedger Controller(基于Raft组件&lt;a href="https://github.com/openmessaging/dledger">DLedger&lt;/a>)。下面结合源码来分析一下RocketMQ主备自动切换模式下的选主的流程。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: RocketMQ源码版本：5.0.0&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="1-何时选主broker">1. 何时选主Broker&lt;/h2>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/Broker%20Elect%20Master.png" alt="Broker Elect Master">&lt;/p>
+&lt;p>Broker的选主发起主要有三种情况：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>通过admin命令人为主动发起重新选主&lt;/p>
+&lt;p>命令发起具体参照 &lt;strong>&lt;code>electMaster&lt;/code>&lt;/strong> 命令(运维命令由笔者开发完成)，详细使用参照命令的说明&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>RocketMQ集群刚搭建Broker启动注册Broker到DLedger Controller，DLedger Controller还没有选主，然后触发选主操作。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>RocketMQ Broker Master下线或者因为其他情况不能正常提供服务与DLedger Controller服务不能正常连接或者心跳失效，会触发DLedger Controller选主Broker&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h2 id="2-如何选主broker">2. 如何选主Broker&lt;/h2>
+&lt;p>文章上面有提到触发选主的三种情况，下面我们就把这三种情况一一进行分析&lt;/p>
+&lt;h3 id="21-broker启动注册触发选主">2.1 Broker启动注册触发选主&lt;/h3>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/Broker%20Master%20elect%20process.png" alt="Broker Master elect process">&lt;/p>
+&lt;p>主备自主切换模式下Broker启动时候到底是Master还是Slave需要通过DLedger Controller服务通过选主的方式来确定。&lt;/p>
+&lt;p>&lt;strong>Broker启动注册到DLedger Controller&lt;/strong>&lt;/p>
+&lt;p>Broker启动后，将Broker的元数据：&lt;/p>
+&lt;ul>
+&lt;li>clusterName&lt;/li>
+&lt;li>brokerName&lt;/li>
+&lt;li>address&lt;/li>
+&lt;li>epoch&lt;/li>
+&lt;li>maxOffset&lt;/li>
+&lt;/ul>
+&lt;p>注册到DLedger Controller,由 &lt;strong>&lt;code>BrokerOuterAPI#registerBrokerToController&lt;/code>&lt;/strong> 提供注册的服务：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221019180858462.png" alt="image-20221019180858462">&lt;/p>
+&lt;p>&lt;strong>DLedger Controller触发选主&lt;/strong>&lt;/p>
+&lt;p>&lt;strong>DLedger Controller&lt;/strong> 模块的主要逻辑在ReplicasInfoManager中。当DLedger Controller接收到Broker发送的 &lt;strong>&lt;code>CONTROLLER_REGISTER_BROKER&lt;/code>&lt;/strong> 消息后就处理选主，由ReplicasInfoManager#registerBroker处理逻辑：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221019182903186.png" alt="image-20221019182903186">&lt;/p>
+&lt;p>&lt;strong>Broker Change Role&lt;/strong>&lt;/p>
+&lt;p>Broker注册后收到DLedger Controller返回的数据，根据返回数据的Master Address和Broker的IP进行对比来判断当前Broker是设置为Master还是Slave。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221019190349777.png" alt="image-20221019190349777">&lt;/p>
+&lt;p>到这里就实现了Broker的选主。&lt;/p>
+&lt;h3 id="22-broker-master-inactive触发选主">2.2 Broker Master Inactive触发选主&lt;/h3>
+&lt;p>Broker Master下线或者Broker Master和DLedger Controller心跳失效触发选主，DLedger Controller有一个定时任务执行 &lt;code>DefaultBrokerHeartbeatManager#scanNotActiveBroker&lt;/code> ：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221019191416688.png" alt="image-20221019191416688">&lt;/p>
+&lt;p>通知最终会触发 &lt;code>ControllerManager#onBrokerInactive&lt;/code> 方法：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221019191744705.png" alt="image-20221019191744705">&lt;/p>
+&lt;p>&lt;strong>&lt;code>ReplicasInfoManager#electMaster&lt;/code>&lt;/strong> 负责选主：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221019195612264.png" alt="image-20221019195612264">&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 笔者领了一个开发一个Preferred Master 的功能任务，可以优先选择某个 Broker 作为 master。还在代码研究和设计阶段。后续会提交PR&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;strong>参与选主的Broker是从SyncStateSet选取的。&lt;/strong>&lt;/p>
+&lt;p>然后选举的结果通知Broker, &lt;strong>&lt;code>AdminBrokerProcessor#notifyBrokerRoleChanged&lt;/code>&lt;/strong> 处理改变：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221019200415384.png" alt="image-20221019200415384">&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221019200445279.png" alt="image-20221019200445279">&lt;/p>
+&lt;h3 id="23-admin命令触发选主">2.3 Admin命令触发选主&lt;/h3>
+&lt;p>首先看一下命令的说明：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">usage: mqadmin electMaster -a &amp;lt;arg&amp;gt; -b &amp;lt;arg&amp;gt; -c &amp;lt;arg&amp;gt; &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-h&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> -n &amp;lt;arg&amp;gt;
+-a,--controllerAddress &amp;lt;arg&amp;gt; The address of controller
+-b,--brokerAddress &amp;lt;arg&amp;gt; The address of the broker which requires to become master
+-c,--clusterName &amp;lt;arg&amp;gt; the clusterName of broker
+-h,--help Print &lt;span style="color:#204a87">help&lt;/span>
+-n,--brokerName &amp;lt;arg&amp;gt; The broker name of the replicas that require to be manipulated
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>指定一个Broker作为Master。后端DLedger Controller的实现也是通过 &lt;strong>&lt;code>ReplicasInfoManager#electMaster&lt;/code>&lt;/strong> 实现。&lt;/p>
+&lt;p>对于代码的详细细节大家可以去研究一下RocketMQ5.0的代码细节，以及DLedger相关的代码。&lt;/p>
+&lt;h2 id="3-总结">3. 总结&lt;/h2>
+&lt;p>Master ID由DLedger Controller设置，Slave的ID也是。选举发起方可能是由Broker发起或者由DLedger Controller发起，也有可能手动通过 **&lt;code>Admin electMaster&lt;/code>**命令发起。Broker主备自主切换的主要依赖DLedger Controller。&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象(GitHub:mxsm)，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢!&lt;/p>
+&lt;/blockquote></description></item></channel></rss>

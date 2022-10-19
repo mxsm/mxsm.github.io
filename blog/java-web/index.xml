@@ -1,0 +1,274 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Java Web</title><link>/blog/java-web/</link><description>Recent content in Java Web on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/blog/java-web/index.xml" rel="self" type="application/rss+xml"/><item><title>Blog: Servlet3.1</title><link>/blog/java-web/servlet3.1/</link><pubDate>Sat, 19 May 2018 00:00:00 +0000</pubDate><guid>/blog/java-web/servlet3.1/</guid><description>
+&lt;h3 id="1-什么是servlet">1. 什么是Servlet&lt;/h3>
+&lt;p>Servlet 是基于 Java 技术的 web 组件，容器托管的，用于生成动态内容。像其他基于 Java 的组件技术一样，&lt;/p>
+&lt;p>Servlet 也是基于平台无关的 Java 类格式，被编译为平台无关的字节码，可以被基于 Java 技术的 web server&lt;/p>
+&lt;p>动态加载并运行。容器，有时候也叫做 servlet 引擎，是 web server 为支持 servlet 功能扩展的部分。客户端&lt;/p>
+&lt;p>通过 Servlet 容器实现的请求/应答模型与 Servlet 交互。&lt;/p>
+&lt;h3 id="2-servlet-接口">2. &lt;strong>Servlet&lt;/strong> 接口&lt;/h3>
+&lt;p>Servlet 接口是 Java Servlet API 的核心抽象。所有 Servlet 类必须直接或间接的实现该接口，或者更通常做法&lt;/p>
+&lt;p>是通过继承一个实现了该接口的类从而复用许多共性功能。目前有 GenericServlet 和 HttpServlet 这两个类实&lt;/p>
+&lt;p>现了 Servlet 接口。大多数情况下，开发者只需要继承 HttpServlet 去实现自己的 Servlet 即可:&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">interface&lt;/span> &lt;span style="color:#000">Servlet&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">init&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ServletConfig&lt;/span> &lt;span style="color:#000">config&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">ServletException&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">ServletConfig&lt;/span> &lt;span style="color:#000">getServletConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">service&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ServletRequest&lt;/span> &lt;span style="color:#000">req&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">ServletResponse&lt;/span> &lt;span style="color:#000">res&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">ServletException&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">IOException&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">getServletInfo&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">destroy&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>Blog: Servlet异步请求如何开启</title><link>/blog/java-web/servlet3-async/</link><pubDate>Tue, 16 Mar 2021 00:00:00 +0000</pubDate><guid>/blog/java-web/servlet3-async/</guid><description>
+&lt;h3 id="1-背景">1. 背景&lt;/h3>
+&lt;p>在研究长轮询的实现过程，有使用到Servlet3的异步请求。下面就来学习一下Servlet3的异步请求&lt;/p>
+&lt;blockquote>
+&lt;p>现在Servlet的版本已经到了5&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="2-servlet同步请求">2. Servlet同步请求&lt;/h3>
+&lt;p>以Tomcat服务器为例：&lt;/p>
+&lt;ul>
+&lt;li>Http请求到达Tomcat&lt;/li>
+&lt;li>Tomcat从线程池中取出线程处理到达Tomcat的请求&lt;/li>
+&lt;li>将请求Http解析为HttpServletRequest&lt;/li>
+&lt;li>分发到具体Servlet处理对应的业务&lt;/li>
+&lt;li>通过HttpServletResponse返回处理的数据&lt;/li>
+&lt;/ul>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/javaweb/Servlet%E5%90%8C%E6%AD%A5%E8%AF%B7%E6%B1%82%E7%A4%BA%E6%84%8F%E5%9B%BE.png?raw=true" alt="image">&lt;br>
+正常情况下请求模型和上面的模型一样，所有的请求交给Tomcat服务器的线程池处理，整个动作处理完成才释放回线程池。&lt;br>
+这里就存在了一个问题如果后期的业务处理时间比较长。那么处理请求的线程就会被一直占用。当请求越来越多被占用的线程也会越来越多。直到被耗尽线程池中所有的线程。后续进来的就一直被阻塞等待线程来处理。&lt;/p>
+&lt;blockquote>
+&lt;p>当用户不关心提交的返回可以定义业务处理线程池，前端请求提交后，Tomcat线程将处理提交给业务线程池立即返回。Spring 中的异步任务(@Async)就是这样的。&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="3-servlet异步请求">3. Servlet异步请求&lt;/h3>
+&lt;p>同样以Tomcat服务为例：&lt;/p>
+&lt;ul>
+&lt;li>将请求Http解析为HttpServletRequest&lt;/li>
+&lt;li>分发到具体Servlet处理，将业务提交给自定义业务线程池，Tomcat线程立刻被释放。&lt;/li>
+&lt;li>当业务线程将任务执行结束，将会将结果转交给Tomcat线程池。&lt;/li>
+&lt;li>通过HttpServletResponse返回处理的数据&lt;/li>
+&lt;/ul>
+&lt;p>引入异步Servlet3整体流程：&lt;br>
+&lt;img src="https://github.com/mxsm/picture/blob/main/javaweb/%E5%BC%82%E6%AD%A5Servlet3%E6%95%B4%E4%BD%93%E6%B5%81%E7%A8%8B.png?raw=true" alt="image">&lt;/p>
+&lt;p>使用异步 Servelt，Tomcat 线程仅仅处理请求解析动作，所有耗时较长的业务操作全部交给业务线程池，所以相比同步请求， Tomcat 线程可以处理 更多请求。虽然将业务交给了业务流程处理，但是前端还在等待结果返回(同步等待返回)。&lt;/p>
+&lt;blockquote>
+&lt;p>异步处理，前端会同步等待结果返回。很多人会觉得异步请求会返回更快。其实不然由于异步存在线程的切换。所有返回时间会比同步的慢。&lt;/p>
+&lt;/blockquote>
+&lt;p>虽然没有降低相应时间但是还是有其他明显的优点:&lt;/p>
+&lt;ul>
+&lt;li>可以处理更高并发连接数，提高系统整体吞吐量&lt;/li>
+&lt;li>请求解析与业务处理完全分离，职责单一&lt;/li>
+&lt;li>自定义业务线程池，我们可以更容易对其监控，降级等处理&lt;/li>
+&lt;li>可以根据不同业务，自定义不同线程池，相互隔离，不用互相影响&lt;/li>
+&lt;/ul>
+&lt;h3 id="4-异步servlet使用方法">4. 异步Servlet使用方法&lt;/h3>
+&lt;p>使用异步Servlet只需要三步：&lt;/p>
+&lt;ol>
+&lt;li>&lt;em>&lt;strong>HttpServletRequest#startAsync()&lt;/strong>&lt;/em> 获取 &lt;em>&lt;strong>AsyncContext&lt;/strong>&lt;/em> 异步上下文&lt;/li>
+&lt;li>使用自定义业务线程池处理业务&lt;/li>
+&lt;li>&lt;em>&lt;strong>AsyncContext#getResponse()&lt;/strong>&lt;/em> 返回处理结果给前端，然后调用 &lt;em>&lt;strong>AsyncContext#complete()&lt;/strong>&lt;/em>&lt;/li>
+&lt;/ol>
+&lt;h3 id="5-spring中的实现例子">5. Spring中的实现例子&lt;/h3>
+&lt;p>代码如下图：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/javaweb/servlet%E5%BC%82%E6%AD%A5%E4%BB%A3%E7%A0%81%E5%9B%BE%E7%89%87.png?raw=true" alt="图">&lt;/p>
+&lt;ol>
+&lt;li>开启异步Servlet&lt;/li>
+&lt;li>模拟业务执行&lt;/li>
+&lt;li>返回结果给前端&lt;/li>
+&lt;/ol>
+&lt;p>前面有说过前端是一直在同步等待的我们通过运行代码来验证一下。结果如下图：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/javaweb/servlet%E5%BC%82%E6%AD%A5%E6%89%A7%E8%A1%8C%E5%89%8D%E7%AB%AF%E5%90%8C%E6%AD%A5%E7%AD%89%E5%BE%85%E9%AA%8C%E8%AF%81%E7%BB%93%E6%9E%9C%E5%9B%BE.gif?raw=true" alt="图">&lt;/p>
+&lt;blockquote>
+&lt;p>代码地址：https://github.com/mxsm/spring-sample/blob/master/spring-boot/src/main/java/com/github/mxsm/controller/AsyncController.java&lt;/p>
+&lt;/blockquote></description></item><item><title>Blog: Servlet异步应用长轮询实现</title><link>/blog/java-web/long-polling/</link><pubDate>Thu, 10 Feb 2022 00:00:00 +0000</pubDate><guid>/blog/java-web/long-polling/</guid><description>
+&lt;h3 id="1-短轮询长轮询长连接">1. 短轮询、长轮询、长连接&lt;/h3>
+&lt;p>首先这里有三个概念需要弄清楚：&lt;/p>
+&lt;ul>
+&lt;li>什么是短轮询？&lt;/li>
+&lt;li>什么是长轮询？&lt;/li>
+&lt;li>什么是长连接？&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>长轮询和短轮询都是基于HTTP协议&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="11-短轮询">1.1 短轮询&lt;/h4>
+&lt;p>&lt;strong>轮询&lt;/strong>（&lt;strong>Polling&lt;/strong>）是一种&lt;a href="https://zh.wikipedia.org/wiki/CPU">CPU&lt;/a>决策如何提供周边设备服务的方式，又称“&lt;strong>程控输入输出&lt;/strong>”（&lt;strong>Programmed I/O&lt;/strong>）。轮询法的概念是：由CPU定时发出询问，依序询问每一个周边设备是否需要其服务，有即给予服务，服务结束后再问下一个周边，接着不断周而复始。&amp;ndash;来自维基百科&lt;/p>
+&lt;p>可以理解为CPU的一种提供服务的策略。在实际的应用中可以看一下现在淘宝、微信等网站扫码登录，会发现有定时去请求一个接口地址来判断当前的二维码是不是有效，这就是轮询的一种实现(也叫短轮询)：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/serialize/%E6%B7%98%E5%AE%9D%E4%BA%8C%E7%BB%B4%E7%A0%81%E8%BD%AE%E8%AF%A2.gif" alt="淘宝二维码轮询">&lt;/p>
+&lt;h4 id="12-长轮询">1.2 长轮询&lt;/h4>
+&lt;p>长轮询和短轮询是相对的，都是属于轮询的一种。总的来说是为了提升实时和效率。长轮询就是一个请求到后端服务器在设置的一段超时时间内如果请求的数据有变动就立刻返回，如果没有变动就等待直到超时返回空的数据或者没有变动的数据(这个看具体业务，超时时间也是看开发者自己设定)。通过长轮询就能达到类似于实时推送的效果。&lt;/p>
+&lt;h4 id="13-长连接">1.3 长连接&lt;/h4>
+&lt;p>长连接，指在一个连接上可以连续发送多个数据包，在连接保持期间，如果没有数据包发送，需要双方发链路检测包&amp;mdash;来自百度百科&lt;/p>
+&lt;p>通俗一点说就是：连接建立好了以后在没有异常的情况下是一直维持的。下次想发数据包直接用之前建立的重新发。无需重新新建连接。&lt;/p>
+&lt;h3 id="2-基于servlet异步长轮询的实现">2. 基于Servlet异步长轮询的实现&lt;/h3>
+&lt;p>在之前的文章《&lt;a href="https://juejin.cn/post/7060323697298505741">Servlet异步请求如何开启&lt;/a>》讲了如何开启Servlet异步，这里我们通过Servlet异步来实现长轮询。&lt;/p>
+&lt;h4 id="21-环境准备">2.1 环境准备&lt;/h4>
+&lt;p>从Spring官方的脚手架网站https://start.spring.io/创建一个SpringBoot web项目。(版本自己选择)&lt;/p>
+&lt;h4 id="22-代码编写">2.2 代码编写&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @author mxsm
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @Date 2021/3/16
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @Since
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@RestController&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@RequestMapping&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;/longPolling&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">LongPollingController&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">ScheduledExecutorService&lt;/span> &lt;span style="color:#000">service&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">ScheduledThreadPoolExecutor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">10&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">ExecutorService&lt;/span> &lt;span style="color:#000">executorService&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">Executors&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">newSingleThreadExecutor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">Queue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">Task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">queue&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">ConcurrentLinkedQueue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&amp;gt;();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">BlockingQueue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">Boolean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">blockingQueue&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">LinkedBlockingQueue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&amp;gt;(&lt;/span>&lt;span style="color:#000">1000&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@PostConstruct&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">init&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(){&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Thread&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Runnable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;init&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(;;){&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">try&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">blockingQueue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">take&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">Task&lt;/span> &lt;span style="color:#000">poll&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">do&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">poll&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">queue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">poll&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">poll&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">!=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#000">poll&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">execute&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>&lt;span style="color:#204a87;font-weight:bold">while&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">poll&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">!=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">catch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">InterruptedException&lt;/span> &lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">printStackTrace&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">},&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;thread-mxsm&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">start&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@GetMapping&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;/time&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">async&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HttpServletRequest&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">HttpServletResponse&lt;/span> &lt;span style="color:#000">response&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">AsyncContext&lt;/span> &lt;span style="color:#000">asyncContext&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">startAsync&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">executorService&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">execute&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">asyncContext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">));&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@GetMapping&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;/update&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">update&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">blockingQueue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">offer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">Task&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">Runnable&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">AsyncContext&lt;/span> &lt;span style="color:#000">asyncContext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">Task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">AsyncContext&lt;/span> &lt;span style="color:#000">asyncContext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">asyncContext&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">asyncContext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">service&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">schedule&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Runnable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">remove&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">queue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">remove&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">remove&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">try&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">HttpServletResponse&lt;/span> &lt;span style="color:#000">response&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HttpServletResponse&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#000">asyncContext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getResponse&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">response&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setStatus&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HttpServletResponse&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">SC_OK&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">response&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getWriter&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;22222&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">123&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">asyncContext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">complete&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">catch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">IOException&lt;/span> &lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">printStackTrace&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">asyncContext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">complete&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">},&lt;/span> &lt;span style="color:#000">10&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">TimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">MINUTES&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">queue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">add&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">3333&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">execute&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(){&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">try&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">HttpServletResponse&lt;/span> &lt;span style="color:#000">response&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HttpServletResponse&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#000">asyncContext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getResponse&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">response&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setStatus&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HttpServletResponse&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">SC_OK&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">response&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getWriter&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;333333&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">123&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">asyncContext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">complete&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">catch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">IOException&lt;/span> &lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">printStackTrace&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>代码说明：&lt;/p>
+&lt;ul>
+&lt;li>async方法长轮询的接入方法&lt;/li>
+&lt;li>update模拟在长轮询过程中数据更新&lt;/li>
+&lt;li>这里没有写客户端，客户端直接用手点浏览器代替看一下效果&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>测试1：正常的轮询一个时间片&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/serialize/%E9%95%BF%E8%BD%AE%E8%AF%A2%E6%B5%8B%E8%AF%951.gif" alt="长轮询测试1">&lt;/p>
+&lt;p>&lt;strong>测试2：长轮询时间片过程中更新数据&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/serialize/%E9%95%BF%E8%BD%AE%E8%AF%A2%E6%B5%8B%E8%AF%952.gif" alt="长轮询测试2">&lt;/p>
+&lt;p>长轮询后端就就实现完成了&lt;/p>
+&lt;blockquote>
+&lt;p>代码地址：https://github.com/mxsm/spring-sample/blob/master/spring-boot/src/main/java/com/github/mxsm/controller/LongPollingController.java&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="3-总结">3. 总结&lt;/h3>
+&lt;ul>
+&lt;li>长轮询相对于短轮询性能好很多，但是相比长连接还是不那么好。但是优势在于可以借助HTTP的一些特性来实现快速开发&lt;/li>
+&lt;li>从轮询通过后台的一些巧妙实现也能做到及时更新数据给前端&lt;/li>
+&lt;/ul></description></item><item><title>Blog: 内嵌式Tomcat</title><link>/blog/java-web/embed-tomcat/</link><pubDate>Thu, 17 Feb 2022 00:00:00 +0000</pubDate><guid>/blog/java-web/embed-tomcat/</guid><description>
+&lt;h3 id="1-引言">1. 引言&lt;/h3>
+&lt;p>作为一个Java开发者，Tomcat没有不认识的。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/serialize/image-20220224231614905.png" alt="image-20220224231614905">&lt;/p>
+&lt;p>以前都是单独部署一个Tomcat然后将服务打包成war包后进行部署。随着技术的发展，前后端的分离。Tomcat已经不需要承担前端页面的部署。所以Tomcat单独部署就不是那么合适。使用Spring Boot框架开发web应用的人大家都可能发现我们并没有部署Tomcat只是通过运行一个方法前端就能访问我们开发的接口，这是为什么？这里就介绍我们今天要说的这个内嵌式Tomcat,这个也就是为什么我们Spring Boot的web应用中报错可以看到一些关于Tomcat的信息&lt;/p>
+&lt;h3 id="2-内嵌式tomcat到底是什么">2. 内嵌式Tomcat到底是什么？&lt;/h3>
+&lt;p>本质上还是一个Tomcat，只不过和以前单独部署然后在指定的目录中部署war不一样的是，内嵌是可以用Jar包的形式嵌入到开发者的项目中。这也是Spring Boot web项目能够使用Tomcat的根本。内嵌式Tomcat将以前传统的Tomcat以编码的方式集成到开发者的web程序中。去除了繁琐的配置。这个也和现在Spring Boot的思想不谋而合。&lt;/p>
+&lt;h3 id="3-创建一个内嵌tomcat应用">3. 创建一个内嵌Tomcat应用&lt;/h3>
+&lt;blockquote>
+&lt;p>Tips: Tomcat版本9.0.58，高的版本需要引入 &lt;a href="https://jakarta.ee/">Jakarta EE&lt;/a> 的一些包，已maven项目为例&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="31-创建pomxml">3.1 创建pom.xml&lt;/h4>
+&lt;p>在pom.xml文件中添加依赖&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml">&lt;span style="color:#204a87;font-weight:bold">&amp;lt;properties&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;tomcat.version&amp;gt;&lt;/span>9.0.58&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/tomcat.version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/properties&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>org.apache.tomcat.embed&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>tomcat-embed-core&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>${tomcat.version}&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>org.apache.tomcat.embed&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>tomcat-embed-jasper&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>${tomcat.version}&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependency&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="32-编写启动程序">3.2 编写启动程序&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">TomcatBootstrap&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">main&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">Exception&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//第一部分
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">Tomcat&lt;/span> &lt;span style="color:#000">tomcat&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Tomcat&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">tomcat&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setPort&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">8080&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">tomcat&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getConnector&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//第二部分
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">Context&lt;/span> &lt;span style="color:#000">ctx&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">tomcat&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">addWebapp&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">File&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;java-sample/src/main/webapp&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">getAbsolutePath&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#000">WebResourceRoot&lt;/span> &lt;span style="color:#000">resources&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">StandardRoot&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">resources&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">addPreResources&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">DirResourceSet&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">resources&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;/WEB-INF/classes&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">File&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;java-sample/target/classes&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">getAbsolutePath&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(),&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;/&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">));&lt;/span>
+&lt;span style="color:#000">ctx&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setResources&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">resources&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//第三部分
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">tomcat&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">start&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">tomcat&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getServer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">await&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@WebServlet&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">urlPatterns&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;/&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">MxsmServlet&lt;/span> &lt;span style="color:#204a87;font-weight:bold">extends&lt;/span> &lt;span style="color:#000">HttpServlet&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">protected&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">doGet&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HttpServletRequest&lt;/span> &lt;span style="color:#000">req&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">HttpServletResponse&lt;/span> &lt;span style="color:#000">resp&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">ServletException&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">IOException&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">resp&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getWriter&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;hello world&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/serialize/image-20220224233009657.png" alt="image-20220224233009657">&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 上面代码根据不同人的代码结构不同标注的地方可能也不相同。可以根据错误提示调整。&lt;/p>
+&lt;/blockquote>
+&lt;p>然后启动服务如下图：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/serialize/startembedtomcat.gif" alt="startembedtomcat">&lt;/p>
+&lt;h4 id="33-验证程序">3.3 验证程序&lt;/h4>
+&lt;p>在浏览器输入：&lt;strong>&lt;code>http://localhost:8080/&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/serialize/image-20220224233432937.png" alt="image-20220224233432937">&lt;/p>
+&lt;p>返回了&lt;code>hello world&lt;/code> , 说明了Tomcat正常运行了。&lt;/p>
+&lt;h3 id="4-总结">4. 总结&lt;/h3>
+&lt;ul>
+&lt;li>内嵌式Tomcat提供编程的方式将Tomcat集成到我们的项目，可以让Web项目以Jar包的形式运行&lt;/li>
+&lt;li>以编程的方式代替配置文件的方式来配置Tomcat,减少了配置文件。这个也是为了支持Servlet的注解。以前需要XML配的现在都可以通过注解来实现&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢&lt;/p>
+&lt;/blockquote></description></item></channel></rss>

@@ -1,0 +1,264 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Docker基础知识</title><link>/middlewares/docker/docker-base/</link><description>Recent content in Docker基础知识 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Sun, 22 Aug 2021 00:00:00 +0000</lastBuildDate><atom:link href="/middlewares/docker/docker-base/index.xml" rel="self" type="application/rss+xml"/><item><title>Middlewares: Centos8 Docker安装</title><link>/middlewares/docker/docker-base/docker-install/</link><pubDate>Sun, 22 Aug 2021 00:00:00 +0000</pubDate><guid>/middlewares/docker/docker-base/docker-install/</guid><description>
+&lt;h3 id="1-系统要求">1. 系统要求&lt;/h3>
+&lt;p>系统必须是Centos7或者Centos8&lt;/p>
+&lt;h3 id="2-卸载系统的旧版本">2. 卸载系统的旧版本&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell"> sudo yum remove docker &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> docker-client &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> docker-client-latest &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> docker-common &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> docker-latest &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> docker-latest-logrotate &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> docker-logrotate &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> docker-engine
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="3-安装docker">3. 安装Docker&lt;/h3>
+&lt;p>在安装Docker之前需要做一些安装的准备&lt;/p>
+&lt;h4 id="31-设置仓库">3.1 设置仓库&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell"> sudo yum install -y yum-utils
+sudo yum-config-manager &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> --add-repo &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> https://download.docker.com/linux/centos/docker-ce.repo
+&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="32-安装docker">3.2 安装Docker&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell"> sudo yum install docker-ce docker-ce-cli containerd.io
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>参考文档:&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://docs.docker.com/engine/install/centos/">https://docs.docker.com/engine/install/centos/&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://docs.docker.com/compose/install/">https://docs.docker.com/compose/install/&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Middlewares: Docker常见的命令</title><link>/middlewares/docker/docker-base/docker-command/</link><pubDate>Sun, 22 Aug 2021 00:00:00 +0000</pubDate><guid>/middlewares/docker/docker-base/docker-command/</guid><description>
+&lt;h3 id="1-镜像搜索">1. 镜像搜索&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">docker search --help
+Usage: docker search &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>OPTIONS&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> TERM
+Search the Docker Hub &lt;span style="color:#204a87;font-weight:bold">for&lt;/span> images
+Options:
+-f, --filter filter Filter output based on conditions provided
+--format string Pretty-print search using a Go template
+--limit int Max number of search results &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>default 25&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+--no-trunc Don&lt;span style="color:#a40000">&amp;#39;&lt;/span>t truncate output
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>例子:&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">docker search mysql
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="2-查看镜像">2. 查看镜像&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">docker images
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="3-查看运行的镜像">3. 查看运行的镜像&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#000">docker&lt;/span> &lt;span style="color:#000">ps&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="4-查看容器的信息">4. 查看容器的信息&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>root@192 ~&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&lt;span style="color:#8f5902;font-style:italic"># docker inspect --help&lt;/span>
+Usage: docker inspect &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>OPTIONS&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> NAME&lt;span style="color:#000;font-weight:bold">|&lt;/span>ID &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>NAME&lt;span style="color:#000;font-weight:bold">|&lt;/span>ID...&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>
+Return low-level information on Docker objects
+Options:
+-f, --format string Format the output using the given Go template
+-s, --size Display total file sizes &lt;span style="color:#204a87;font-weight:bold">if&lt;/span> the &lt;span style="color:#204a87">type&lt;/span> is container
+--type string Return JSON &lt;span style="color:#204a87;font-weight:bold">for&lt;/span> specified &lt;span style="color:#204a87">type&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>Middlewares: Dockfile</title><link>/middlewares/docker/docker-base/dockerfile/</link><pubDate>Sun, 21 Nov 2021 00:00:00 +0000</pubDate><guid>/middlewares/docker/docker-base/dockerfile/</guid><description>
+&lt;h3 id="1-什么是dockerfile">1. 什么是Dockerfile&lt;/h3>
+&lt;p>Docker 通过从一个Dockerfile包含所有命令的文本文件中读取指令来自动构建镜像，该 文件按顺序包含构建给定镜像所需的所有命令&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#8f5902;font-style:italic"># syntax=docker/dockerfile:1&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">FROM&lt;/span>&lt;span style="color:#4e9a06"> ubuntu:18.04&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">COPY&lt;/span> . /app&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">RUN&lt;/span> make /app&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">CMD&lt;/span> python /app/app.py&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>每条指令创建一层：&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>FROM&lt;/code>从&lt;code>ubuntu:18.04&lt;/code>Docker 镜像创建一个层。&lt;/li>
+&lt;li>&lt;code>COPY&lt;/code> 从 Docker 客户端的当前目录添加文件。&lt;/li>
+&lt;li>&lt;code>RUN&lt;/code>使用&lt;code>make&lt;/code>.&lt;/li>
+&lt;li>&lt;code>CMD&lt;/code> 指定要在容器内运行的命令。&lt;/li>
+&lt;/ul>
+&lt;p>当你运行一个镜像并生成一个容器时，你会 在底层的顶部添加一个新的&lt;em>可写层&lt;/em>（“容器层”）。对正在运行的容器所做的所有更改，例如写入新文件、修改现有文件和删除文件，都将写入此可写容器层。&lt;/p>
+&lt;h3 id="2-dockerfile指令">2. Dockerfile指令&lt;/h3>
+&lt;p>这些建议旨在帮助您创建一个高效和可维护的Dockerfile。&lt;/p>
+&lt;h4 id="21-from">2.1 FROM&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">FROM&lt;/span>&lt;span style="color:#4e9a06"> [--platform=&amp;lt;platform&amp;gt;] &amp;lt;image&amp;gt; [AS &amp;lt;name&amp;gt;]&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">FROM&lt;/span>&lt;span style="color:#4e9a06"> [--platform=&amp;lt;platform&amp;gt;] &amp;lt;image&amp;gt;[:&amp;lt;tag&amp;gt;] [AS &amp;lt;name&amp;gt;]&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">FROM&lt;/span>&lt;span style="color:#4e9a06"> [--platform=&amp;lt;platform&amp;gt;] &amp;lt;image&amp;gt;[@&amp;lt;digest&amp;gt;] [AS &amp;lt;name&amp;gt;]&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>Tips:只要有可能，请使用当前的官方图像作为您的图像的基础。我们推荐Alpine映像，因为它是严格控制的，而且体积很小(目前小于6 MB)，同时仍然是一个完整的Linux发行版。&lt;/p>
+&lt;/blockquote>
+&lt;p>FROM指令初始化一个新的构建阶段，并为后续指令设置基本映像。因此，一个有效的Dockerfile必须以FROM指令开始。映像可以是任何有效的映像—从公共存储库中取出映像特别容易。&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>ARG&lt;/code>&lt;/strong> 是Dockerfile中唯一可能先于 &lt;strong>&lt;code>FROM&lt;/code>&lt;/strong> 的指令&lt;/p>
+&lt;p>FROM指令支持由发生在第一个FROM之前的任何ARG指令声明的变量&lt;/p>
+&lt;pre>&lt;code>ARG CODE_VERSION=latest
+FROM base:${CODE_VERSION}
+CMD /code/run-app
+FROM extras:${CODE_VERSION}
+CMD /code/run-extras
+&lt;/code>&lt;/pre>&lt;p>在FROM之前声明的ARG在构建阶段之外，所以它不能在FROM之后的任何指令中使用。要使用在第一个FROM之前声明的ARG的默认值，在构建阶段使用一个没有值的ARG指令:&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">ARG&lt;/span> &lt;span style="color:#000">VERSION&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>latest
+&lt;span style="color:#204a87;font-weight:bold">FROM&lt;/span>&lt;span style="color:#4e9a06"> busybox:$VERSION&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">ARG&lt;/span> VERSION&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">RUN&lt;/span> &lt;span style="color:#204a87">echo&lt;/span> &lt;span style="color:#000">$VERSION&lt;/span> &amp;gt; image_version&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;/li>
+&lt;li>
+&lt;p>FROM可以在一个Dockerfile中出现多次，以创建多个映像或使用一个构建阶段作为另一个构建阶段的依赖项。只需在每个新的FROM指令之前记录提交的最后一个镜像ID输出。每个FROM指令清除前面指令创建的任何状态。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>可以通过在FROM指令中添加AS名称来为新的构建阶段指定一个名称。这个名称可以用于后面的FROM和COPY。参考在此阶段构建的映像的说明&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>tag或digest值是可选的。如果省略其中任何一个，构造器默认采用最新的标记。如果不能找到标记值，构造器将返回一个错误。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>可选的——platform标志可用于在FROM引用多平台图像的情况下指定图像的平台。例如:linux/amd64、linux/arm64或windows/amd64。默认情况下，将使用构建请求的目标平台。全局构建参数可以在这个标志的值中使用，例如，自动平台arg允许你强制一个阶段本地构建平台(——platform=$BUILDPLATFORM)，并使用它在阶段内部交叉编译到目标平台。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="22-run">2.2 RUN&lt;/h4>
+&lt;ul>
+&lt;li>&lt;strong>&lt;code>RUN &amp;lt;command&amp;gt;&lt;/code>&lt;/strong> (Shell形式，命令在Shell中运行，默认情况下是 &lt;strong>&lt;code>/bin/sh -c&lt;/code>&lt;/strong> 在Linux上面或者 &lt;strong>&lt;code>cmd /S /C&lt;/code>&lt;/strong> 在windows上面)&lt;/li>
+&lt;li>&lt;strong>&lt;code>RUN [&amp;quot;executable&amp;quot;, &amp;quot;param1&amp;quot;, &amp;quot;param2&amp;quot;]&lt;/code>&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;p>RUN指令将在当前镜像上方的新层中执行任何命令，并提交结果。生成的提交映像将用于Dockerfile中的下一步。&lt;/p>
+&lt;p>分层RUN指令和生成提交符合Docker的核心概念，其中提交很便宜，容器可以从映像历史的任何点创建，就像源代码控制一样。&lt;/p>
+&lt;p>exec表单可以避免shell字符串被修改，并且可以使用不包含指定shell可执行文件的基本映像来运行命令。&lt;/p>
+&lt;p>shell表单的默认shell可以使用shell命令更改。&lt;/p>
+&lt;p>在shell形式中，您可以使用 \ (反斜杠)来将单个RUN指令继续到下一行。例如，考虑这两行:&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">RUN&lt;/span> /bin/bash -c &lt;span style="color:#4e9a06">&amp;#39;source $HOME/.bashrc; \
+&lt;/span>&lt;span style="color:#4e9a06">echo $HOME&amp;#39;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>它们合在一起相当于这一行:&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">RUN&lt;/span> /bin/bash -c &lt;span style="color:#4e9a06">&amp;#39;source $HOME/.bashrc; echo $HOME&amp;#39;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>要使用不同的shell，而不是' /bin/sh &amp;lsquo;，请使用exec表单传入所需的shell。例如:&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">RUN&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;/bin/bash&amp;#34;&lt;/span>, &lt;span style="color:#4e9a06">&amp;#34;-c&amp;#34;&lt;/span>, &lt;span style="color:#4e9a06">&amp;#34;echo hello&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="24-label">2.4 LABEL&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">LABEL&lt;/span> &amp;lt;key&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&amp;lt;value&amp;gt; &amp;lt;key&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&amp;lt;value&amp;gt; &amp;lt;key&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&amp;lt;value&amp;gt; ...&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>LABEL指令向镜像添加元数据。 LABEL是一个键值对。 要在LABEL值中包含空格，请像在命令行解析中那样使用引号和反斜杠。 一些用法示例:&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">LABEL&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;com.example.vendor&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;ACME Incorporated&amp;#34;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">LABEL&lt;/span> com.example.label-with-value&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;foo&amp;#34;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">LABEL&lt;/span> &lt;span style="color:#000">version&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;1.0&amp;#34;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">LABEL&lt;/span> &lt;span style="color:#000">description&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;This text illustrates \
+&lt;/span>&lt;span style="color:#4e9a06">that label-values can span multiple lines.&amp;#34;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">LABEL&lt;/span> multi.label1&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;value1&amp;#34;&lt;/span> multi.label2&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;value2&amp;#34;&lt;/span> &lt;span style="color:#000">other&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;value3&amp;#34;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">LABEL&lt;/span> multi.label1&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;value1&amp;#34;&lt;/span> &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> multi.label2&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;value2&amp;#34;&lt;/span> &lt;span style="color:#4e9a06">\
+&lt;/span>&lt;span style="color:#4e9a06">&lt;/span> &lt;span style="color:#000">other&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;value3&amp;#34;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>基映像或父映像(FROM行中的映像)中包含的标签由映像继承。 如果标签已经存在，但有不同的值，则最近应用的值将覆盖以前设置的值。&lt;/p>
+&lt;p>要查看图像的标签，使用docker image inspect命令。 您可以使用——format选项只显示标签;&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-json" data-lang="json">&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;com.example.vendor&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;ACME Incorporated&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;com.example.label-with-value&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;foo&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;version&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;1.0&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;description&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;This text illustrates that label-values can span multiple lines.&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;multi.label1&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;value1&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;multi.label2&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;value2&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;other&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;value3&amp;#34;&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="25-expose">2.5 EXPOSE&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">EXPOSE&lt;/span>&lt;span style="color:#4e9a06"> &amp;lt;port&amp;gt; [&amp;lt;port&amp;gt;/&amp;lt;protocol&amp;gt;...]&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>EXPOSE指令通知Docker容器在运行时侦听指定的网络端口。 可以指定端口监听的是TCP还是UDP，如果没有指定协议，默认为TCP。&lt;/p>
+&lt;p>EXPOSE指令实际上并不发布端口。 它可以作为构建映像的人和运行容器的人之间的一种文档，说明要发布哪些端口。 要在运行容器时实际发布端口，可以在docker run上使用-p标志来发布和映射一个或多个端口，或者使用-p标志发布所有暴露的端口并将它们映射到高阶端口。 缺省情况下，EXPOSE采用TCP协议。 你也可以指定UDP:选项只显示标签;&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">EXPOSE&lt;/span>&lt;span style="color:#4e9a06"> 80/udp&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">EXPOSE&lt;/span>&lt;span style="color:#4e9a06"> 80/tcp&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>在这种情况下，如果您在运行docker时使用-P，则端口将分别对TCP和UDP公开一次。请记住，-P在主机上使用一个临时的高顺序主机端口，因此TCP和UDP的端口不相同。无论EXPOSE设置如何，您都可以在运行时使用-p标志覆盖它们。例如&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell"> docker run -p 80:80/tcp -p 80:80/udp ...
+&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="26-env">2.6 ENV&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">ENV&lt;/span> &amp;lt;key&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&amp;lt;value&amp;gt; ...&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>ENV指令设置环境变量key value;。该值将在构建阶段的所有后续指令的环境中，并且可以在许多指令中内联替换。该值将被解释为其他环境变量，因此如果引号字符没有转义，它们将被删除。像命令行解析一样，引号和反斜杠可以用于在值中包含空格。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">ENV&lt;/span> &lt;span style="color:#000">MY_NAME&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;John Doe&amp;#34;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">ENV&lt;/span> &lt;span style="color:#000">MY_DOG&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>Rex&lt;span style="color:#4e9a06">\ &lt;/span>The&lt;span style="color:#4e9a06">\ &lt;/span>Dog&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">ENV&lt;/span> &lt;span style="color:#000">MY_CAT&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>fluffy
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>ENV可以在Dockerfile中使用多次&lt;/p>
+&lt;p>当镜像运行容器时，使用ENV设置的环境变量将持续存在。您可以使用docker inspect查看值，并使用docker run &amp;ndash;env &lt;key>=&lt;value>&lt;/p>
+&lt;blockquote>
+&lt;p>ENV指令还允许使用另一种语法&lt;/p>
+&lt;pre>&lt;code>ENV MY_VAR my-value
+&lt;/code>&lt;/pre>&lt;p>他的语法不允许在一条ENV指令中设置多个环境变量，这可能会令人困惑。例如，下面设置了一个环境变量(ONE)，其值为“TWO= THREE=world”:&lt;/p>
+&lt;pre>&lt;code>ENV ONE TWO= THREE=world
+&lt;/code>&lt;/pre>&lt;/blockquote>
+&lt;h4 id="27-add">2.7 ADD&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">ADD &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>--chown&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&amp;lt;user&amp;gt;:&amp;lt;group&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &amp;lt;src&amp;gt;... &amp;lt;dest&amp;gt; &lt;span style="color:#0000cf;font-weight:bold">1&lt;/span>
+ADD &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>--chown&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&amp;lt;user&amp;gt;:&amp;lt;group&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;&amp;lt;src&amp;gt;&amp;#34;&lt;/span>,... &lt;span style="color:#4e9a06">&amp;#34;&amp;lt;dest&amp;gt;&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">2&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>对于包含空格的路径，使用第二种形式&lt;/p>
+&lt;blockquote>
+&lt;p>Note: &amp;ndash;chown特性只支持用于构建Linux容器的Dockerfiles，而不适用于Windows容器。由于用户和组所有权的概念不能在Linux和Windows之间转换，使用/etc/passwd和/etc/group将用户和组名转换为id，限制了该特性只能在基于Linux操作系统的容器中有效。&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="28-copy">2.8 COPY&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">COPY&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>--chown&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&amp;lt;user&amp;gt;:&amp;lt;group&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &amp;lt;src&amp;gt;... &amp;lt;dest&amp;gt;&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">COPY&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>--chown&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&amp;lt;user&amp;gt;:&amp;lt;group&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;&amp;lt;src&amp;gt;&amp;#34;&lt;/span>,... &lt;span style="color:#4e9a06">&amp;#34;&amp;lt;dest&amp;gt;&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>Note:&lt;/p>
+&lt;p>&amp;ndash;chown特性只支持用于构建Linux容器的Dockerfiles，而不适用于Windows容器。由于用户和组所有权的概念不能在Linux和Windows之间转换，使用/etc/passwd和/etc/group将用户和组名转换为id，限制了该特性只能在基于Linux操作系统的容器中有效。&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="29-entrypoint">2.9 ENTRYPOINT&lt;/h4>
+&lt;p>两种格式：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">ENTRYPOINT &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;executable&amp;#34;&lt;/span>, &lt;span style="color:#4e9a06">&amp;#34;param1&amp;#34;&lt;/span>, &lt;span style="color:#4e9a06">&amp;#34;param2&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>
+ENTRYPOINT &lt;span style="color:#204a87">command&lt;/span> param1 param2
+&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="210-volume">2.10 VOLUME&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">VOLUME&lt;/span> &lt;span style="color:#000;font-weight:bold">[&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;/data&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">]&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>VOLUME指令使用指定的名称创建一个挂载点，并将其标记为保存来自本机主机或其他容器的外部挂载卷。可以是JSON数组，VOLUME [&amp;quot;/var/log/&amp;quot;]，也可以是带多个参数的纯字符串，如VOLUME /var/log或VOLUME /var/log/ var/db&lt;/p>
+&lt;h4 id="211-user">2.11 USER&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">USER&lt;/span>&lt;span style="color:#4e9a06"> &amp;lt;user&amp;gt;[:&amp;lt;group&amp;gt;]&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">USER&lt;/span>&lt;span style="color:#4e9a06"> &amp;lt;UID&amp;gt;[:&amp;lt;GID&amp;gt;]&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="212-workdir">2.12 WORKDIR&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">WORKDIR&lt;/span>&lt;span style="color:#4e9a06"> /path/to/workdir&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>WORKDIR指令为Dockerfile中跟随它的任何RUN、CMD、ENTRYPOINT、COPY和ADD指令设置工作目录。如果WORKDIR不存在，它将被创建，即使它没有在任何后续Dockerfile指令中使用。&lt;/p>
+&lt;p>WORKDIR指令可以在Dockerfile中多次使用。如果提供了一个相对路径，它将相对于前一个WORKDIR指令的路径。例如:&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">WORKDIR&lt;/span>&lt;span style="color:#4e9a06"> /a&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">WORKDIR&lt;/span>&lt;span style="color:#4e9a06"> b&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">WORKDIR&lt;/span>&lt;span style="color:#4e9a06"> c&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">RUN&lt;/span> pwd&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>pwd显示的值是： &lt;strong>&lt;code>/a/b/c&lt;/code>&lt;/strong>&lt;/p>
+&lt;h4 id="213-arg">2.13 ARG&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">ARG&lt;/span> &amp;lt;name&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">[=&lt;/span>&amp;lt;default value&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>ARG定义了一个变量，配合**&lt;code>docker build --build-arg &amp;lt;varname&amp;gt;=&amp;lt;varvalue&amp;gt;&lt;/code>**&lt;/p>
+&lt;h4 id="214-onbuild">2.14 ONBUILD&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">ONBUILD&lt;/span> &amp;lt;INSTRUCTION&amp;gt;&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="215-stopsignal">2.15 STOPSIGNAL&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">STOPSIGNAL&lt;/span>&lt;span style="color:#4e9a06"> signal&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="216-healthcheck">2.16 HEALTHCHECK&lt;/h4>
+&lt;p>格式：&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>HEALTHCHECK [选项] CMD &amp;lt;命令&amp;gt;&lt;/code>：设置检查容器健康状况的命令&lt;/li>
+&lt;li>&lt;code>HEALTHCHECK NONE&lt;/code>：如果基础镜像有健康检查指令，使用这行可以屏蔽掉其健康检查指令&lt;/li>
+&lt;/ul>
+&lt;p>&lt;code>HEALTHCHECK&lt;/code> 指令是告诉 Docker 应该如何进行判断容器的状态是否正常，这是 Docker 1.12 引入的新指令。&lt;/p>
+&lt;p>在没有 &lt;code>HEALTHCHECK&lt;/code> 指令前，Docker 引擎只可以通过容器内主进程是否退出来判断容器是否状态异常。很多情况下这没问题，但是如果程序进入死锁状态，或者死循环状态，应用进程并不退出，但是该容器已经无法提供服务了。在 1.12 以前，Docker 不会检测到容器的这种状态，从而不会重新调度，导致可能会有部分容器已经无法提供服务了却还在接受用户请求。&lt;/p>
+&lt;p>而自 1.12 之后，Docker 提供了 &lt;code>HEALTHCHECK&lt;/code> 指令，通过该指令指定一行命令，用这行命令来判断容器主进程的服务状态是否还正常，从而比较真实的反应容器实际状态。&lt;/p>
+&lt;p>当在一个镜像指定了 &lt;code>HEALTHCHECK&lt;/code> 指令后，用其启动容器，初始状态会为 &lt;code>starting&lt;/code>，在 &lt;code>HEALTHCHECK&lt;/code> 指令检查成功后变为 &lt;code>healthy&lt;/code>，如果连续一定次数失败，则会变为 &lt;code>unhealthy&lt;/code>。&lt;/p>
+&lt;p>&lt;code>HEALTHCHECK&lt;/code> 支持下列选项：&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>--interval=&amp;lt;间隔&amp;gt;&lt;/code>：两次健康检查的间隔，默认为 30 秒；&lt;/li>
+&lt;li>&lt;code>--timeout=&amp;lt;时长&amp;gt;&lt;/code>：健康检查命令运行超时时间，如果超过这个时间，本次健康检查就被视为失败，默认 30 秒；&lt;/li>
+&lt;li>&lt;code>--retries=&amp;lt;次数&amp;gt;&lt;/code>：当连续失败指定次数后，则将容器状态视为 &lt;code>unhealthy&lt;/code>，默认 3 次。&lt;/li>
+&lt;/ul>
+&lt;p>和 &lt;code>CMD&lt;/code>, &lt;code>ENTRYPOINT&lt;/code> 一样，&lt;code>HEALTHCHECK&lt;/code> 只可以出现一次，如果写了多个，只有最后一个生效。&lt;/p>
+&lt;p>在 &lt;code>HEALTHCHECK [选项] CMD&lt;/code> 后面的命令，格式和 &lt;code>ENTRYPOINT&lt;/code> 一样，分为 &lt;code>shell&lt;/code> 格式，和 &lt;code>exec&lt;/code> 格式。命令的返回值决定了该次健康检查的成功与否：&lt;code>0&lt;/code>：成功；&lt;code>1&lt;/code>：失败；&lt;code>2&lt;/code>：保留，不要使用这个值。&lt;/p>
+&lt;h4 id="217-shell">2.17 SHELL&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-dockerfile" data-lang="dockerfile">&lt;span style="color:#204a87;font-weight:bold">SHELL&lt;/span> &lt;span style="color:#000;font-weight:bold">[&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;executable&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;parameters&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">]&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>参考文档：&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://docs.docker.com/engine/reference/builder/">https://docs.docker.com/engine/reference/builder/&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Middlewares: Docker Compose file</title><link>/middlewares/docker/docker-base/docker-compose-file/</link><pubDate>Tue, 23 Nov 2021 00:00:00 +0000</pubDate><guid>/middlewares/docker/docker-base/docker-compose-file/</guid><description>
+&lt;blockquote>
+&lt;p>Docker Compose file 版本V3&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="1-docker-compose是什么">1. Docker Compose是什么?&lt;/h3>
+&lt;pre>&lt;code> Docker Compose是Docker编排服务的一部分，Compose可以让用户在集群中部署分布式应用。Docker Compose是一个属于“应用层”的服务，用户可以定义哪个容器组运行哪个应用，它支持动态改变应用，并在需要时扩展。
+&lt;/code>&lt;/pre>
+&lt;blockquote>
+&lt;p>Tips：安装就不在这里说了具体参照: &lt;a href="https://docs.docker.com/compose/install/">Docker Compose安装&lt;/a>&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="2-docker-compose-file">2. Docker Compose file&lt;/h3>
+&lt;p>Docker Compose file 文件类型为yaml文件，这个文件可以用来定义服务，网络，以及卷等等，默认的路径和名称为 &lt;strong>&lt;code>./docker-compose.yml&lt;/code>&lt;/strong> 。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 文件的后缀可以是.yml或者.yaml&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="3-服务配置">3. 服务配置&lt;/h3>
+&lt;p>本节包含版本3中服务定义支持的所有配置选项的列表。&lt;/p>
+&lt;h4 id="31-build">3.1 build&lt;/h4>
+&lt;p>在构建时应用的配置选项。 &lt;strong>&lt;code>build&lt;/code>&lt;/strong> 可以指定为包含构建上下文路径的字符串&lt;/p>
+&lt;p>例子：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-yaml" data-lang="yaml">&lt;span style="color:#204a87;font-weight:bold">version&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#4e9a06">&amp;#34;3.9&amp;#34;&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">services&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#204a87;font-weight:bold">webapp&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#204a87;font-weight:bold">build&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#000">./dir&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>作为一个对象，在context下指定路径，Dockerfile和args是可选的&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-yaml" data-lang="yaml">&lt;span style="color:#204a87;font-weight:bold">version&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#4e9a06">&amp;#34;3.9&amp;#34;&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">services&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#204a87;font-weight:bold">webapp&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#204a87;font-weight:bold">build&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#204a87;font-weight:bold">context&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#000">./dir&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#204a87;font-weight:bold">dockerfile&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#000">Dockerfile-alternate&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#204a87;font-weight:bold">args&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#204a87;font-weight:bold">buildno&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline"> &lt;/span>&lt;span style="color:#0000cf;font-weight:bold">1&lt;/span>&lt;span style="color:#f8f8f8;text-decoration:underline">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div></description></item></channel></rss>

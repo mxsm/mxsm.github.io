@@ -1,0 +1,423 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – OAuth2</title><link>/other/oauth2/</link><description>Recent content in OAuth2 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/oauth2/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: 从IETF规范理解OAuth 2.0</title><link>/other/oauth2/oauth2-overview/</link><pubDate>Thu, 24 Mar 2022 00:00:00 +0000</pubDate><guid>/other/oauth2/oauth2-overview/</guid><description>
+&lt;h3 id="1什么是-oauth-20">1.什么是 OAuth 2.0？&lt;/h3>
+&lt;p>以下是 OAuth 2.0 IETF 规范中给出的 OAuth 2.0 定义：&lt;/p>
+&lt;p>OAuth 2.0授权框架支持第三方应用程序获取对HTTP服务的有限访问通过编排审批交互来代表资源所有者在资源所有者和HTTP服务之间，或者通过允许第三方应用程序以自己的名义获得访问权。&lt;/p>
+&lt;p>需要了解的一点是，OAuth 2.0 为应用提供了一种获取用户受保护资源（如支付宝账户或其他用户可能希望通过应用访问的敏感信息）有限访问权限的方法，而无需用户将其登录凭据(用户名、密码)透露给应用&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: OAuth 2.0解决了一个什么问题？以网站的第三方登录为例子，网站A接入了微信、支付宝、微博的登录。你想要通过这三个网站的用户名登录接入的网站，正常情况下你需要输入你的用户名和密码在接入微信、支付宝、微博的登录网站A。但是这样你就需要向这网站A提供微信、支付宝、微博的账号密码。从根本上说，您要向应用提供这些敏感信息。您是否信任该网站A拥有你的密码和用户名这一行为？如果该应用遭到入侵，怎么办？如果这样，您必须要记得更改每个帐户的银行凭据。而OAuth 2.0就是为了解决这个问题&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="2-oauth-20角色">2. OAuth 2.0角色&lt;/h3>
+&lt;p>OAuth 2.0中定义了四个角色&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>资源拥有者(resource owner):&lt;/strong> 也称为&lt;em>最终用户&lt;/em>。通常是指能够授权访问受保护资源的人员（或其他实体），例如：微信中的头像信息，这个资源的拥有者就是你。&lt;/li>
+&lt;li>&lt;strong>资源服务器 (resource server)：&lt;/strong> 托管受保护资源的服务器，能够使用访问令牌接受和响应受保护的资源请求,例如：你的微信头像信息存储在微信服务器&lt;/li>
+&lt;li>&lt;strong>客户端(Client)&lt;/strong>：代表资源所有者并经其授权发出受保护资源请求的应用程序。例如：桌面应用，手机应用，服务器应用等等&lt;/li>
+&lt;li>&lt;strong>授权服务器(authorization server):&lt;/strong> 服务器成功认证资源所有者并获得授权后，向客户端发出访问令牌。&lt;/li>
+&lt;/ul>
+&lt;h3 id="3oauth-20协议流程">3.OAuth 2.0协议流程&lt;/h3>
+&lt;p>图片来自OAuth 2.0官方文档&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/oauth2/OAuth2.0%E6%B5%81%E7%A8%8B%E5%9B%BE.png" alt="OAuth2.0流程图">&lt;/p>
+&lt;p>了解相关术语：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>授权许可&lt;/strong>：授予应用代表最终用户检索访问令牌的权限&lt;/li>
+&lt;li>&lt;strong>访问令牌（Access Token）&lt;/strong>：一条长字符串，用作访问受保护资源的凭据&lt;/li>
+&lt;li>&lt;strong>受保护的资源&lt;/strong>：资源所有者拥有的数据。例如：账号头像、姓名、手机号等其他的敏感信息&lt;/li>
+&lt;/ul>
+&lt;p>OAuth 2.0协议流程说明：&lt;/p>
+&lt;ul>
+&lt;li>（A）用户打开客户端以后，客户端要求用户给予授权。例如：微信便捷登录弹窗获取用户的账号信息流程&lt;/li>
+&lt;li>（B）用户同意给予客户端授权。例如： 点击同意获取授权&lt;/li>
+&lt;li>（C）客户端使用上一步(B)获得的授权，向认证服务器申请令牌。&lt;/li>
+&lt;li>（D）认证服务器对客户端进行认证以后，确认无误，同意发放令牌。&lt;/li>
+&lt;li>（E）客户端使用令牌，向资源服务器申请获取资源。&lt;/li>
+&lt;li>（F）资源服务器确认令牌无误，同意向客户端开放资源。&lt;/li>
+&lt;/ul>
+&lt;h3 id="4什么是-oauth-20-授权类型">4.什么是 OAuth 2.0 授权类型？&lt;/h3>
+&lt;p>授权授予是代表资源所有者授权(访问其受保护资源)的凭据，客户机使用该授权来获取访问令牌。该规范定义了四种授权类型——授权代码、隐式、资源所有者密码凭证和客户端凭证——以及用于定义其他类型的可扩展机制。一般来说，每种授权类型都各有利弊，您需要根据您的业务用例进行权衡。其中一个考核因素之一：&lt;strong>&lt;code>即将访问您的数据的应用的可信度&lt;/code>&lt;/strong> 。通常第三方的应用可信度不如企业自己开发和使用的。例如：你在支付宝开发的小程序比支付宝内置的小程序的可信度低很多。&lt;/p>
+&lt;p>OAuth 2.0 的四种授权类型：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/oauth2/OAuth%202.0%20%E6%8E%88%E6%9D%83%E7%B1%BB%E5%9E%8B.png" alt="OAuth 2.0 授权类型">&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 后续会更新文章来详细讲解这四种授权类型&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="5-什么是访问令牌access-token">5. 什么是访问令牌(Access Token)&lt;/h3>
+&lt;p>访问令牌是一条长字符串，可用作访问受保护资源的凭据。资源令牌（也称为不记名令牌）在 Authorization 标头中传递，如下所示：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-http" data-lang="http">&lt;span style="color:#000">GET&lt;/span> &lt;span style="color:#000">/resource&lt;/span> &lt;span style="color:#204a87;font-weight:bold">HTTP&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">/&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">1.1&lt;/span>
+&lt;span style="color:#000">Host&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">server.example.com&lt;/span>
+&lt;span style="color:#000">Authorization&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">Bearer mF_9.B5f-4.1JqM&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>或者POST请求体中，如下所示：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-http" data-lang="http">&lt;span style="color:#000">POST&lt;/span> &lt;span style="color:#000">/resource&lt;/span> &lt;span style="color:#204a87;font-weight:bold">HTTP&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">/&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">1.1&lt;/span>
+&lt;span style="color:#000">Host&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">server.example.com&lt;/span>
+&lt;span style="color:#000">Content-Type&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">application/x-www-form-urlencoded&lt;/span>
+access_token=mF_9.B5f-4.1JqM
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>或者在URI请求参数中,如下所示：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-http" data-lang="http">&lt;span style="color:#000">GET&lt;/span> &lt;span style="color:#000">/resource?access_token=mF_9.B5f-4.1JqM&lt;/span> &lt;span style="color:#204a87;font-weight:bold">HTTP&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">/&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">1.1&lt;/span>
+&lt;span style="color:#000">Host&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">server.example.com&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>Tips: 参考https://datatracker.ietf.org/doc/html/rfc6750&lt;/p>
+&lt;/blockquote>
+&lt;p>访问令牌通常设有有效期（出于安全原因）。某些授权类型允许授权服务器发出刷新令牌，这允许应用在旧令牌到期时获取新的访问令牌。如需详细了解访问令牌和刷新令牌，请参阅 IETF OAuth 2.0 规范。例如时间的有效期时长等等在OAuth 2.0 规范中都给了建议以及相对应的说明&lt;/p>
+&lt;h3 id="6-通过范围限制访问权限">6. 通过范围限制访问权限&lt;/h3>
+&lt;p>通过范围机制，OAuth 2.0 可以向应用授予受保护资源的有限访问权限。例如我们在使用微信登录第三方网站的时候，第三方网站只能获取到微信用户的账号的基本信息，而不能在第三方网站对微信的账号进行改动。&lt;/p>
+&lt;h3 id="7-客户端注册">7. 客户端注册&lt;/h3>
+&lt;p>在OAuth中定义了两种客户端类型：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>机密的（confidential）&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>公开的（public）&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;p>所有客户端（应用）都必须注册准备向其请求访问令牌的 OAuth 2.0 授权服务器。注册后会生成客户端的client_id和client_secret。&lt;/p>
+&lt;h3 id="8-总结">8. 总结&lt;/h3>
+&lt;p>通过对OAuth 2.0 规范的梳理，我们需要了解以下几点：&lt;/p>
+&lt;ul>
+&lt;li>OAuth 2.0中的四个角色类型&lt;/li>
+&lt;li>OAuth 2.0的运行流程图&lt;/li>
+&lt;li>OAuth 2.0的四个授权模式，以及授权模式在什么情况下使用以及安全性等等&lt;/li>
+&lt;li>OAuth 2.0中的一些常见的名词，例如Access Token、refresh Token等等。&lt;/li>
+&lt;/ul>
+&lt;p>欲善其事，必先利其器。要想知道如何使用OAuth 2.0首先要了解其基础的知识。&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢&lt;/p>
+&lt;/blockquote>
+&lt;p>参考文档：&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://cloud.google.com/apigee/docs/api-platform/security/oauth/oauth-introduction?hl=zh-cn">https://cloud.google.com/apigee/docs/api-platform/security/oauth/oauth-introduction?hl=zh-cn&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://datatracker.ietf.org/doc/html/rfc6749">https://datatracker.ietf.org/doc/html/rfc6749&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Other: OAuth2-授权码模式图解(Authorization Code Grant)</title><link>/other/oauth2/oauth2-authorization-code-grant/</link><pubDate>Mon, 28 Mar 2022 00:00:00 +0000</pubDate><guid>/other/oauth2/oauth2-authorization-code-grant/</guid><description>
+&lt;h3 id="1授权码模式">1.授权码模式&lt;/h3>
+&lt;p>授权码模式用来获取**&lt;code>Access Token&lt;/code>** 以及 **&lt;code>refresh Token&lt;/code>** 。这个模式是功能最完整，最严密的、安全性最高的授权模式。**&lt;code>通过客户端的后台服务器与认证服务器进行交互。&lt;/code>**&lt;/p>
+&lt;h3 id="2-授权码流程图">2. 授权码流程图&lt;/h3>
+&lt;p>下面是官方给的授权流程图：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/oauth2/%E6%8E%88%E6%9D%83%E7%A0%81%E6%A8%A1%E5%BC%8F%E6%B5%81%E7%A8%8B.png" alt="授权码模式流程">&lt;/p>
+&lt;p>上图这个看起来有点懵，转换一下成详细时序图：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/oauth2/%E6%8E%88%E6%9D%83%E7%A0%81%E6%A8%A1%E5%BC%8F%E6%97%B6%E5%BA%8F%E5%9B%BE.png" alt="授权码模式时序图">&lt;/p>
+&lt;p>上图有几个重要的步骤下面根据图以及官方的文档进行详细分析。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 上图的client其实是可以包含前端页面、后台的服务。&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="21-授权请求">2.1 授权请求&lt;/h4>
+&lt;p>官方的流程图中（A）步骤就是授权请求认证的URI，在时序图中就是步骤（2）。客户端构造的请求URI的格式如下：&lt;/p>
+&lt;p>&lt;strong>&lt;code>Context-Type: application/x-www-form-urlencoded&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>HTTP请求方式： GET&lt;/p>
+&lt;p>请求参数：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>参数&lt;/th>
+&lt;th>是否必须&lt;/th>
+&lt;th>说明&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>response_type&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>必须设置为&lt;strong>code&lt;/strong>&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>client_id&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>客户端在授权服务注册的能够标识的唯一值，一般用应用的唯一ID&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>redirect_uri&lt;/td>
+&lt;td>可选&lt;/td>
+&lt;td>授权完成后的重定向地址，一般可以在授权服务后台进行设置&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>scope&lt;/td>
+&lt;td>可选&lt;/td>
+&lt;td>可选、表示授权范围&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>state&lt;/td>
+&lt;td>推荐使用&lt;/td>
+&lt;td>用来维护请求和回调状态的附加字符串，在授权完成回调时会附加此参数，应用可以根据此字符串来判断上下文关系&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>例子如下：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-http" data-lang="http">&lt;span style="color:#a40000">GET /authorize?response_type=code&amp;amp;client_id=s6BhdRkqt3&amp;amp;state=xyz
+&lt;/span>&lt;span style="color:#a40000"> &amp;amp;redirect_uri=https%3A%2F%2Fclient%2Eexample%2Ecom%2Fcb HTTP/1.1
+&lt;/span>&lt;span style="color:#a40000">Host: server.example.com
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>Tips: URI要进行URIEncode的编码&lt;/p>
+&lt;/blockquote>
+&lt;p>授权服务器对URI的请求参数进行验证，验证通过后就是响应返回&lt;/p>
+&lt;h4 id="22-授权响应">2.2 授权响应&lt;/h4>
+&lt;p>步骤（c）和时序图中的步骤（6）返回授权请求的响应。返回的格式：&lt;/p>
+&lt;p>&lt;strong>&lt;code>Context-Type: application/x-www-form-urlencoded&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>返回的参数：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>参数&lt;/th>
+&lt;th>是否必须&lt;/th>
+&lt;th>说明&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>code&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>授权码，授权码代表用户确认授权的暂时性凭证，&lt;strong>只能使用一次&lt;/strong>，推荐最大生命周期不超过10分钟&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>state&lt;/td>
+&lt;td>可选&lt;/td>
+&lt;td>如果客户端传递了该参数，则必须原封不动返回&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>例子如下：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-http" data-lang="http">&lt;span style="color:#204a87;font-weight:bold">HTTP&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">/&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">1.1&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">302&lt;/span> &lt;span style="color:#c00;font-weight:bold">Found&lt;/span>
+&lt;span style="color:#000">Location&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">https://client.example.com/cb?code=SplxlOBeZQQYbYS6WxSbIA&amp;amp;state=xyz&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="23-access-token请求">2.3 Access Token请求&lt;/h4>
+&lt;p>（D）步骤和时序图中的（7）步骤，客户端向认证服务器申请令牌的HTTP请求，包含以下参数：&lt;/p>
+&lt;p>&lt;strong>&lt;code>Context-Type: application/x-www-form-urlencoded&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>HTTP请求方式：POST&lt;/p>
+&lt;p>请求参数：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>参数&lt;/th>
+&lt;th>是否必须&lt;/th>
+&lt;th>说明&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>grant_type&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>OAuth 2.0规定的授权类型，此处必须是 &lt;strong>authorization_code&lt;/strong>&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>client_id&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>应用的唯一ID&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>redirect_uri&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>授权回调地址&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>code&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>授权码&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>例子如下：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-http" data-lang="http">&lt;span style="color:#000">POST&lt;/span> &lt;span style="color:#000">/token&lt;/span> &lt;span style="color:#204a87;font-weight:bold">HTTP&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">/&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">1.1&lt;/span>
+&lt;span style="color:#000">Host&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">server.example.com&lt;/span>
+&lt;span style="color:#000">Authorization&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW&lt;/span>
+&lt;span style="color:#000">Content-Type&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">application/x-www-form-urlencoded&lt;/span>
+grant_type=authorization_code&amp;amp;code=SplxlOBeZQQYbYS6WxSbIA
+&amp;amp;redirect_uri=https%3A%2F%2Fclient%2Eexample%2Ecom%2Fcb
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;strong>验证服务器需要做的：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>验证客户端的凭证&lt;/li>
+&lt;li>如果包含客户端身份验证，则对客户端进行身份验证&lt;/li>
+&lt;li>校验客户端的client_id&lt;/li>
+&lt;li>校验授权码是否有效&lt;/li>
+&lt;li>确保redirect_uri是存在的，且和获取授权码请求的一样&lt;/li>
+&lt;/ul>
+&lt;h4 id="24-access-token响应">2.4 Access Token响应&lt;/h4>
+&lt;p>（E）步骤和时序图（9）中，认证服务器发送的HTTP回复：&lt;/p>
+&lt;p>返回参数：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>参数&lt;/th>
+&lt;th>是否必须&lt;/th>
+&lt;th>说明&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>access_token&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>授权服务器颁发的 &lt;strong>&lt;code>Access Token&lt;/code>&lt;/strong>&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>token_type&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>&lt;a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7.1">OAuth 2.0协议规定的Token类型，固定为 &lt;strong>&lt;code>Bearer&lt;/code>&lt;/strong>&lt;/a>&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>expires_in&lt;/td>
+&lt;td>推荐&lt;/td>
+&lt;td>过期时间（秒）&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>refresh_token&lt;/td>
+&lt;td>可选&lt;/td>
+&lt;td>授权服务器颁发的**&lt;code>refresh token&lt;/code>**&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>scope&lt;/td>
+&lt;td>可选&lt;/td>
+&lt;td>表示权限范围，如果与客户端申请的范围一致，此项可省略&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>返回例子如下：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-http" data-lang="http">&lt;span style="color:#204a87;font-weight:bold">HTTP&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">/&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">1.1&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">200&lt;/span> &lt;span style="color:#c00;font-weight:bold">OK&lt;/span>
+&lt;span style="color:#000">Content-Type&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">application/json;charset=UTF-8&lt;/span>
+&lt;span style="color:#000">Cache-Control&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">no-store&lt;/span>
+&lt;span style="color:#000">Pragma&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">no-cache&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;access_token&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;2YotnFZFEjr1zCsicMWpAA&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;token_type&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;Bearer&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;expires_in&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">3600&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;refresh_token&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;tGzv3JOkF0XG5Qx2TlKWIA&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;example_parameter&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;example_value&amp;#34;&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;strong>说明：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>Content-Type: application/json;charset=UTF-8&lt;/code>&lt;/li>
+&lt;li>不能使用缓存&lt;/li>
+&lt;/ul>
+&lt;h3 id="3-授权码模式应用-第三方登录">3. 授权码模式应用-第三方登录&lt;/h3>
+&lt;p>授权码模式使用的最多的应用就是第三方登录，我们以自己设计一个第三方登录为例子来进行说明。首先看一下登录时序图&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/oauth2/%E7%AC%AC%E4%B8%89%E6%96%B9%E6%8E%88%E6%9D%83%E7%99%BB%E5%BD%95%E6%97%B6%E5%BA%8F%E5%9B%BE.png" alt="第三方授权登录时序图">&lt;/p>
+&lt;p>上述登录时序图说明：我们以加入你要接入微信登录为例子。那么授权服务就是微信的服务，资源拥有服务也是微信的服务。而第三方的面和第三方的后端服务就是需要接入微信登录的用户方。授权登录的页面是微信提供的。对应OAuth2的角色：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>资源拥有者(resource owner):&lt;/strong> 微信。&lt;/li>
+&lt;li>&lt;strong>资源服务器 (resource server)：&lt;/strong> 资源拥有服务(微信)&lt;/li>
+&lt;li>&lt;strong>客户端(Client)&lt;/strong>：第三方页面、第三方后端服务&lt;/li>
+&lt;li>&lt;strong>授权服务器(authorization server):&lt;/strong> 授权服务（微信）&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>关键步骤说明：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>(2)主要是为了去授权服务器验证当前接入的客户端是否合法，在验证合法的情况下返回授权登录页面，如果是微信登录获得的就是微信授权登录的页面，这个是由授权放提供。(这里大家可以找一个有接入微信或者其他的支持第三方登录的网站看一下)&lt;/li>
+&lt;li>(8)和(9)主要是生成授权码和将授权码通过重定向链接将数据发送到第三方后端服务(这个过程是一个自动的过程对web页面来说，这里返回的HTTP响应码是302)&lt;/li>
+&lt;li>(11)是由第三方后端服务调用授权服务去获取&lt;code>Access Token&lt;/code> 。 OAuth 2.0协议规定redirect_uri是必填的。但是大多数的实现都没有这个必填的参数传入。后续就是授权服务校验提交的参数同时通过就返回 &lt;strong>&lt;code>Access Token&lt;/code>&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;h3 id="4-总结">4. 总结&lt;/h3>
+&lt;p>授权码模式作为最安全的模式，经常被用于用作实现第三方登录。但是对比OAuth 2.0的标准，不同的公司的实现有一定的差异。但是总体的思想都差不多。第三方的登录可以参考知乎的第三方登录页面。&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢&lt;/p>
+&lt;/blockquote>
+&lt;p>参考文档：&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://datatracker.ietf.org/doc/html/rfc6749#section-4.1">https://datatracker.ietf.org/doc/html/rfc6749#section-4.1&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Other: OAuth2-隐式授权详解(Implicit Grant)</title><link>/other/oauth2/oauth2-implicit-grant/</link><pubDate>Thu, 31 Mar 2022 00:00:00 +0000</pubDate><guid>/other/oauth2/oauth2-implicit-grant/</guid><description>
+&lt;p>一起养成写作习惯！这是我参与「掘金日新计划 · 4 月更文挑战」的第2天，&lt;a href="https://juejin.cn/post/7080800226365145118">点击查看活动详情&lt;/a>。&lt;/p>
+&lt;h3 id="1-隐式授权概述">1. 隐式授权概述&lt;/h3>
+&lt;p>隐式授予类型用于获取访问令牌(&lt;strong>&lt;code>它不支持发布刷新令牌&lt;/code>&lt;/strong>)，并针对已知操作特定重定向URI的公共客户端进行了优化。这些客户端通常使用JavaScript等脚本语言在浏览器中实现。(主要面向浏览器)。客户端必须能够与资源所有者的用户代理交互，并且能够接收来自授权服务器传入的请求(这个是通过重定向实现)。在授权码授予类型中，客户端分别请求授权和访问令牌，与此不同的是，客户端作为授权请求的结果接收访问令牌。隐式授权类型不包括客户端身份验证，它依赖于资源所有者的存在和重定向URI的注册。因为访问令牌被编码到重定向URI中，所以它可能被公开给资源所有者和驻留在同一设备上的其他应用程序。&lt;/p>
+&lt;p>上述的几个关键点：&lt;/p>
+&lt;ul>
+&lt;li>不用通过第三方应用后端服务&lt;/li>
+&lt;li>浏览器中直接向认证服务器申请访问令牌&lt;/li>
+&lt;li>相比授权码授权少了获取授权码的过程&lt;/li>
+&lt;li>客户端无需验证，且令牌对访问者可见&lt;/li>
+&lt;li>令牌是拼接在重定向URL的后面&lt;/li>
+&lt;/ul>
+&lt;h3 id="2-隐式授权的流程">2. 隐式授权的流程&lt;/h3>
+&lt;p>看一下官方给的授权流程：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/oauth2/%E9%9A%90%E5%BC%8F%E6%8E%88%E6%9D%83%E6%B5%81%E7%A8%8B%E5%9B%BE.png" alt="隐式授权流程图">&lt;/p>
+&lt;p>对比 &lt;strong>&lt;code>授权码模式&lt;/code>&lt;/strong> ，少了获取授权码的获取，转换成详细的时序图如下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/oauth2/%E9%9A%90%E5%BC%8F%E6%8E%88%E6%9D%83%E6%97%B6%E5%BA%8F%E5%9B%BE.png" alt="隐式授权时序图">&lt;/p>
+&lt;h4 id="21-授权请求">2.1 授权请求&lt;/h4>
+&lt;p>客户端构造的请求URI的格式如下：&lt;/p>
+&lt;p>&lt;strong>&lt;code>Context-Type: application/x-www-form-urlencoded&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>HTTP请求方式： GET&lt;/p>
+&lt;p>请求参数：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>参数&lt;/th>
+&lt;th>是否必须&lt;/th>
+&lt;th>说明&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>response_type&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>必须设置为 &lt;strong>token&lt;/strong> (这个是OAuth2的规范)&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>client_id&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>客户端在授权服务注册的能够标识的唯一值，一般用应用的唯一ID&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>redirect_uri&lt;/td>
+&lt;td>可选&lt;/td>
+&lt;td>授权完成后的重定向地址，一般可以在授权服务后台进行设置&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>scope&lt;/td>
+&lt;td>可选&lt;/td>
+&lt;td>可选、表示授权范围&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>state&lt;/td>
+&lt;td>推荐使用&lt;/td>
+&lt;td>用来维护请求和回调状态的附加字符串，在授权完成回调时会附加此参数，应用可以根据此字符串来判断上下文关系&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>例子如下：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-http" data-lang="http">&lt;span style="color:#a40000">GET /authorize?response_type=token&amp;amp;client_id=s6BhdRkqt3&amp;amp;state=xyz
+&lt;/span>&lt;span style="color:#a40000"> &amp;amp;redirect_uri=https%3A%2F%2Fclient%2Eexample%2Ecom%2Fcb HTTP/1.1
+&lt;/span>&lt;span style="color:#a40000">Host: server.example.com
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>Tips: URI要进行URIEncode的编码&lt;/p>
+&lt;/blockquote>
+&lt;p>授权服务器对URI的请求参数进行验证。就会返回一个授权的页面用户点击授权页面，授权页面点击授权后授权服务器就会返回一个访问令牌 Access Token。&lt;/p>
+&lt;h4 id="22-访问令牌返回">2.2 访问令牌返回&lt;/h4>
+&lt;p>隐式模式访问令牌的返回是将数据放在重定向URI的后面，格式如下：&lt;/p>
+&lt;p>返回参数：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>参数&lt;/th>
+&lt;th>是否必须&lt;/th>
+&lt;th>说明&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>access_token&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>必须设置为 &lt;strong>token&lt;/strong> (这个是OAuth2的规范)&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>token_type&lt;/td>
+&lt;td>必须&lt;/td>
+&lt;td>固定值bearer，&lt;a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7.1">参考OAuth2规范&lt;/a>&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>expires_in&lt;/td>
+&lt;td>推荐使用&lt;/td>
+&lt;td>Access Token的有效时间&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>scope&lt;/td>
+&lt;td>可选&lt;/td>
+&lt;td>可选、表示授权范围&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>state&lt;/td>
+&lt;td>推荐使用&lt;/td>
+&lt;td>用来维护请求和回调状态的附加字符串，在授权完成回调时会附加此参数，应用可以根据此字符串来判断上下文关系&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>例子：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-http" data-lang="http">&lt;span style="color:#204a87;font-weight:bold">HTTP&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">/&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">1.1&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">302&lt;/span> &lt;span style="color:#c00;font-weight:bold">Found&lt;/span>
+&lt;span style="color:#000">Location&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">http://example.com/cb#access_token=2YotnFZFEjr1zCsicMWpAA&amp;amp;state=xyz&amp;amp;token_type=example&amp;amp;expires_in=3600&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="3-应用场景">3. 应用场景&lt;/h3>
+&lt;p>对于采用隐式授权（Implicit Grant）方式获取Access Token的授权验证流程，&lt;strong>&lt;code>适用于无Server端配合的应用&lt;/code>&lt;/strong> 。 这些应用往往位于一个用户代理（User Agent）里面。例如：&lt;strong>&lt;code>手机/桌面客户端程序、浏览器插件等,&lt;/code>&lt;/strong> 这一类应用无法妥善保管客户端在授权服务器注册时候颁发的客户端秘钥(App Secret Key)。&lt;/p>
+&lt;h3 id="4-总结">4. 总结&lt;/h3>
+&lt;p>隐式授权（Implicit Grant）是为了解决无Server后端配合的应用，而又防止客户端的在授权服务器的秘钥泄露对授权码模式的一种精简。相比授权码模式做了以下几个改动：&lt;/p>
+&lt;ul>
+&lt;li>少了获取授权码的步骤&lt;/li>
+&lt;li>少了验证客户端的有效性&lt;/li>
+&lt;li>隐式授权不支持刷新访问令牌(refresh Token)&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢&lt;/p>
+&lt;/blockquote></description></item></channel></rss>

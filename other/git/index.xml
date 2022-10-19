@@ -1,0 +1,216 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Git</title><link>/other/git/</link><description>Recent content in Git on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/git/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: 如何将本地已有项目关联到github的新建的项目中</title><link>/other/git/git-project-init/</link><pubDate>Mon, 04 Apr 2022 00:00:00 +0000</pubDate><guid>/other/git/git-project-init/</guid><description>
+&lt;p>一起养成写作习惯！这是我参与「掘金日新计划 · 4 月更文挑战」的第5天，&lt;a href="https://juejin.cn/post/7080800226365145118">点击查看活动详情&lt;/a>。&lt;/p>
+&lt;h3 id="1背景">1.背景&lt;/h3>
+&lt;p>很多使用Git的人会遇到这样的情况，我在本地新建了一个项目(以Java项目举例)。此时这个Java项目还没有用Git进行管理。然后我们这个时候会去GitHub或者其他你想用来管理项目的Git后台创建一个项目。这个时候如何将本地的项目推送到服务器上？&lt;/p>
+&lt;p>一般的做法就是首先 &lt;strong>&lt;code>GitHub&lt;/code>&lt;/strong> 上建的项目 &lt;strong>&lt;code>Clone&lt;/code>&lt;/strong> 到本地。然后把新建的项目手动拷贝到项目中，然后把文件用Git进行管理。最后把文件 &lt;strong>&lt;code>Push&lt;/code>&lt;/strong> 到Github。其次我们还可以使用命令进行操作。下面就来说一说如何用命令的方式直接把两者关联进行管理。这个也是我们比较常见的方式。&lt;/p>
+&lt;h3 id="2-关联步骤">2. 关联步骤&lt;/h3>
+&lt;h4 id="21github创建项目">2.1Github创建项目&lt;/h4>
+&lt;p>本地项目如下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/git/image-20220405200549240.png" alt="image-20220405200549240">&lt;/p>
+&lt;p>然后在Github上面创建名称和本地一样的项目：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/git/image-20220405200646074.png" alt="image-20220405200646074">&lt;/p>
+&lt;h4 id="22-git初始化本地项目">2.2 Git初始化本地项目&lt;/h4>
+&lt;p>用命令初始化本地项目：&lt;/p>
+&lt;pre>&lt;code>git init
+git add .
+git commit -m &amp;quot;project init&amp;quot;
+&lt;/code>&lt;/pre>&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/git/image-20220405201219092.png" alt="image-20220405201219092">&lt;/p>
+&lt;h4 id="23-关联github项目">2.3 关联GitHub项目&lt;/h4>
+&lt;p>命令：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell"> git remote add &amp;lt;name&amp;gt; &amp;lt;url&amp;gt;
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>例如：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">git remote add origin git@github.com:mxsm/distributed-id-generator.git
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/git/image-20220405202603586.png" alt="image-20220405202603586">&lt;/p>
+&lt;p>此时已经关联起来了。&lt;/p>
+&lt;h4 id="24-pull远程库">2.4 pull远程库&lt;/h4>
+&lt;p>命令：&lt;/p>
+&lt;pre>&lt;code>git pull origin main --allow-unrelated-histories
+&lt;/code>&lt;/pre>&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/git/image-20220405205318418.png" alt="image-20220405205318418">&lt;/p>
+&lt;h4 id="25-提交代码">2.5 提交代码&lt;/h4>
+&lt;pre>&lt;code>git push -u origin main
+&lt;/code>&lt;/pre>&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/git/image-20220405205419581.png" alt="image-20220405205419581">&lt;/p>
+&lt;p>到这里就完成了本地项目关联到GitHub的项目。&lt;/p>
+&lt;h4 id="26-验证">2.6 验证&lt;/h4>
+&lt;p>打开GitHub项目进行验证：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/other/git/image-20220405205707203.png" alt="image-20220405205707203">&lt;/p>
+&lt;p>以及提交关联了。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 以上操作是GitHub已经添加了SSH key的情况下进行操作的。没有添加的可以自行进行添加&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="3-总结">3. 总结&lt;/h3>
+&lt;p>本地将本地已有项目关联到github的新建的项目中主要使用的是命令：&lt;strong>git remote add &lt;name> &lt;url>&lt;/strong> 。平时工作中也用的比较多。&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;strong>参考资料：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://docs.github.com/cn/authentication/connecting-to-github-with-ssh/checking-for-existing-ssh-keys">https://docs.github.com/cn/authentication/connecting-to-github-with-ssh/checking-for-existing-ssh-keys&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://docs.github.com/cn/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account">https://docs.github.com/cn/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Other: Git版本回退</title><link>/other/git/git-version-back/</link><pubDate>Sun, 05 Apr 2020 00:00:00 +0000</pubDate><guid>/other/git/git-version-back/</guid><description>
+&lt;h3 id="使用命令">使用命令&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">git reset &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-q&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&amp;lt;tree-ish&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>--&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &amp;lt;pathspec&amp;gt;…​
+git reset &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-q&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>--pathspec-from-file&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&amp;lt;file&amp;gt; &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>--pathspec-file-nul&lt;span style="color:#ce5c00;font-weight:bold">]]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&amp;lt;tree-ish&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>
+git reset &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>--patch &lt;span style="color:#000;font-weight:bold">|&lt;/span> -p&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&amp;lt;tree-ish&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>--&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&amp;lt;pathspec&amp;gt;…​&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>
+git reset &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>--soft &lt;span style="color:#000;font-weight:bold">|&lt;/span> --mixed &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-N&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#000;font-weight:bold">|&lt;/span> --hard &lt;span style="color:#000;font-weight:bold">|&lt;/span> --merge &lt;span style="color:#000;font-weight:bold">|&lt;/span> --keep&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>-q&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&amp;lt;commit&amp;gt;&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="使用演示">使用演示&lt;/h3>
+&lt;p>首先建一个git仓库如下图：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/document/master/image/git/reset1.png" alt="">&lt;/p>
+&lt;p>然后通过命令:&lt;/p>
+&lt;blockquote>
+&lt;p>git log &amp;ndash;pretty=oneline&lt;/p>
+&lt;/blockquote>
+&lt;p>查看提交纪录&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/document/master/image/git/reset2.png" alt="">&lt;/p>
+&lt;p>常用的reset命令有两种：&lt;/p>
+&lt;blockquote>
+&lt;p>git reset &amp;ndash;soft 保留之前的修改&lt;/p>
+&lt;p>git reset &amp;ndash;hard 丢弃所有的改变&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="git-reset---hard">git reset &amp;ndash;hard&lt;/h4>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/document/master/image/git/reset3.png" alt="">&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/document/master/image/git/reset4.png" alt="">&lt;/p>
+&lt;h4 id="git-reset---soft">git reset &amp;ndash;soft&lt;/h4>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/document/master/image/git/reset5.png" alt="">&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/document/master/image/git/reset6.png" alt="">&lt;/p>
+&lt;h4 id="提交远程">提交远程&lt;/h4>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/document/master/image/git/reset7.png" alt="">&lt;/p>
+&lt;blockquote>
+&lt;p>&lt;a href="https://www.cnblogs.com/kidsitcn/p/4513297.html">git reset soft,hard,mixed之区别深解&lt;/a> 可以看一下这篇文章，同样自己也可以用souretree去看一下。&lt;/p>
+&lt;/blockquote></description></item><item><title>Other: Git常用命令-Tag</title><link>/other/git/git-command-tag/</link><pubDate>Tue, 11 Feb 2020 00:00:00 +0000</pubDate><guid>/other/git/git-command-tag/</guid><description>
+&lt;h3 id="git-基础---打标签">Git 基础 - 打标签&lt;/h3>
+&lt;h4 id="打标签">打标签&lt;/h4>
+&lt;p>像其他版本控制系统（VCS）一样，Git 可以给历史中的某一个提交打上标签，以示重要。 比较有代表性的是人们会使用这个功能来标记发布结点（v1.0 等等）。 在本节中，你将会学习如何列出已有的标签、如何创建新标签、以及不同类型的标签分别是什么。&lt;/p>
+&lt;h3 id="列出标签">列出标签&lt;/h3>
+&lt;p>在 Git 中列出已有的标签是非常简单直观的。 只需要输入 &lt;code>git tag&lt;/code>：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ git tag
+v0.1
+v1.3
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>这个命令以字母顺序列出标签；但是它们出现的顺序并不重要。&lt;/p>
+&lt;p>你也可以使用特定的模式查找标签。 例如，Git 自身的源代码仓库包含标签的数量超过 500 个。 如果只对 1.8.5 系列感兴趣，可以运行：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ git tag -l &lt;span style="color:#4e9a06">&amp;#39;v1.8.5*&amp;#39;&lt;/span>
+v1.8.5
+v1.8.5-rc0
+v1.8.5-rc1
+v1.8.5-rc2
+v1.8.5-rc3
+v1.8.5.1
+v1.8.5.2
+v1.8.5.3
+v1.8.5.4
+v1.8.5.5
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="创建标签">创建标签&lt;/h3>
+&lt;p>Git 使用两种主要类型的标签：轻量标签（lightweight）与附注标签（annotated）。&lt;/p>
+&lt;p>一个轻量标签很像一个不会改变的分支——它只是一个特定提交的引用。&lt;/p>
+&lt;p>然而，附注标签是存储在 Git 数据库中的一个完整对象。 它们是可以被校验的；其中包含打标签者的名字、电子邮件地址、日期时间；还有一个标签信息；并且可以使用 GNU Privacy Guard （GPG）签名与验证。 通常建议创建附注标签，这样你可以拥有以上所有信息；但是如果你只是想用一个临时的标签，或者因为某些原因不想要保存那些信息，轻量标签也是可用的。&lt;/p>
+&lt;h4 id="附注标签">附注标签&lt;/h4>
+&lt;p>在 Git 中创建一个附注标签是很简单的。 最简单的方式是当你在运行 &lt;code>tag&lt;/code> 命令时指定 &lt;code>-a&lt;/code> 选项：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ git tag -a v1.4 -m &lt;span style="color:#4e9a06">&amp;#34;my version 1.4&amp;#34;&lt;/span>
+$ git tag
+v0.1
+v1.3
+v1.4
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;code>-m&lt;/code> 选项指定了一条将会存储在标签中的信息。 如果没有为附注标签指定一条信息，Git 会运行编辑器要求你输入信息。&lt;/p>
+&lt;p>通过使用 &lt;code>git show&lt;/code> 命令可以看到标签信息与对应的提交信息：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ git show v1.4
+tag v1.4
+Tagger: Ben Straub &amp;lt;ben@straub.cc&amp;gt;
+Date: Sat May &lt;span style="color:#0000cf;font-weight:bold">3&lt;/span> 20:19:12 &lt;span style="color:#0000cf;font-weight:bold">2014&lt;/span> -0700
+my version 1.4
+commit ca82a6dff817ec66f44342007202690a93763949
+Author: Scott Chacon &amp;lt;schacon@gee-mail.com&amp;gt;
+Date: Mon Mar &lt;span style="color:#0000cf;font-weight:bold">17&lt;/span> 21:52:11 &lt;span style="color:#0000cf;font-weight:bold">2008&lt;/span> -0700
+changed the version number
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>输出显示了打标签者的信息、打标签的日期时间、附注信息，然后显示具体的提交信息。&lt;/p>
+&lt;h4 id="轻量标签">轻量标签&lt;/h4>
+&lt;p>另一种给提交打标签的方式是使用轻量标签。 轻量标签本质上是将提交校验和存储到一个文件中——没有保存任何其他信息。 创建轻量标签，不需要使用 &lt;code>-a&lt;/code>、&lt;code>-s&lt;/code> 或 &lt;code>-m&lt;/code> 选项，只需要提供标签名字：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ git tag v1.4-lw
+$ git tag
+v0.1
+v1.3
+v1.4
+v1.4-lw
+v1.5
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>这时，如果在标签上运行 &lt;code>git show&lt;/code>，你不会看到额外的标签信息。 命令只会显示出提交信息：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ git show v1.4-lw
+commit ca82a6dff817ec66f44342007202690a93763949
+Author: Scott Chacon &amp;lt;schacon@gee-mail.com&amp;gt;
+Date: Mon Mar &lt;span style="color:#0000cf;font-weight:bold">17&lt;/span> 21:52:11 &lt;span style="color:#0000cf;font-weight:bold">2008&lt;/span> -0700
+changed the version number
+&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="后期打标签">后期打标签&lt;/h4>
+&lt;p>你也可以对过去的提交打标签。 假设提交历史是这样的：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ git log --pretty&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>oneline
+15027957951b64cf874c3557a0f3547bd83b3ff6 Merge branch &lt;span style="color:#4e9a06">&amp;#39;experiment&amp;#39;&lt;/span>
+a6b4c97498bd301d84096da251c98a07c7723e65 beginning write support
+0d52aaab4479697da7686c15f77a3d64d9165190 one more thing
+6d52a271eda8725415634dd79daabbc4d9b6008e Merge branch &lt;span style="color:#4e9a06">&amp;#39;experiment&amp;#39;&lt;/span>
+0b7434d86859cc7b8c3d5e1dddfed66ff742fcbc added a commit &lt;span style="color:#204a87;font-weight:bold">function&lt;/span>
+4682c3261057305bdd616e23b64b0857d832627b added a todo file
+166ae0c4d3f420721acbb115cc33848dfcc2121a started write support
+9fceb02d0ae598e95dc970b74767f19372d61af8 updated rakefile
+964f16d36dfccde844893cac5b347e7b3d44abbc commit the todo
+8a5cbc430f1a9c3d00faaeffd07798508422908a updated readme
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>现在，假设在 v1.2 时你忘记给项目打标签，也就是在 “updated rakefile” 提交。 你可以在之后补上标签。 要在那个提交上打标签，你需要在命令的末尾指定提交的校验和（或部分校验和）：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ git tag -a v1.2 9fceb02
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>可以看到你已经在那次提交上打上标签了：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ git tag
+v0.1
+v1.2
+v1.3
+v1.4
+v1.4-lw
+v1.5
+$ git show v1.2
+tag v1.2
+Tagger: Scott Chacon &amp;lt;schacon@gee-mail.com&amp;gt;
+Date: Mon Feb &lt;span style="color:#0000cf;font-weight:bold">9&lt;/span> 15:32:16 &lt;span style="color:#0000cf;font-weight:bold">2009&lt;/span> -0800
+version 1.2
+commit 9fceb02d0ae598e95dc970b74767f19372d61af8
+Author: Magnus Chacon &amp;lt;mchacon@gee-mail.com&amp;gt;
+Date: Sun Apr &lt;span style="color:#0000cf;font-weight:bold">27&lt;/span> 20:43:35 &lt;span style="color:#0000cf;font-weight:bold">2008&lt;/span> -0700
+updated rakefile
+...
+&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="共享标签">共享标签&lt;/h4>
+&lt;p>默认情况下，&lt;code>git push&lt;/code> 命令并不会传送标签到远程仓库服务器上。 在创建完标签后你必须显式地推送标签到共享服务器上。 这个过程就像共享远程分支一样——你可以运行 &lt;code>git push origin [tagname]&lt;/code>。&lt;/p>
+&lt;pre>&lt;code class="language-console" data-lang="console">$ git push origin v1.5
+Counting objects: 14, done.
+Delta compression using up to 8 threads.
+Compressing objects: 100% (12/12), done.
+Writing objects: 100% (14/14), 2.05 KiB | 0 bytes/s, done.
+Total 14 (delta 3), reused 0 (delta 0)
+To git@github.com:schacon/simplegit.git
+* [new tag] v1.5 -&amp;gt; v1.5
+&lt;/code>&lt;/pre>&lt;p>如果想要一次性推送很多标签，也可以使用带有 &lt;code>--tags&lt;/code> 选项的 &lt;code>git push&lt;/code> 命令。 这将会把所有不在远程仓库服务器上的标签全部传送到那里。&lt;/p>
+&lt;pre>&lt;code class="language-console" data-lang="console">$ git push origin --tags
+Counting objects: 1, done.
+Writing objects: 100% (1/1), 160 bytes | 0 bytes/s, done.
+Total 1 (delta 0), reused 0 (delta 0)
+To git@github.com:schacon/simplegit.git
+* [new tag] v1.4 -&amp;gt; v1.4
+* [new tag] v1.4-lw -&amp;gt; v1.4-lw
+&lt;/code>&lt;/pre>&lt;p>现在，当其他人从仓库中克隆或拉取，他们也能得到你的那些标签。&lt;/p>
+&lt;h3 id="删除标签">删除标签&lt;/h3>
+&lt;p>要删除掉你本地仓库上的标签，可以使用命令 &lt;code>git tag -d &lt;/code>。例如，可以使用下面的命令删除掉一个轻量级标签：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ git tag -d v1.4-lw
+Deleted tag &lt;span style="color:#4e9a06">&amp;#39;v1.4-lw&amp;#39;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>was e7d5add&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>应该注意的是上述命令并不会从任何远程仓库中移除这个标签，你必须使用 &lt;code>git push :refs/tags/&lt;/code> 来更新你的远程仓库：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ git push origin :refs/tags/v1.4-lw
+To /git@github.com:schacon/simplegit.git
+- &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>deleted&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> v1.4-lw
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="检出标签">检出标签&lt;/h3>
+&lt;p>如果你想查看某个标签所指向的文件版本，可以使用 &lt;code>git checkout&lt;/code> 命令，虽然说这会使你的仓库处于“分离头指针（detacthed HEAD）”状态——这个状态有些不好的副作用：&lt;/p>
+&lt;pre>&lt;code class="language-console" data-lang="console">$ git checkout 2.0.0
+Note: checking out '2.0.0'.
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by performing another checkout.
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -b with the checkout command again. Example:
+git checkout -b &amp;lt;new-branch&amp;gt;
+HEAD is now at 99ada87... Merge pull request #89 from schacon/appendix-final
+$ git checkout 2.0-beta-0.1
+Previous HEAD position was 99ada87... Merge pull request #89 from schacon/appendix-final
+HEAD is now at df3f601... add atlas.json and cover image
+&lt;/code>&lt;/pre>&lt;p>在“分离头指针”状态下，如果你做了某些更改然后提交它们，标签不会发生变化，但你的新提交将不属于任何分支，并且将无法访问，除非确切的提交哈希。因此，如果你需要进行更改——比如说你正在修复旧版本的错误——这通常需要创建一个新分支：&lt;/p>
+&lt;pre>&lt;code class="language-console" data-lang="console">$ git checkout -b version2 v2.0.0
+Switched to a new branch 'version2'
+&lt;/code>&lt;/pre>&lt;p>当然，如果在这之后又进行了一次提交，&lt;code>version2&lt;/code> 分支会因为这个改动向前移动，&lt;code>version2&lt;/code> 分支就会和 &lt;code>v2.0.0&lt;/code> 标签稍微有些不同，这时就应该当心了。&lt;/p></description></item></channel></rss>

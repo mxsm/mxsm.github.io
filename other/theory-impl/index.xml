@@ -1,0 +1,658 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – 理论实现</title><link>/other/theory-impl/</link><description>Recent content in 理论实现 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/theory-impl/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: 时间轮-理论篇</title><link>/other/theory-impl/timingwheel/</link><pubDate>Fri, 29 Apr 2022 00:00:00 +0000</pubDate><guid>/other/theory-impl/timingwheel/</guid><description>
+&lt;h3 id="1-引言">1. 引言&lt;/h3>
+&lt;p>定时任务再开发过程中无处不在，定时发送消息，定时更新数据库表的状态，Linux系统定时执行脚本等等。这些操作都离不开定时任务，那么这些定时任务是怎么实现的是否又去想过。如果让开发者自己去实现一个定时任务又该怎么实现？&lt;/p>
+&lt;p>最简单的方案：定义一个链表，将要执行的任务添加到链表中。然后用线程去遍历链表，找出需要执行的任务进行执行。通过反复遍历任务链表就能实现定时任务的执行功能。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/docs/im/DistributedIDGenerator/%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%AE%80%E5%8D%95%E5%AE%9E%E7%8E%B0.png" alt="定时任务简单实现">&lt;/p>
+&lt;p>但是上述方案有一个很重要的缺陷：如果我的任务有上百万个甚至更多的情况下，可能光遍历整个链表找出需要执行的任务就要花费一定量的时间。如果此时刚好有一个任务添加到链表的Tail,但是任务扫描的指针此时刚好在第一个Head任务节点。此时添加的任务执行时间就在添加后的20ms后，这个时候线程扫描到最后一个需要执行的任务的耗时可能超过了20ms,那么这种情况下就会出现任务的延迟执行。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 任务的延迟执行需要有一个合理的容忍范围。&lt;/p>
+&lt;/blockquote>
+&lt;p>在论文&lt;a href="http://www.cs.columbia.edu/~nahum/w6998/papers/sosp87-timing-wheels.pdf">《Hashed and Hierarchical Timing Wheels》&lt;/a> 提出了时间轮的概念来解决传统定时任务中的弊端&lt;/p>
+&lt;h3 id="2-时间轮简介">2. 时间轮简介&lt;/h3>
+&lt;p>在生活中大家肯定见过指针手表(非电子手表)这个就可以看做时间轮，山地自行车的前后齿轮、水表的齿轮、以及减速齿轮都可以看做是时间轮。以手表的刻度为例子，机械手表上最长的指针每条以下表示1秒，也就是将一分钟分成了60个1秒。 &lt;strong>&lt;code>时间轮的核心思想：将单位时间分成若干个时间间隔，每个时间间隔包含了时间单位除以若干时间间隔的时间量，时间轮转动到对应的时间间隔就执行当前时间间隔对应的可执行的任务。&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>下面用例子来说明：&lt;/p>
+&lt;p>1秒我们可以分成8个时间间隔，那么每个时间间隔就是125ms,如下图所示：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/%E7%AE%80%E5%8D%95%E7%9A%84%E6%97%B6%E9%97%B4%E8%BD%AE%E5%AE%9A%E4%B9%89%E8%AF%B4%E6%98%8E.png" alt="简单的时间轮定义说明">&lt;/p>
+&lt;h4 id="21-简单的时间轮">2.1 简单的时间轮&lt;/h4>
+&lt;p>在论文&lt;a href="http://www.cs.columbia.edu/~nahum/w6998/papers/sosp87-timing-wheels.pdf">《Hashed and Hierarchical Timing Wheels》&lt;/a> 中每一个时间间隔叫做 &lt;strong>&lt;code>bucket&lt;/code>&lt;/strong> 。 bucket的作用用于存放当前时间间隔内存在的需要执行的任务。例如现在有四个任务A、B、C、D分别要在一秒的三个不同的时间段执行，A、B在两个不同的时间段执行，C、D在同一个时间段执行。那么在时间轮上的示意图如下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/docs/im/DistributedIDGenerator/%E7%AE%80%E5%8D%95%E6%97%B6%E9%97%B4%E8%BD%AE%E7%A4%BA%E6%84%8F%E5%9B%BE.png" alt="简单时间轮示意图">&lt;/p>
+&lt;p>当时间轮的指针从1Bucket的开始时间到结束时间段的过程中，会去遍历Bucket的链表中的任务，将需要执行的任务从链表中拿出来执行。已上图的例子每一秒时间轮的指针走一圈。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: bucket中存放的任务是时间轮一个时间间隔中的任务，也就是说这些任务是一个时间段里面的任务。例如：100ms和80ms需要执行的任务都说存在bucket1。&lt;/p>
+&lt;/blockquote>
+&lt;p>进一步思考，如果你一分钟执行一次，那么时间轮的刻度就需要分成480个时间段，随着单位时间刻度的增加会让时间论的刻度越来越多。这样对于计算机来说就是消耗更多的内存。这种如何解决，在论文中提出另一个概念就是：&lt;strong>&lt;code>分层时间轮&lt;/code>&lt;/strong>&lt;/p>
+&lt;h4 id="22-分层时间轮">2.2 分层时间轮&lt;/h4>
+&lt;p>在生活中分层时间轮也是比比皆是，例如在手表长最长的指针代表秒针，中间的代表分针，最短的代表时针。例如我有三个任务 A、B、C分别在以下时间执行：&lt;/p>
+&lt;ul>
+&lt;li>A六十秒的时候执行一次&lt;/li>
+&lt;li>B十五分钟的时候执行一次&lt;/li>
+&lt;li>C六点位置的时候执行一次&lt;/li>
+&lt;/ul>
+&lt;p>如下图所示：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/docs/im/DistributedIDGenerator/%E5%88%86%E5%B1%82%E6%97%B6%E9%97%B4%E8%BD%AE%E6%89%A7%E8%A1%8C%E7%A4%BA%E6%84%8F%E5%9B%BE.png" alt="分层时间轮执行示意图">&lt;/p>
+&lt;p>秒时间轮完成一圈触发分时间轮刻度往下一个，分时间轮完成一周触发时时间轮往下一个刻度。分层时间轮之间的刻度关系可以自己定义。不需要和时间刻度表上一样的。具体取决于业务的需要。例如：Linux的Corntab只支持分钟，而Java的Quartz可以支持到秒。&lt;/p>
+&lt;h3 id="3总结">3.总结&lt;/h3>
+&lt;p>时间轮是一种高效来利用线程资源来进行批量化调度的一种调度模型。提高利用率，但是时间轮调度器的时间精度可能不是很高，对于精度要求特别高的调度任务可能不太适合。因为时间轮算法的精度取决于，也就是时间间隔，时间间隔越小精度越高。时间轮的使用在各大框架与中间件中有使用，netty，kafka,jraft（这个是fork netty的）。&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢！&lt;/p>
+&lt;/blockquote></description></item><item><title>Other: 时间轮-实现篇</title><link>/other/theory-impl/timingwheel-impl/</link><pubDate>Sat, 07 May 2022 00:00:00 +0000</pubDate><guid>/other/theory-impl/timingwheel-impl/</guid><description>
+&lt;p>在前面的文章《&lt;a href="https://juejin.cn/post/7092028178322948127">时间轮-理论篇&lt;/a>》讲了时间轮的一些理论知识，然后根据理论知识。我们自己来实现一个简单的时间轮。&lt;/p>
+&lt;h3 id="1-理论抽象">1. 理论抽象&lt;/h3>
+&lt;p>将时间轮的理论进行抽象，主要有两个方面：&lt;/p>
+&lt;ul>
+&lt;li>时间轮的转动&lt;/li>
+&lt;li>每一个时间间隔任务的处理，从时间间隔的Buket中取出要执行的任务，删除已经关闭的任务。将任务提交给线程池进行执行处理&lt;/li>
+&lt;/ul>
+&lt;h3 id="2java实现">2.Java实现&lt;/h3>
+&lt;p>接口：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">interface&lt;/span> &lt;span style="color:#000">Timer&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">createTimerTask&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">TimerTask&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">delay&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">TimeUnit&lt;/span> &lt;span style="color:#000">unit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">interface&lt;/span> &lt;span style="color:#000">TimerTask&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>实现类：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">TimeWheel&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">Timer&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">ExecutorService&lt;/span> &lt;span style="color:#000">service&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">Executors&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">newFixedThreadPool&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Runtime&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getRuntime&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">availableProcessors&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">BlockingQueue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">TimerTaskWrapper&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">addQueue&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">ArrayBlockingQueue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&amp;gt;(&lt;/span>&lt;span style="color:#000">128&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//每一个tick时间间隔默认1毫秒
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">duration&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//时间轮启动时间
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">volatile&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">startTime&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">Thread&lt;/span> &lt;span style="color:#000">timeWheelThread&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">CountDownLatch&lt;/span> &lt;span style="color:#000">startLatch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">CountDownLatch&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//时间轮的tick数量
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">tickNum&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">128&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">Bucket&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">buckets&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">started&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">false&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">TimeWheel&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">duration&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">TimeUnit&lt;/span> &lt;span style="color:#000">unit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">nanos&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">unit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">toNanos&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">duration&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">TimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">MILLISECONDS&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">toNanos&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">nanos&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">duration&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">else&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">duration&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">unit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">toMillis&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">duration&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">timeWheelThread&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Thread&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Worker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">buckets&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Bucket&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#000">tickNum&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">];&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span> &lt;span style="color:#000">tickNum&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">++&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">buckets&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Bucket&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">createTimerTask&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">TimerTask&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">delay&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">TimeUnit&lt;/span> &lt;span style="color:#000">unit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">start&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">deadline&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">currentTimeMillis&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">unit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">toMillis&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">delay&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span> &lt;span style="color:#000">startTime&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;deadline=&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span>&lt;span style="color:#000">deadline&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">addQueue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">offer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">TimerTaskWrapper&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">deadline&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">));&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">start&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">started&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000">started&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">timeWheelThread&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">start&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">try&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">startLatch&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">await&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;启动完成&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">catch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Exception&lt;/span> &lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">printStackTrace&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//处理时间轮的转动
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">Worker&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">Runnable&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//记录tick的次数
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">tick&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">startTime&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">currentTimeMillis&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">startLatch&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">countDown&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;Worker 启动完成..........&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">time&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">nextTick&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">time&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">continue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">bucketIndex&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">int&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">tick&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;amp;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">tickNum&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span> &lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">));&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;bucketIndex=&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span>&lt;span style="color:#000">bucketIndex&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">Bucket&lt;/span> &lt;span style="color:#000">bucket&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">buckets&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#000">bucketIndex&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">];&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//处理阻塞队列中的task
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">doHandleQueneTask&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//处理过期数据
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">bucket&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">expire&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">time&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">tick&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">++;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">doHandleQueneTask&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span> &lt;span style="color:#000">1024&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">++&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">TimerTaskWrapper&lt;/span> &lt;span style="color:#000">taskWrapper&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">addQueue&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">poll&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//队列为空
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">taskWrapper&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">break&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">taskTicks&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">taskWrapper&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">deadline&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">/&lt;/span> &lt;span style="color:#000">duration&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">taskWrapper&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">rounds&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">taskTicks&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span> &lt;span style="color:#000">tick&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">/&lt;/span> &lt;span style="color:#000">tickNum&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">ticks&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">Math&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">max&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">taskTicks&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">tick&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">bucketIndex&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">int&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ticks&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;amp;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">tickNum&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span> &lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">));&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;inster bucketIndex = &amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">bucketIndex&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">Bucket&lt;/span> &lt;span style="color:#000">bucket&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">buckets&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#000">bucketIndex&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">];&lt;/span>
+&lt;span style="color:#000">bucket&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">addTimerTask&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">taskWrapper&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">nextTick&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">deadline&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">duration&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">*&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">tick&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">current&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">currentTimeMillis&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span> &lt;span style="color:#000">startTime&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">sleepTime&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">deadline&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span> &lt;span style="color:#000">current&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">sleepTime&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">current&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">try&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Thread&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">sleep&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">sleepTime&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">catch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Exception&lt;/span> &lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">printStackTrace&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">TimerTaskWrapper&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">Runnable&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">TimerTask&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//任务执行截止时间
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">protected&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">deadline&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//多少圈
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">protected&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">rounds&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">TimerTaskWrapper&lt;/span> &lt;span style="color:#000">prev&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">TimerTaskWrapper&lt;/span> &lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">TimerTaskWrapper&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">TimerTask&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">deadline&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">task&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">deadline&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">deadline&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">expire&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">service&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">execute&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">Bucket&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">TimerTaskWrapper&lt;/span> &lt;span style="color:#000">head&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">TimerTaskWrapper&lt;/span> &lt;span style="color:#000">tail&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">addTimerTask&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">TimerTaskWrapper&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">task&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">head&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">tail&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">head&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">tail&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">else&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">tail&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">next&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">prev&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">tail&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">tail&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">TimerTaskWrapper&lt;/span> &lt;span style="color:#000">removeTimerTask&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">TimerTaskWrapper&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">TimerTaskWrapper&lt;/span> &lt;span style="color:#000">next&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">prev&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">!=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">prev&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">next&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">next&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">!=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">prev&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">prev&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">task&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#000">head&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">task&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#000">tail&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">head&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">tail&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">else&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">head&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">else&lt;/span> &lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">task&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#000">tail&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">tail&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">prev&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">prev&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">next&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">expire&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">deadline&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">TimerTaskWrapper&lt;/span> &lt;span style="color:#000">task&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">head&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">while&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">task&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">!=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">TimerTaskWrapper&lt;/span> &lt;span style="color:#000">next&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">rounds&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">next&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">removeTimerTask&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">deadline&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;=&lt;/span> &lt;span style="color:#000">deadline&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">expire&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">else&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//减少时间轮的圈数
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">task&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">rounds&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">--;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000">task&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">next&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>编写一个测试案例来测试一下：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">Test&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">main&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">TimeWheel&lt;/span> &lt;span style="color:#000">wheel&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">TimeWheel&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">TimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">SECONDS&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">wheel&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">createTimerTask&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">TimerTask&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1111&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">wheel&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">createTimerTask&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">4&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">TimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">SECONDS&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">},&lt;/span> &lt;span style="color:#000">3&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>&lt;span style="color:#000">TimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">SECONDS&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>运行打印结果：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/docs/im/DistributedIDGenerator/timewheel-test.gif" alt="timewheel-test">&lt;/p>
+&lt;p>说明：从日志的打印可以发现，在延迟三秒的情况下你会发现打印了 &lt;strong>&lt;code>bucketIndex=xxx&lt;/code>&lt;/strong> 四次。为什么会这样打印四次呢？因为当时间轮的tick在当前的时间间隔内，这个时间是不算的，从下个开始的。所以打印了四次。&lt;/p>
+&lt;h3 id="3-总结">3. 总结&lt;/h3>
+&lt;p>从上面的实现可以看出来，时间间隔越长调用的就越不准确。例如刚开始的时候添加了任务到时间轮中，那么当前时间间隔就需要多消耗，实际的添加任务的执行时间为：当前时间轮剩下的时间+任务延迟执行的时间。所以如果对任务执行需要精确时间时间轮不适合。&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢！&lt;/p>
+&lt;/blockquote></description></item><item><title>Other: 分布式一致性算法Raft-理论篇</title><link>/other/theory-impl/raft/</link><pubDate>Fri, 29 Jul 2022 00:00:00 +0000</pubDate><guid>/other/theory-impl/raft/</guid><description>
+&lt;h3 id="1-什么是raft">1. 什么是Raft？&lt;/h3>
+&lt;p>&lt;a href="https://raft.github.io/">Raft&lt;/a>其实是一种分布式一致性算法(分布式共识算法)。核心还是和Paxos差不多但是更加便于理解和实现，Raft算法模块化的拆分以及相比Paxos更加简化的设计。实现Raft协议更加的简单，理解Raft算法也更加的容易(这一点可以参照&lt;a href="https://raft.github.io/raft.pdf">Raft算法的论文&lt;/a>给出来的报告)。主要拆分成了多个模块：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>领导人选举(Leader selection)：&lt;/strong> Raft集群启动，或者当存在的Leader节点发生故障，触发 &lt;code>Leader selection&lt;/code> 。选举出来新的Leader&lt;/li>
+&lt;li>&lt;strong>日志复制(Log replication)：&lt;/strong> Leader必须从客户端接收日志条目(Log entry),然后复制的其他的节点。同时强制要求其他节点日志必须和Leader日志一致&lt;/li>
+&lt;li>&lt;strong>MemberShip变更：&lt;/strong> 在不停机整个Raft集群的情况做到变更集群的配置，替换宕机的机器或者改变复制集群。&lt;/li>
+&lt;li>&lt;strong>Snapshot：&lt;/strong> 快照功能是为了实现日志的压缩&lt;/li>
+&lt;/ul>
+&lt;h4 id="11-强leader">1.1 强Leader&lt;/h4>
+&lt;ol>
+&lt;li>系统中必须存在且同一时刻只能有一个 leader，只有 leader 可以接受 clients 发过来的请求（读写请求，可优化）&lt;/li>
+&lt;li>Leader负责主动和所有的Follower进行通讯，负责分发Log Entry给Follower，同时统计Follower返回的ACK。&lt;/li>
+&lt;li>Leader通过向所有的Follower发送heartbeat维持Leader的地位&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/Strong%20Leader.png" alt="Strong Leader">&lt;/p>
+&lt;h4 id="12-复制状态机">1.2 复制状态机&lt;/h4>
+&lt;p>一致性算法是从复制状态机的背景下提出的：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/raft-%E5%9B%BE1.png" alt="">&lt;/p>
+&lt;ol>
+&lt;li>Client向Leader发送append Log entry请求&lt;/li>
+&lt;li>Leader先写本地Log,然后将Log复制到所有的Follower&lt;/li>
+&lt;li>Leader收到多数Follower的应答(大于1/2),然后将Log entry对应的操作应用到状态机&lt;/li>
+&lt;li>Client收到Leader处理log entry结果&lt;/li>
+&lt;/ol>
+&lt;h3 id="2raft的基本概念">2.Raft的基本概念&lt;/h3>
+&lt;h4 id="21raft的三种角色以及角色相互变动">2.1Raft的三种角色以及角色相互变动&lt;/h4>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/raft-%E5%9B%BE4.png" alt="">&lt;/p>
+&lt;p>将上面的图转换一下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/Raft%20role%20change.png" alt="Raft role change">&lt;/p>
+&lt;ol>
+&lt;li>Follower：完全被动，不能发送任何请求，只接受并响应来自 leader 和 candidate 的 message，每个节点启动后的初始状态一定是 follower。&lt;strong>具体实现不一定要是Follower,可以是Candidate这个看具体情况。&lt;/strong>&lt;/li>
+&lt;li>Leader：处理所有来自Client请求，以及复制 log 到所有 followers。正常情况下所有的读写请求都经过Leader,但是这样会导致Leader的压力很大。同样这里也有优化的空间&lt;/li>
+&lt;li>Candidate：用来竞选一个新 leader （candidate 由 follower 触发超时而来）&lt;/li>
+&lt;/ol>
+&lt;blockquote>
+&lt;p>服务器状态。跟随者只响应来自其他服务器的请求。如果跟随者接收不到消息，那么他就会变成候选人并发起一次选举。获得集群中大多数选票的候选人将成为领导人。在一个任期内，领导人一直都会是领导人，直到自己宕机了。&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/raft-%E5%9B%BE5.png" alt="">&lt;/p>
+&lt;ul>
+&lt;li>Raft 把时间分割成任意长度的&lt;strong>任期（Term）&lt;/strong>, 任期值按时间轴单调递增&lt;/li>
+&lt;li>每一个任期的开始都是 leader 选举，选举成功之后，leader 在任期内管理整个集群。也就是 &lt;strong>election+normal operation&lt;/strong>&lt;/li>
+&lt;li>每个任期最多一个Leader,也有可能没有Leader,如上图的 &lt;strong>Term t3&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;h4 id="22-服务节点状态">2.2 服务节点状态&lt;/h4>
+&lt;p>&lt;strong>所有服务节点的持久性状态 (在响应 RPC 请求之前，已经更新到了稳定的存储设备)：&lt;/strong>&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>参数&lt;/th>
+&lt;th>解释&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>&lt;strong>currentTerm&lt;/strong>&lt;/td>
+&lt;td>服务器已知最新的任期（在服务器首次启动时初始化为0，单调递增）&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;strong>votedFor&lt;/strong>&lt;/td>
+&lt;td>当前任期内收到选票的 candidateId，如果没有投给任何候选人 则为空&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;strong>log[]&lt;/strong>&lt;/td>
+&lt;td>日志条目；每个条目包含了用于状态机的命令，以及领导人接收到该条目时的任期（初始索引为1）&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>&lt;strong>所有服务节点的易失性状态：&lt;/strong>&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>参数&lt;/th>
+&lt;th>解释&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>commitIndex&lt;/td>
+&lt;td>已知已提交的最高的日志条目的索引（初始值为0，单调递增）&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>lastApplied&lt;/td>
+&lt;td>已经被应用到状态机的最高的日志条目的索引（初始值为0，单调递增）&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>&lt;strong>Leader上的易失性状态 (选举后已经重新初始化)：&lt;/strong>&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>参数&lt;/th>
+&lt;th>解释&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>nextIndex[]&lt;/td>
+&lt;td>对于每一台服务器，发送到该服务器的下一个日志条目的索引（初始值为领导人最后的日志条目的索引+1）&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>matchIndex[]&lt;/td>
+&lt;td>对于每一台服务器，已知的已经复制到该服务器的最高日志条目的索引（初始值为0，单调递增）&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;h4 id="23-raft中三类rpc">2.3 Raft中三类RPC&lt;/h4>
+&lt;p>&lt;strong>RequestVote RPC(选举投票)：&lt;/strong> 由Candidate发出的用于选举投票Leader的RPC请求&lt;/p>
+&lt;p>&lt;strong>AppendEntries RPC(追加Log Entry)：&lt;/strong> 由领导人调用，用于日志追加。&lt;strong>同时也可以当做心跳使用&lt;/strong>。&lt;/p>
+&lt;p>&lt;strong>InstallSnapshot RPC（安装快照）：&lt;/strong> 安装快照的新的 RPC 来发送快照给太落后的跟随者，由Leader发出。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/raft-%E5%9B%BE2.png" alt="">&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/raft-%E5%9B%BE13.png" alt="">&lt;/p>
+&lt;h4 id="24-raft算法特性总结">2.4 Raft算法特性总结&lt;/h4>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>特性&lt;/th>
+&lt;th>解释&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>选举安全特性&lt;/td>
+&lt;td>对于一个给定的任期号，最多只会有一个领导人被选举出来&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>领导人只附加原则&lt;/td>
+&lt;td>领导人绝对不会删除或者覆盖自己的日志，只会增加&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>日志匹配原则&lt;/td>
+&lt;td>如果两个日志在某一相同索引位置日志条目的任期号相同，那么我们就认为这两个日志从头到该索引位置之间的内容完全一致&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>领导人完全特性&lt;/td>
+&lt;td>如果某个日志条目在某个任期号中已经被提交，那么这个条目必然出现在更大任期号的所有领导人中&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>状态机安全特性&lt;/td>
+&lt;td>如果某一服务器已将给定索引位置的日志条目应用至其状态机中，则其他任何服务器在该索引位置不会应用不同的日志条目&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/raft-%E5%9B%BE3.png" alt="">&lt;/p>
+&lt;p>&lt;strong>说明：Raft 在任何时候都保证以上的各个特性&lt;/strong>&lt;/p>
+&lt;h4 id="25-安全性说明">2.5 安全性说明&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;h4 id="选举限制">&lt;strong>选举限制&lt;/strong>&lt;/h4>
+&lt;ul>
+&lt;li>选举的时候新的Leader拥有所有之前任期中已经提交的日志条目,也就是说如果前任Leader接收到日志请求后发生宕机，当前日志还没来得及通过PRC同步到Follower的情况下，整个Raft集群再次重新发起选举的时候。选举出来的Leader就是之前的Leader。因为之前的Leader包含了已经提交的全部日志条目。&lt;/li>
+&lt;li>Raft 通过比较两份日志中最后一条日志条目的索引值和任期号定义谁的日志比较新。如果两份日志最后的条目的任期号不同，那么任期号大的日志更加新。如果两份日志最后的条目任期号相同，那么日志比较长(last index更大)的那个就更加新。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;h4 id="提交之前任期内的日志条目">提交之前任期内的日志条目&lt;/h4>
+&lt;p>一条已经被存储到大多数节点上的老日志条目，也依然有可能会被未来的领导人覆盖掉。Raft 永远不会通过计算副本数目的方式去提交一个之前任期内的日志条目。只有领导人当前任期里的日志条目通过计算副本数目可以被提交；&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/raft-%E5%9B%BE8.png" alt="">&lt;/p>
+&lt;p>如图的时间序列展示了为什么领导人无法决定对老任期号的日志条目进行提交。在 (a) 中，S1 是领导人，部分的(跟随者)复制了索引位置 2 的日志条目。在 (b) 中，S1 崩溃了，然后 S5 在任期 3 里通过 S3、S4 和自己的选票赢得选举，然后从客户端接收了一条不一样的日志条目放在了索引 2 处。然后到 (c)，S5 又崩溃了；S1 重新启动，选举成功，开始复制日志。在这时，来自任期 2 的那条日志已经被复制到了集群中的大多数机器上，但是还没有被提交。如果 S1 在 (d) 中又崩溃了，S5 可以重新被选举成功（通过来自 S2，S3 和 S4 的选票），然后覆盖了他们在索引 2 处的日志。反之，如果在崩溃之前，S1 把自己主导的新任期里产生的日志条目复制到了大多数机器上，就如 (e) 中那样，那么在后面任期里面这些新的日志条目就会被提交（因为 S5 就不可能选举成功）。 这样在同一时刻就同时保证了，之前的所有老的日志条目就会被提交。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="3-raft功能">3. Raft功能&lt;/h3>
+&lt;h4 id="31-领导人选举leader-election">3.1 领导人选举（Leader election）&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>触发时机：&lt;/strong> Raft服务集群启动、Follower没有定时收到Leader heartbeat、Candidate选举超时都会触发。也就是&lt;strong>选举超时&lt;/strong>触发&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>随机选举超时时间：&lt;/strong> Raft 算法使用随机选举超时时间的方法来确保很少会发生选票瓜分的情况，就算发生也能很快的解决。为了阻止选票起初就被瓜分，选举超时时间是从一个固定的区间（例如 150-300 毫秒）随机选择。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>选举流程：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>Follower &amp;mdash;&amp;gt; Candidate（选举超时）
+&lt;ul>
+&lt;li>Candidate&amp;mdash;&amp;gt;Leader：当前节点赢得选举&lt;/li>
+&lt;li>Candidate&amp;mdash;&amp;gt;Follower：非赢得选举节点的Candidate节点&lt;/li>
+&lt;li>选举Term内Candidate没有改变Candidate&amp;mdash;&amp;gt;Candidate：没有任何一个Candidate节点赢得选举重新开始下一轮任期的选举&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/%E9%80%89%E4%B8%BE%E6%B5%81%E7%A8%8B.png" alt="选举流程">&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>选举的操作：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>任期(Term)增加1&lt;/li>
+&lt;li>发送RequestVote RPC请求给Candidate&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>Leader选取原则：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>针对同一个Term,Candidate赢得了多数选举(大于节点1/2)&lt;/li>
+&lt;li>Leader Term 不小于Candidate Term, Candidate承认Leader,角色转换为Follower&lt;/li>
+&lt;li>在选举的时候选择已提交Log Entry最多的Candidate&lt;/li>
+&lt;li>在选举中Leader拥有最完整的Log Entry记录&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>安全性：&lt;/strong>&lt;/p>
+&lt;p>一个 term，最多选出一个 leader，可以没 leader，下一个 term 再选&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/Raft%E9%80%89%E4%B8%BE.png" alt="Raft选举" />&lt;/p>
+&lt;p>当一个集群中的节点是偶数个的时候，就有可能在某一轮选举投票过程中不能选举出Leader,因为可能会出现两个节点获得的投票一样。导致重新开始选举。如果没有特殊方式限制，理论上存在每次都出现投票获得情况一样。而奇数节点就能大大减少这种情况。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>影响选举成功的时参数&lt;/p>
+&lt;ul>
+&lt;li>RTT(Round Trip Time)：网络延时&lt;/li>
+&lt;li>Heartbeat timeout：心跳间隔,目的是让 leader 能够持续发送心跳来阻止 followers 触发选举&lt;/li>
+&lt;li>Election timeout：Leader 与 followers 间通信超时触发选举的时间。Leader和Follower之间网络发生故障&lt;/li>
+&lt;li>MTBF(Meantime Between Failure)：Servers 连续常规故障时间间隔， &lt;strong>&lt;code>RTT &amp;lt;&amp;lt; Heartbeat timeout &amp;lt; Election timeout(ET) &amp;lt;&amp;lt; MTBF&lt;/code>&lt;/strong>&lt;/li>
+&lt;li>随机选主触发时间：150-300 毫秒选取。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="32-日志复制">3.2 日志复制&lt;/h4>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/Log%20replication.png" alt="">&lt;/p>
+&lt;p>Leader被选出后负责处理Client的请求， Append Log Entry请求只能通过Leader进行复制转发到Follower。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/raft-%E5%9B%BE6.png" alt="">&lt;/p>
+&lt;p>&lt;strong>日志格式：&lt;/strong> &lt;strong>&lt;code>logIndex+Term+log body&lt;/code>&lt;/strong> ，条日志至少包含三个类型的的数据。&lt;strong>&lt;code>logIndex+Term&lt;/code>&lt;/strong> 确定一条日志。&lt;/p>
+&lt;p>&lt;strong>Log Replication 特点：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>连续性，日志不允许出现断层。都是自然数递增的情况，例如：1、2、3&amp;hellip;&amp;hellip;n。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>日志特性&lt;/p>
+&lt;ul>
+&lt;li>如果在不同的日志中的两个条目拥有相同的索引和任期号，那么他们存储了相同的日志&lt;/li>
+&lt;li>如果在不同的日志中的两个条目拥有相同的索引和任期号，那么他们之前的所有日志条目也全部相同&lt;/li>
+&lt;li>Leader上面的日志一定是有效的(强领导特性)，Follower的日志是否有效需要和Leader进行对比&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>Follower日志恢复&lt;/p>
+&lt;p>Follower从对比Leader的lastIndex来判断Follower是否需要从Leader复制Log填充，或者truncate Follower 多余的日志。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="33-committed-index">3.3 Committed Index&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>Committed Index&lt;code>(TermId, LogIndex)&lt;/code>：本质上Log Index一样。都是Log的索引但是指向位置不同。&lt;/p>
+&lt;ul>
+&lt;li>Leader接收日志，先保存到Leader本地持久化。然后复制分发给Follower&lt;/li>
+&lt;li>日志复制到Followers后，先持久化，并不能马上应用到状态机&lt;/li>
+&lt;li>Leader收到大多数(大于1/2)Follower的返回的时候，Committed Index才能应用到状态机&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>Committed Index推进&lt;/p>
+&lt;ul>
+&lt;li>Leader Committed Index推进：根据Leader分发日志Leader收到大多数(大于1/2)Follower的返回的时候，Committed Index才能应用到状态机&lt;/li>
+&lt;li>Follower Committed Index推进：Leader在下一个Append Entry或者 send Heartbeat的时候携带Leader当前Committed Index。然后Follower根据Leader 发送过来的Committed Index。把小于等于Committed Index日志应用到Follower状态机中&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="33-日志压缩log-snapshot">3.3 日志压缩(Log Snapshot)&lt;/h4>
+&lt;p>Raft 的日志在正常操作中不断地增长，但是在实际的系统中，日志不能无限制地增长。随着日志不断增长，他会占用越来越多的空间，花费越来越多的时间来重置。如果没有一定的机制去清除日志里积累的陈旧的信息，那么会带来可用性问题。&lt;/p>
+&lt;p>&lt;strong>Snapshot&lt;/strong> 是最简单压缩方法。整个系统的状态都以快照的形式写入到稳定的持久化存储中，然后到那个时间点之前的日志全部丢弃。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/raft-%E5%9B%BE12.png" alt="">&lt;/p>
+&lt;p>Raft 中快照的基础思想。每个服务器独立地创建快照，只包括已经被提交的日志。主要的工作包括将状态机的状态写入到快照中。Raft 也包含一些少量的元数据到快照中：&lt;strong>最后被包含索引&lt;/strong>指的是被快照取代的最后的条目在日志中的索引值（状态机最后应用的日志），&lt;strong>最后被包含的任期&lt;/strong>指的是该条目的任期号。保留这些数据是为了支持快照后紧接着的第一个条目的附加日志请求时的一致性检查，因为这个条目需要前一日志条目的索引值和任期号。&lt;/p>
+&lt;p>快照中包含的元数据：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>参数&lt;/th>
+&lt;th>解释&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>lastIncludedIndex&lt;/td>
+&lt;td>快照中包含的最后日志条目的索引值&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>lastIncludedTerm&lt;/td>
+&lt;td>快照中包含的最后日志条目的任期号&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>&lt;strong>Install Snapshot（安装快照）RPC：&lt;/strong>&lt;/p>
+&lt;p>由Leader以将快照的分块发送给跟随者。领导人总是按顺序发送分块。&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>参数&lt;/th>
+&lt;th>解释&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>term&lt;/td>
+&lt;td>领导人的任期号&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>leaderId&lt;/td>
+&lt;td>领导人的 ID，以便于跟随者重定向请求&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>lastIncludedIndex&lt;/td>
+&lt;td>快照中包含的最后日志条目的索引值&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>lastIncludedTerm&lt;/td>
+&lt;td>快照中包含的最后日志条目的任期号&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>offset&lt;/td>
+&lt;td>分块在快照中的字节偏移量&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>data[]&lt;/td>
+&lt;td>从偏移量开始的快照分块的原始字节&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>done&lt;/td>
+&lt;td>如果这是最后一个分块则为 true&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>结果&lt;/th>
+&lt;th>解释&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>term&lt;/td>
+&lt;td>当前任期号（currentTerm），便于领导人更新自己&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>&lt;strong>接收者实现&lt;/strong>：&lt;/p>
+&lt;ol>
+&lt;li>如果&lt;code>term &amp;lt; currentTerm&lt;/code>就立即回复&lt;/li>
+&lt;li>如果是第一个分块（offset 为 0）就创建一个新的快照&lt;/li>
+&lt;li>在指定偏移量写入数据&lt;/li>
+&lt;li>如果 done 是 false，则继续等待更多的数据&lt;/li>
+&lt;li>保存快照文件，丢弃具有较小索引的任何现有或部分快照&lt;/li>
+&lt;li>如果现存的日志条目与快照中最后包含的日志条目具有相同的索引值和任期号，则保留其后的日志条目并进行回复&lt;/li>
+&lt;li>丢弃整个日志&lt;/li>
+&lt;li>使用快照重置状态机（并加载快照的集群配置）&lt;/li>
+&lt;/ol>
+&lt;h3 id="4-raft集群成员变化">4. Raft集群成员变化&lt;/h3>
+&lt;ul>
+&lt;li>&lt;strong>成员何时变化&lt;/strong>
+&lt;ul>
+&lt;li>替换宕机的机器&lt;/li>
+&lt;li>增加集群机器(扩容)&lt;/li>
+&lt;li>改变复制级别&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;strong>解决方法&lt;/strong>
+&lt;ul>
+&lt;li>重启整个Raft集群&lt;/li>
+&lt;li>实现动态成员关系变化&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;p>首先任何集群中的Raft服务直接从旧的配置直接转换到新的配置的方案都是不安全的，不可能做到原子转换所有的集群服务。所以在转换期间整个集群存在划分成两个独立的大多数群体的可能性，需要在保证 &lt;strong>&lt;code>安全性&lt;/code>&lt;/strong> 的前提下完成：&lt;strong>不能在同一 &lt;code>term&lt;/code> 有多个 &lt;code>leader&lt;/code>，否则可能存在 &lt;code>term&lt;/code> 和 &lt;code>index&lt;/code> 相同但内容不同的 &lt;code>log entry&lt;/code>。&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/raft-%E5%9B%BE10.png" alt="">&lt;/p>
+&lt;blockquote>
+&lt;p>集群服务从 3变成了 5 。不幸的是，存在这样的一个时间点，两个不同的领导人在同一个任期里都可以被选举成功。一个是通过旧的配置，一个通过新的配置。&lt;/p>
+&lt;/blockquote>
+&lt;p>Raft给出的解决方案是：Raft集群先切换到一个过度的配置也叫共同一致（&lt;em>joint consensus&lt;/em>)，共同一致是新老配置的结合。一旦共同一致已经被提交，那么系统就切换新的配置。&lt;/p>
+&lt;ul>
+&lt;li>日志条目被复制给集群中新、老配置的所有服务。&lt;/li>
+&lt;li>新、旧配置的服务都可以成为领导人。&lt;/li>
+&lt;li>达成一致（针对选举和提交）需要分别在两种配置上获得大多数的支持。&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>好处：不影响安全的情况下，集群配置转换的过程依然可以响应客户端请求。&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/others/theory/raft-%E5%9B%BE11.png" alt="">&lt;/p>
+&lt;h3 id="5-raft的优化">5. Raft的优化&lt;/h3>
+&lt;ul>
+&lt;li>&lt;strong>Log batch Append：&lt;/strong> 日志批量添加，增加Raft的写入速度&lt;/li>
+&lt;li>&lt;strong>ReadIndex/Lease Read：&lt;/strong> 允许Follower提供读&lt;/li>
+&lt;/ul>
+&lt;p>后续会通过 &lt;a href="https://github.com/openmessaging/dledger">DLedger&lt;/a>项目进行分析，这个项目首先比较简单整体实现起来比较清晰。同时代码量也不是很多理解更加容易。&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢&lt;/p>
+&lt;/blockquote>
+&lt;p>参考资料：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;a href="https://raft.github.io/raft.pdf">https://raft.github.io/raft.pdf&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;a href="https://github.com/maemual/raft-zh_cn/blob/master/raft-zh_cn.md">https://github.com/maemual/raft-zh_cn/blob/master/raft-zh_cn.md&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;a href="https://www.sofastack.tech/projects/sofa-jraft/consistency-raft-jraft/">https://www.sofastack.tech/projects/sofa-jraft/consistency-raft-jraft/&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;a href="https://raft.github.io/">https://raft.github.io/&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;a href="https://raft.github.io/slides/raftuserstudy2013.p">https://raft.github.io/slides/raftuserstudy2013.p&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;a href="https://github.com/openmessaging/dledger">https://github.com/openmessaging/dledger&lt;/a>&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;p>我正在参与掘金技术社区创作者签约计划招募活动，&lt;a href="https://juejin.cn/post/7112770927082864653">点击链接报名投稿&lt;/a>。&lt;/p></description></item></channel></rss>

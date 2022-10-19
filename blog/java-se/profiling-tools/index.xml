@@ -1,0 +1,118 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Java分析工具</title><link>/blog/java-se/profiling-tools/</link><description>Recent content in Java分析工具 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/blog/java-se/profiling-tools/index.xml" rel="self" type="application/rss+xml"/><item><title>Blog: Java 性能分析工具 async-profiler</title><link>/blog/java-se/profiling-tools/async-profiler/</link><pubDate>Sat, 18 Jun 2022 00:00:00 +0000</pubDate><guid>/blog/java-se/profiling-tools/async-profiler/</guid><description>
+&lt;h3 id="1-async-profiler介绍">1. async-profiler介绍&lt;/h3>
+&lt;p>Async-profiler是一个低开销的Java采样分析器，不受Safepoint偏差问题的影响。具有特定于Hotspot的API用于收集 &lt;strong>&lt;code>堆栈跟踪&lt;/code>&lt;/strong> 和 &lt;strong>&lt;code>内存分配&lt;/code>&lt;/strong> 。能够分析 &lt;strong>OpenJDK、Oracle JDK 以及其他基于 Hotspot的JVM。&lt;/strong>&lt;/p>
+&lt;p>async-profiler能够跟踪一下几种事件：&lt;/p>
+&lt;ul>
+&lt;li>CUP cycles&lt;/li>
+&lt;li>硬件和软件性能计数器，如缓存失败、分支失败、页面错误、上下文切换等。&lt;/li>
+&lt;li>Java Heap分配&lt;/li>
+&lt;li>Contented lock attempts, including both Java object monitors and ReentrantLocks&lt;/li>
+&lt;/ul>
+&lt;h3 id="2-async-profiler安装">2. async-profiler安装&lt;/h3>
+&lt;p>在官网提供了不同的平台的下载：&lt;/p>
+&lt;ul>
+&lt;li>Linux x64 (glibc): &lt;a href="https://github.com/jvm-profiling-tools/async-profiler/releases/download/v2.8.1/async-profiler-2.8.1-linux-x64.tar.gz">async-profiler-2.8.1-linux-x64.tar.gz&lt;/a>&lt;/li>
+&lt;li>Linux x64 (musl): &lt;a href="https://github.com/jvm-profiling-tools/async-profiler/releases/download/v2.8.1/async-profiler-2.8.1-linux-musl-x64.tar.gz">async-profiler-2.8.1-linux-musl-x64.tar.gz&lt;/a>&lt;/li>
+&lt;li>Linux arm64: &lt;a href="https://github.com/jvm-profiling-tools/async-profiler/releases/download/v2.8.1/async-profiler-2.8.1-linux-arm64.tar.gz">async-profiler-2.8.1-linux-arm64.tar.gz&lt;/a>&lt;/li>
+&lt;li>macOS x64/arm64: &lt;a href="https://github.com/jvm-profiling-tools/async-profiler/releases/download/v2.8.1/async-profiler-2.8.1-macos.zip">async-profiler-2.8.1-macos.zip&lt;/a>&lt;/li>
+&lt;li>配置文件格式之间的转换器: &lt;a href="https://github.com/jvm-profiling-tools/async-profiler/releases/download/v2.8.1/converter.jar">converter.jar&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>Tips: 文章编写的时候版本为2.8.1&lt;/p>
+&lt;/blockquote>
+&lt;p>根据自己的平台下载到本地，解压后的目录结构如下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/blog/javase/profiling-tools/image-20220618172149158.png" alt="image-20220618172149158">&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 笔者的使用的WSL环境进行测试。&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="3-async-profiler使用">3. async-profiler使用&lt;/h3>
+&lt;p>使用命令：&lt;strong>&lt;code>./profiler.sh&lt;/code>&lt;/strong> ,出现如下使用说明。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">Usage: ./profiler.sh &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>action&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>options&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &amp;lt;pid&amp;gt;
+Actions:
+start start profiling and &lt;span style="color:#204a87;font-weight:bold">return&lt;/span> immediately
+resume resume profiling without resetting collected data
+stop stop profiling
+dump dump collected data without stopping profiling session
+check check &lt;span style="color:#204a87;font-weight:bold">if&lt;/span> the specified profiling event is available
+status print profiling status
+list list profiling events supported by the target JVM
+collect collect profile &lt;span style="color:#204a87;font-weight:bold">for&lt;/span> the specified period of &lt;span style="color:#204a87">time&lt;/span>
+and &lt;span style="color:#204a87;font-weight:bold">then&lt;/span> stop &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>default action&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+Options:
+-e event profiling event: cpu&lt;span style="color:#000;font-weight:bold">|&lt;/span>alloc&lt;span style="color:#000;font-weight:bold">|&lt;/span>lock&lt;span style="color:#000;font-weight:bold">|&lt;/span>cache-misses etc.
+-d duration run profiling &lt;span style="color:#204a87;font-weight:bold">for&lt;/span> &amp;lt;duration&amp;gt; seconds
+-f filename dump output to &amp;lt;filename&amp;gt;
+-i interval sampling interval in nanoseconds
+-j jstackdepth maximum Java stack depth
+-t profile different threads separately
+-s simple class names instead of FQN
+-g print method signatures
+-a annotate Java methods
+-l prepend library names
+-o fmt output format: flat&lt;span style="color:#000;font-weight:bold">|&lt;/span>traces&lt;span style="color:#000;font-weight:bold">|&lt;/span>collapsed&lt;span style="color:#000;font-weight:bold">|&lt;/span>flamegraph&lt;span style="color:#000;font-weight:bold">|&lt;/span>tree&lt;span style="color:#000;font-weight:bold">|&lt;/span>jfr
+-I include output only stack traces containing the specified pattern
+-X exclude exclude stack traces with the specified pattern
+-v, --version display version string
+--title string FlameGraph title
+--minwidth pct skip frames smaller than pct%
+--reverse generate stack-reversed FlameGraph / Call tree
+--loop &lt;span style="color:#204a87">time&lt;/span> run profiler in a loop
+--alloc bytes allocation profiling interval in bytes
+--lock duration lock profiling threshold in nanoseconds
+--total accumulate the total value &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>time, bytes, etc.&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+--all-user only include user-mode events
+--sched group threads by scheduling policy
+--cstack mode how to traverse C stack: fp&lt;span style="color:#000;font-weight:bold">|&lt;/span>dwarf&lt;span style="color:#000;font-weight:bold">|&lt;/span>lbr&lt;span style="color:#000;font-weight:bold">|&lt;/span>no
+--begin &lt;span style="color:#204a87;font-weight:bold">function&lt;/span> begin profiling when &lt;span style="color:#204a87;font-weight:bold">function&lt;/span> is executed
+--end &lt;span style="color:#204a87;font-weight:bold">function&lt;/span> end profiling when &lt;span style="color:#204a87;font-weight:bold">function&lt;/span> is executed
+--ttsp time-to-safepoint profiling
+--jfrsync config synchronize profiler with JFR recording
+--lib path full path to libasyncProfiler.so in the container
+--fdtransfer use fdtransfer to serve perf requests
+from the non-privileged target
+&amp;lt;pid&amp;gt; is a numeric process ID of the target JVM
+or &lt;span style="color:#4e9a06">&amp;#39;jps&amp;#39;&lt;/span> keyword to find running JVM automatically
+or the application&lt;span style="color:#a40000">&amp;#39;&lt;/span>s name as it would appear in the jps tool
+Example: ./profiler.sh -d &lt;span style="color:#0000cf;font-weight:bold">30&lt;/span> -f profile.html &lt;span style="color:#0000cf;font-weight:bold">3456&lt;/span>
+./profiler.sh start -i &lt;span style="color:#0000cf;font-weight:bold">999000&lt;/span> jps
+./profiler.sh stop -o flat jps
+./profiler.sh -d &lt;span style="color:#0000cf;font-weight:bold">5&lt;/span> -e alloc MyAppName
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="4-async-profiler使用案例">4. async-profiler使用案例&lt;/h3>
+&lt;h4 id="41-案例1">4.1 案例1&lt;/h4>
+&lt;p>启动一个自己编写的服务。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/blog/javase/profiling-tools/%E6%9C%8D%E5%8A%A1%E5%90%AF%E5%8A%A8gif.gif" alt="服务启动gif">&lt;/p>
+&lt;p>然后启动jmeter去调用接口，然后启动async-profiler生成cup的火焰图：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/blog/javase/profiling-tools/image-20220618221032418.png" alt="image-20220618221032418">&lt;/p>
+&lt;p>查看火焰图：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/blog/javase/profiling-tools/image-20220618221221235.png" alt="image-20220618221221235">&lt;/p>
+&lt;h4 id="42-案例2">4.2 案例2&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">Test&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#000">ExecutorService&lt;/span> &lt;span style="color:#000">service&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">Executors&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">newFixedThreadPool&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">10&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">main&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">service&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">submit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Runnable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">while&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#000">uuid1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">uuid2&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">});&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">uuid1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(){&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">s&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">UUID&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">randomUUID&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">toString&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">uuid2&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(){&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">s&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">UUID&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ThreadLocalRandom&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">current&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">nextLong&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(),&lt;/span> &lt;span style="color:#000">ThreadLocalRandom&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">current&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">nextLong&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()).&lt;/span>&lt;span style="color:#c4a000">toString&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>运行服务：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/blog/javase/profiling-tools/image-20220618224232033.png" alt="image-20220618224232033">&lt;/p>
+&lt;p>查看火焰图：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/blog/javase/profiling-tools/image-20220618224337979.png" alt="image-20220618224337979">&lt;/p>
+&lt;p>通过分析火焰图会发现 &lt;strong>org/example/objectsize/Test.uuid1&lt;/strong> 和 &lt;strong>org/example/objectsize/Test.uuid2&lt;/strong> ，uuid1占用的时间远远大于uuid2，说明了 new &lt;strong>&lt;code>UUID(ThreadLocalRandom.current().nextLong(), ThreadLocalRandom.current().nextLong()).toString()&lt;/code>&lt;/strong> 的性能高于 &lt;strong>&lt;code>UUID.randomUUID().toString()&lt;/code>&lt;/strong> 。&lt;/p>
+&lt;h3 id="5-总结">5. 总结&lt;/h3>
+&lt;p>不管是CPU还是内存分配，在火焰图上面横向越长说明越多，纵向表示调用链。火焰图里，横条越长，代表使用的越多，从下到上是调用堆栈信息。在阿里的 &lt;a href="https://arthas.aliyun.com/doc/">arthas&lt;/a>也集成了async-profiler。&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢&lt;/p>
+&lt;/blockquote></description></item></channel></rss>

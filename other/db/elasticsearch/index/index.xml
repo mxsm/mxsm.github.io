@@ -1,0 +1,165 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Elasticsearch 索引</title><link>/other/db/elasticsearch/index/</link><description>Recent content in Elasticsearch 索引 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/db/elasticsearch/index/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: Elasticsearch-索引模式</title><link>/other/db/elasticsearch/index/elasticsearch-index-mode/</link><pubDate>Fri, 14 Feb 2020 00:00:00 +0000</pubDate><guid>/other/db/elasticsearch/index/elasticsearch-index-mode/</guid><description>
+&lt;blockquote>
+&lt;p>注意：以下语法都是基于Elasticsearch的7.6版本&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="索引模式">索引模式&lt;/h3>
+&lt;p>之前介绍过，在ES中index相当于关系数据库中的数据库实例。下面来看一下index的一些设置&lt;/p>
+&lt;h3 id="索引的设置">索引的设置&lt;/h3>
+&lt;p>可以为每一个索引设置级别，如下：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;em>&lt;strong>静态索引(static)&lt;/strong>&lt;/em>&lt;/p>
+&lt;p>只能在创建索引或者在关闭的索引上面设置&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;em>&lt;strong>动态索引dynamic&lt;/strong>&lt;/em>&lt;/p>
+&lt;p>可以使用&lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-update-settings.html">update-index-settings API&lt;/a>在活动索引上更改它们。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>注意：更改关闭索引上的静态或动态索引设置可能导致错误的设置，如果不删除和重新创建索引，就无法纠正这些错误&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="静态索引设置">静态索引设置&lt;/h4>
+&lt;p>下面列举了所有的与任何特殊索引无关的静态索引的配置：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>index.number_of_shards&lt;/strong>&lt;/p>
+&lt;p>索引应该具有的主分片数量， &lt;strong>默认值为：1，同时这个设置只能在索引创建的时候，不能再关闭了的索引上面进行修改。索引（index）分片的最大值为1024&lt;/strong> 。 这个设置以防止由于资源分配而意外创建可能破坏集群稳定的索引。通过 &lt;strong>export ES_JAVA_OPTS=&amp;quot;-Des.index.max_number_of_shards=128&amp;quot;&lt;/strong> 来设置。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>index.shard.check_on_startup&lt;/strong>&lt;/p>
+&lt;p>是否应该在打开之前检查分片是否损坏。当检测到损坏时，它将阻止碎片被打开&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>false&lt;/strong>&lt;/p>
+&lt;p>默认值&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>checksum&lt;/strong>&lt;/p>
+&lt;p>检查是否物理损坏&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>true&lt;/strong>&lt;/p>
+&lt;p>检查物理损坏和逻辑损坏&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>注意： 检查分片可能花费很多时间，在一个很大的索引上面&lt;/p>
+&lt;/blockquote>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>index.codec&lt;/strong>&lt;/p>
+&lt;p>默认值使用LZ4压缩压缩存储的数据，但是可以将这个值设置为best_compression，它使用DEFLATE获得更高的压缩比，代价是降低存储字段的性能。如果您正在更新压缩类型，则新的压缩类型将在段合并后应用。段合并可以使用强制合并来强制执行。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>index.routing_partition_size&lt;/strong>&lt;/p>
+&lt;p>自定义路由值可以转到的碎片数。默认值为1，只能在创建索引时设置。这个值必须小于索引。除非索引是number_of_shards。number_of_shards的值也是1。有关如何使用此设置的详细信息，&lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-routing-field.html#routing-index-partition">请参阅路由到索引分区&lt;/a>。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>index.load_fixed_bitset_filters_eagerly&lt;/strong>&lt;/p>
+&lt;p>指示是否为嵌套查询预先加载缓存的筛选器。可能的值为true(默认值)和false。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="动态索引设置">动态索引设置&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>index.number_of_replicas&lt;/strong>&lt;/p>
+&lt;p>每个主分片副本的数量，默认值：1&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>index.auto_expand_replicas&lt;/strong>&lt;/p>
+&lt;p>根据集群中数据节点的数量自动扩展副本的数量。设置为以破折号分隔的下界和上界(例如0-5)，或将all用于上界(例如0-all)。默认为false(即禁用)。注意auto-expanded数量的副本只需要配置过滤规则,但是忽略了其他的分配规则,如碎片分配每个节点感知和总碎片,这可能导致集群健康成为黄色如果适用的规则防止所有的副本分配。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>index.search.idle.after&lt;/strong>&lt;/p>
+&lt;p>设置分片被认为搜索无效，不能接收搜索或获取请求的时间。（&lt;strong>默认值30s&lt;/strong>）&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>index.refresh_interval&lt;/strong>&lt;/p>
+&lt;p>执行刷新操作的频率，使对索引的最新更改对搜索可见。默认为1。可以设置为-1以禁用刷新。如果没有显式设置此设置，则至少index.search.idle没有看到搜索流量的分片。秒后将不会收到背景刷新，直到他们收到一个搜索请求。在等待刷新的地方遇到空闲分片的搜索将等待下一次后台刷新(在1秒内)。此行为的目的是在不执行搜索的默认情况下自动优化批量索引。为了避免这种行为，应该将1s的显式值设置为刷新间隔。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.max_inner_result_window&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The maximum value of &lt;code>from + size&lt;/code> for inner hits definition and top hits aggregations to this index. Defaults to &lt;code>100&lt;/code>. Inner hits and top hits aggregation take heap memory and time proportional to &lt;code>from + size&lt;/code> and this limits that memory.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.max_rescore_window&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The maximum value of &lt;code>window_size&lt;/code> for &lt;code>rescore&lt;/code> requests in searches of this index. Defaults to &lt;code>index.max_result_window&lt;/code> which defaults to &lt;code>10000&lt;/code>. Search requests take heap memory and time proportional to &lt;code>max(window_size, from + size)&lt;/code> and this limits that memory.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.max_docvalue_fields_search&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The maximum number of &lt;code>docvalue_fields&lt;/code> that are allowed in a query. Defaults to &lt;code>100&lt;/code>. Doc-value fields are costly since they might incur a per-field per-document seek.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.max_script_fields&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The maximum number of &lt;code>script_fields&lt;/code> that are allowed in a query. Defaults to &lt;code>32&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.max_ngram_diff&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The maximum allowed difference between min_gram and max_gram for NGramTokenizer and NGramTokenFilter. Defaults to &lt;code>1&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.max_shingle_diff&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The maximum allowed difference between max_shingle_size and min_shingle_size for ShingleTokenFilter. Defaults to &lt;code>3&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.blocks.read_only&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>Set to &lt;code>true&lt;/code> to make the index and index metadata read only, &lt;code>false&lt;/code> to allow writes and metadata changes.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.blocks.read_only_allow_delete&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>Similar to &lt;code>index.blocks.read_only&lt;/code> but also allows deleting the index to free up resources. The &lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/disk-allocator.html">disk-based shard allocator&lt;/a> may add and remove this block automatically.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.blocks.read&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>Set to &lt;code>true&lt;/code> to disable read operations against the index.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.blocks.write&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>Set to &lt;code>true&lt;/code> to disable data write operations against the index. Unlike &lt;code>read_only&lt;/code>, this setting does not affect metadata. For instance, you can close an index with a &lt;code>write&lt;/code> block, but not an index with a &lt;code>read_only&lt;/code> block.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.blocks.metadata&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>Set to &lt;code>true&lt;/code> to disable index metadata reads and writes.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.max_refresh_listeners&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>Maximum number of refresh listeners available on each shard of the index. These listeners are used to implement &lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-refresh.html">&lt;code>refresh=wait_for&lt;/code>&lt;/a>.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.analyze.max_token_count&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The maximum number of tokens that can be produced using _analyze API. Defaults to &lt;code>10000&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.highlight.max_analyzed_offset&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The maximum number of characters that will be analyzed for a highlight request. This setting is only applicable when highlighting is requested on a text that was indexed without offsets or term vectors. Defaults to &lt;code>1000000&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.max_terms_count&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The maximum number of terms that can be used in Terms Query. Defaults to &lt;code>65536&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.max_regex_length&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The maximum length of regex that can be used in Regexp Query. Defaults to &lt;code>1000&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.routing.allocation.enable&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>Controls shard allocation for this index. It can be set to:&lt;code>all&lt;/code> (default) - Allows shard allocation for all shards.&lt;code>primaries&lt;/code> - Allows shard allocation only for primary shards.&lt;code>new_primaries&lt;/code> - Allows shard allocation only for newly-created primary shards.&lt;code>none&lt;/code> - No shard allocation is allowed.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.routing.rebalance.enable&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>Enables shard rebalancing for this index. It can be set to:&lt;code>all&lt;/code> (default) - Allows shard rebalancing for all shards.&lt;code>primaries&lt;/code> - Allows shard rebalancing only for primary shards.&lt;code>replicas&lt;/code> - Allows shard rebalancing only for replica shards.&lt;code>none&lt;/code> - No shard rebalancing is allowed.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.gc_deletes&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The length of time that a &lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete.html#delete-versioning">deleted document’s version number&lt;/a> remains available for &lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html#index-versioning">further versioned operations&lt;/a>. Defaults to &lt;code>60s&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.default_pipeline&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The default &lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest.html">ingest node&lt;/a> pipeline for this index. Index requests will fail if the default pipeline is set and the pipeline does not exist. The default may be overridden using the &lt;code>pipeline&lt;/code> parameter. The special pipeline name &lt;code>_none&lt;/code> indicates no ingest pipeline should be run.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>index.final_pipeline&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>The final &lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest.html">ingest node&lt;/a> pipeline for this index. Index requests will fail if the final pipeline is set and the pipeline does not exist. The final pipeline always runs after the request pipeline (if specified) and the default pipeline (if it exists). The special pipeline name &lt;code>_none&lt;/code> indicates no ingest pipeline will run.&lt;/p>
+&lt;/li>
+&lt;/ul></description></item></channel></rss>

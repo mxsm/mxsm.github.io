@@ -1,0 +1,822 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Spring framework自定义组件</title><link>/spring-framework/custom-component/</link><description>Recent content in Spring framework自定义组件 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/spring-framework/custom-component/index.xml" rel="self" type="application/rss+xml"/><item><title>Spring-Framework: Spring如何自定义注解</title><link>/spring-framework/custom-component/spring-custom-annotation/</link><pubDate>Wed, 28 Aug 2019 00:00:00 +0000</pubDate><guid>/spring-framework/custom-component/spring-custom-annotation/</guid><description>
+&lt;h3 id="1-自定义注解分类">1 自定义注解分类&lt;/h3></description></item><item><title>Spring-Framework: Spring中的拓展原理实战</title><link>/spring-framework/custom-component/spring-extend/</link><pubDate>Mon, 18 Jan 2021 00:00:00 +0000</pubDate><guid>/spring-framework/custom-component/spring-extend/</guid><description>
+&lt;h3 id="1-spring拓展分类">1. Spring拓展分类&lt;/h3>
+&lt;p>Spring在Java框架中有着不可撼动的地位，只要是Java开发者就没有不用的。对于这样一个优秀的框架可拓展性是必不可少的。这里通过分析Spring的原理然后根据工作中的需要基于Spring的一些常用的拓展：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/custom/Spring%E4%B8%AD%E7%9A%84%E6%8B%93%E5%B1%95.png" alt="Spring中的拓展">&lt;/p>
+&lt;blockquote>
+&lt;p>&lt;a href="https://spring.io/">Spring官网&lt;/a>&lt;/p>
+&lt;p>&lt;a href="https://github.com/spring-projects/spring-framework">Spring Framework Github&lt;/a>&lt;/p>
+&lt;/blockquote>
+&lt;p>拓展分类：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>XML Schema拓展&lt;/strong>&lt;/p>
+&lt;p>在Spring中有除了比较常见的标签 bean、aop标签以外，还可以通过自定义XSD然后和Spring的拓展接口实现自定义&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>自定义注解&lt;/strong>&lt;/p>
+&lt;p>首先要明白自定义注解有什么好处：&lt;/p>
+&lt;ul>
+&lt;li>自定义注解能够通过注解很好的表达我们这个注解表干的事情，例如：@Log这个在Spring中没有这个注解，通过注解我们很好猜到这个是用来记录日志的。在Spring Web中的注解@RestController&lt;/li>
+&lt;li>能够在Spring的原有的注解上做一些额外的功能&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>AOP拓展&lt;/strong>&lt;/p>
+&lt;p>对于AOP拓展，Spring中已经有了几个例子：&lt;strong>&lt;code>@Transactional&lt;/code>&lt;/strong> &lt;strong>&lt;code>@Async&lt;/code>&lt;/strong> &lt;strong>&lt;code>@Cacheable&lt;/code>&lt;/strong> ，这几个都是AOP拓展的体现，但是在实际的工作中远远不止这些拓展。例如：日志记录，方法调用时间统计等等&lt;/p>
+&lt;blockquote>
+&lt;p>Async原理源码分析可以阅读 《&lt;a href="https://juejin.cn/post/7045587358174937101">Spring AOP应用之EnableAsync&lt;/a>》&lt;/p>
+&lt;p>Transactional原理源码分析可以阅读 《&lt;a href="https://juejin.cn/post/7040748897915895821">Spring AOP应用之Spring事务管理&lt;/a>》&lt;/p>
+&lt;/blockquote>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>校验拓展&lt;/strong>&lt;/p>
+&lt;p>在web项目中，有一类注解像：@NotBlank 这一类注解，这些只是Java本身提供的，Spring给了支持。但是例如判断是不是电子邮件、电话号码等等都需要自定义。(严格意义上来说这只能是Spring对校验的一种支持)&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>其他拓展&lt;/strong>&lt;/p>
+&lt;p>对一些接口拓展，例如Aware接口拓展等等&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="2-为什么要拓展自定义">2. 为什么要拓展(自定义)？&lt;/h3>
+&lt;p>拓展自定义的意义在哪里？从代码可读性上来说能够让使用者更加清楚明白当前的组件是干什么的，从解决问题的角度来说更好的解决每个具体业务的问题。实现个性化定制。&lt;/p>
+&lt;p>接下来通过一系列文章进行分门别类，从原理到实际编写代码来实现以上的这些拓展。结合工作中的一些实际需求对拓展做一些实现！同时把Spring的拓展进行分门别类。在更新完成Spring拓展的系列后还会继续更新Spring Boot的相关拓展以及源码分析的文章。&lt;/p></description></item><item><title>Spring-Framework: 如何自定义Spring xml Namespace</title><link>/spring-framework/custom-component/spring-extend-xml/</link><pubDate>Tue, 19 Jan 2021 00:00:00 +0000</pubDate><guid>/spring-framework/custom-component/spring-extend-xml/</guid><description>
+&lt;p>在Spring XML配置文件中除了Spring 默认的Namespace，今天我们来看一下如何自定义Namespace&lt;/p>
+&lt;h3 id="1-spring自定义xml的namespace原理">1. Spring自定义XML的Namespace原理&lt;/h3>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/custom/%E8%87%AA%E5%AE%9A%E4%B9%89xml%20schema.png" alt="自定义xml schema">&lt;/p>
+&lt;p>整个Spring容器启动的时候流程还是一样，但是在加载Bean的定义的时候，XML配置文件调用的是 &lt;strong>AbstractXmlApplicationContext#loadBeanDefinitions&lt;/strong> 方法来加载XML中的Bean的定义。然后通过 &lt;strong>XmlBeanDefinitionReader&lt;/strong> 从设置的默认位置或者指定位置的xml解析成为Document到内存。&lt;strong>BeanDefinitionDocumentReader&lt;/strong> 负责解析 XML Document中每个 Element。&lt;/p>
+&lt;blockquote>
+&lt;p>整个过程会读取META-INF/spring.schemas文件中配置的Namespace和XSD文件的对应关系进行校验&lt;/p>
+&lt;/blockquote>
+&lt;p>在解析的过程中会去判断是Spring默认的Namespace还是用户自定义Namespace&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>Spring 默认Element处理&lt;/p>
+&lt;p>默认的Element: import,alias,bean,beans,这些都是由 &lt;strong>DefaultBeanDefinitionDocumentReader&lt;/strong> 提供默认解析&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>自定义的Element处理&lt;/p>
+&lt;p>通过获取配置在 &lt;strong>META-INF/spring.handlers&lt;/strong> 文件中对应Namespace的处理类。这个Namespace的处理类实现 &lt;strong>NamespaceHandler或者NamespaceHandlerSupport&lt;/strong> 。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;p>然后调用NamespaceHandler具体实例的NamespaceHandler#parse方法对Element进行解析。&lt;/p>
+&lt;h3 id="2-spring自定义xml的namespace实战">2. Spring自定义XML的Namespace实战&lt;/h3>
+&lt;p>定义一个和Spring默认的bean拥有相同功能的Element,这个Element可以叫：&lt;strong>mxsmBean&lt;/strong>, 具体的步骤如下图：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/custom/Spring%20%E8%87%AA%E5%AE%9A%E4%B9%89XML%20Namespace%E6%AD%A5%E9%AA%A4.png" alt="Spring 自定义XML Namespace步骤">&lt;/p>
+&lt;h4 id="21-xsd定义">2.1 XSD定义&lt;/h4>
+&lt;p>通过XSD文件定义mxsmBean需要有哪些属性。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml">&lt;span style="color:#8f5902;font-style:italic">&amp;lt;?xml version=&amp;#34;1.0&amp;#34; encoding=&amp;#34;UTF-16&amp;#34; ?&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;xsd:schema&lt;/span> &lt;span style="color:#c4a000">xmlns=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;https://github.com/mxsm/schema/mxsm&amp;#34;&lt;/span> &lt;span style="color:#a40000">(1)&lt;/span>
+&lt;span style="color:#c4a000">xmlns:xsd=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;http://www.w3.org/2001/XMLSchema&amp;#34;&lt;/span>
+&lt;span style="color:#c4a000">targetNamespace=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;https://github.com/mxsm/schema/mxsm&amp;#34;&lt;/span>&lt;span style="color:#204a87;font-weight:bold">&amp;gt;&lt;/span> (2)
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;xsd:import&lt;/span> &lt;span style="color:#c4a000">namespace=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;http://www.springframework.org/schema/beans&amp;#34;&lt;/span> &lt;span style="color:#204a87;font-weight:bold">/&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;xsd:element&lt;/span> &lt;span style="color:#c4a000">name=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;mxsmBean&amp;#34;&lt;/span>&lt;span style="color:#204a87;font-weight:bold">&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;xsd:complexType&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;xsd:attribute&lt;/span> &lt;span style="color:#c4a000">name=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;name&amp;#34;&lt;/span> &lt;span style="color:#c4a000">type=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;xsd:string&amp;#34;&lt;/span> &lt;span style="color:#c4a000">use=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;required&amp;#34;&lt;/span>&lt;span style="color:#204a87;font-weight:bold">/&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;xsd:attribute&lt;/span> &lt;span style="color:#c4a000">name=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;class&amp;#34;&lt;/span> &lt;span style="color:#c4a000">type=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;xsd:string&amp;#34;&lt;/span> &lt;span style="color:#c4a000">use=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;required&amp;#34;&lt;/span>&lt;span style="color:#204a87;font-weight:bold">/&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/xsd:complexType&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/xsd:element&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/xsd:schema&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>(1)和(2)是加自己的Namescape,XSD存放的位置如下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/custom/image-20220119221646852.png" alt="image-20220119221646852">&lt;/p>
+&lt;h4 id="22-编写namespacehandler接口实现">2.2 编写NamespaceHandler接口实现&lt;/h4>
+&lt;p>这个接口主要是用来处理我们对应的Element。例如在 &lt;a href="https://github.com/mxsm/schema/mxsm">https://github.com/mxsm/schema/mxsm&lt;/a> 下面我只是定义application这个Element所以就只需要解析这一个就可以了。&lt;/p>
+&lt;blockquote>
+&lt;p>NamespaceHandlerSupport是实现了部分NamespaceHandler接口的抽象方法，一般情况下我们实现NamespaceHandlerSupport类&lt;/p>
+&lt;/blockquote>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">MxsmSchemaHandler&lt;/span> &lt;span style="color:#204a87;font-weight:bold">extends&lt;/span> &lt;span style="color:#000">NamespaceHandlerSupport&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">init&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">registerBeanDefinitionParser&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;mxsmBean&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">MxsmBeanDefinitionParser&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//如果有多个Element就调用多个
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">MxsmBeanDefinitionParser&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">BeanDefinitionParser&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">BeanDefinition&lt;/span> &lt;span style="color:#000">parse&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Element&lt;/span> &lt;span style="color:#000">element&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">ParserContext&lt;/span> &lt;span style="color:#000">parserContext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">aClass&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">element&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getAttribute&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;class&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">aClass&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">BeanDefinitionBuilder&lt;/span> &lt;span style="color:#000">beanDefinitionBuilder&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">BeanDefinitionBuilder&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">genericBeanDefinition&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">aClass&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">AbstractBeanDefinition&lt;/span> &lt;span style="color:#000">beanDefinition&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">beanDefinitionBuilder&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getBeanDefinition&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">parserContext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getRegistry&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">registerBeanDefinition&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">element&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getAttribute&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;name&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">),&lt;/span> &lt;span style="color:#000">beanDefinition&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">beanDefinition&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>每一个对应的标签对应一个解析类，解析类实现 &lt;strong>BeanDefinitionParser&lt;/strong> 接口。&lt;/p>
+&lt;h4 id="23-配置meta-infspringschemas和meta-infspringhandlers文件配置">2.3 配置META-INF/spring.schemas和META-INF/spring.handlers文件配置&lt;/h4>
+&lt;p>&lt;strong>spring.schemas作用&lt;/strong>：配置自定义Namespace的xsd文件的存放位置&lt;/p>
+&lt;pre>&lt;code class="language-properties" data-lang="properties">https\://github.com/mxsm/schema/mxsm/mxsm.xsd=com/github/mxsm/xml/xsd/mxsm.xsd
+&lt;/code>&lt;/pre>&lt;p>spring.handlers作用：配置自定义Namespace对应的NamespaceHandler&lt;/p>
+&lt;pre>&lt;code class="language-properties" data-lang="properties">https\://github.com/mxsm/schema/mxsm=com.github.mxsm.handler.MxsmSchemaHandler
+&lt;/code>&lt;/pre>&lt;p>在项目中存放的位置如图：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/custom/image-20220119221852581.png" alt="image-20220119221852581">&lt;/p>
+&lt;h4 id="24-spring-applicationxml文件中引入自定义的element">2.4 Spring application.xml文件中引入自定义的Element&lt;/h4>
+&lt;p>创建Spring应用的xml文件。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml">&lt;span style="color:#8f5902;font-style:italic">&amp;lt;?xml version=&amp;#34;1.0&amp;#34; encoding=&amp;#34;UTF-8&amp;#34;?&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;beans&lt;/span> &lt;span style="color:#c4a000">xmlns=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;http://www.springframework.org/schema/beans&amp;#34;&lt;/span>
+&lt;span style="color:#c4a000">xmlns:xsi=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;http://www.w3.org/2001/XMLSchema-instance&amp;#34;&lt;/span>
+&lt;span style="color:#c4a000">xmlns:mxsm=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;https://github.com/mxsm/schema/mxsm&amp;#34;&lt;/span> &lt;span style="color:#a40000">(1)&lt;/span>
+&lt;span style="color:#c4a000">xmlns:context=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;http://www.springframework.org/schema/context&amp;#34;&lt;/span>
+&lt;span style="color:#c4a000">xsi:schemaLocation=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;http://www.springframework.org/schema/beans
+&lt;/span>&lt;span style="color:#4e9a06"> https://www.springframework.org/schema/beans/spring-beans.xsd
+&lt;/span>&lt;span style="color:#4e9a06"> https://github.com/mxsm/schema/mxsm (2)
+&lt;/span>&lt;span style="color:#4e9a06"> https://github.com/mxsm/schema/mxsm/mxsm.xsd (3)
+&lt;/span>&lt;span style="color:#4e9a06"> http://www.springframework.org/schema/context
+&lt;/span>&lt;span style="color:#4e9a06"> https://www.springframework.org/schema/context/spring-context.xsd&amp;#34;&lt;/span>&lt;span style="color:#204a87;font-weight:bold">&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;mxsm:mxsmBean&lt;/span> &lt;span style="color:#c4a000">class=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;com.github.mxsm.bean.MxsmBeanTest&amp;#34;&lt;/span> &lt;span style="color:#c4a000">name=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;test&amp;#34;&lt;/span>&lt;span style="color:#204a87;font-weight:bold">/&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/beans&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>(1)、(2)，(3) 这三处在使用的时候需要加上。到这里为止，自定义的步骤都已经完成了。接下来就是进行验证我们能不能把这个类注入到Spring 容器中。这里我们写一段测试代码来检验：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">App&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">main&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span> &lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">ApplicationContext&lt;/span> &lt;span style="color:#000">context&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">ClassPathXmlApplicationContext&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;application.xml&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//System.out.println(context.getBean(&amp;#34;aaaa&amp;#34;,String.class));
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">MxsmBeanTest&lt;/span> &lt;span style="color:#000">test&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">context&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getBean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;test&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">MxsmBeanTest&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">test&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">MxsmBeanTest&lt;/span> &lt;span style="color:#000">bean&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">context&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getBean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">MxsmBeanTest&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">bean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">test&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span>&lt;span style="color:#000">bean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>然后运行看一下结果：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/custom/image-20220119223247306.png" alt="image-20220119223247306">&lt;/p>
+&lt;p>从运行结果来看能够获取到 &lt;strong>MxsmBeanTest&lt;/strong> 对应的实例，并且获取的还是单例。那么说明在我们创建默认的时候注册到Spring容器中的定义获取的类实例默认是已单例的形式。&lt;/p>
+&lt;blockquote>
+&lt;p>完整代码地址：https://github.com/mxsm/spring-sample/tree/master/namespace-handler&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="3-总结">3. 总结&lt;/h3>
+&lt;ul>
+&lt;li>在自定义拓展前，首先你要知道你拓展的Element是干什么用的，然后在根据用途来进行解析。比如我上面这个mxsmBean就是为了实现一个简化版本的和Spring默认的Bean类似的功能。&lt;/li>
+&lt;li>Namespace的XSD文件的编写，需要了解XSD的编写(教程参考：https://www.w3school.com.cn/schema/schema_example.asp)&lt;/li>
+&lt;li>在接口层面需要实现NamespaceHandler以及BeanDefinitionParser接口，两者搭配以前使用。&lt;/li>
+&lt;li>在文件META-INF/spring.schemas和META-INF/spring.handlers中添加对应配置，Spring会默认加载这两个文件中的配置进行解析。&lt;/li>
+&lt;li>在Spring的xml配置文件中导入对应自定义的Namespace。&lt;/li>
+&lt;/ul>
+&lt;p>上面就是整个自定义命名空间的过程，步骤以及Spring怎么样去解析。如果想了解更多的细节可以去Spring的网站(&lt;a href="https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#xsd-schemas">https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#xsd-schemas&lt;/a>)了解。同时Spring自己也实现了一些例如 util（spring-util.xsd）。可以通过这些来学习。这样能够更好的明白和理解自定义的这个过程。&lt;/p></description></item><item><title>Spring-Framework: Spring常用的拓展接口</title><link>/spring-framework/custom-component/spring-custom-used-interface/</link><pubDate>Sun, 19 Dec 2021 00:00:00 +0000</pubDate><guid>/spring-framework/custom-component/spring-custom-used-interface/</guid><description>
+&lt;ul>
+&lt;li>
+&lt;p>Spring框架是一个拓展性很好的框架，在平时的开发中我们也会进行一些拓展。那么来看一下常用的拓展类：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/spring/Spring%E5%B8%B8%E8%A7%81%E7%9A%84%E6%8B%93%E5%B1%95%E6%8E%A5%E5%8F%A3.png?raw=true" alt="">&lt;/p>
+&lt;p>这里把拓展接口分成了四大类&lt;/p>
+&lt;h3 id="1-导入类拓展接口">1. 导入类拓展接口&lt;/h3>
+&lt;ul>
+&lt;li>
+&lt;p>ImportAware&lt;/p>
+&lt;p>从Spring的源码注释来看&lt;code>ImportAware&lt;/code>接口是需要和&lt;code>@Import&lt;/code>一起使用的。通过&lt;code>@Import&lt;/code>导入的配置类如果实现了&lt;code>ImportAware&lt;/code>接口就可以获取到导入该配置类接口的数据配置。同时需要搭配 &lt;strong>&lt;code>@Configuration注解&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>例如Spring实现的注解**&lt;code>@ EnableAsync&lt;/code>** 中的 **&lt;code>ProxyAsyncConfiguration&lt;/code>** 就实现了。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>ImportSelector，DeferredImportSelector&lt;/p>
+&lt;p>动态导入配置类,例如Spring的实现：&lt;strong>&lt;code>@ EnableAsync&lt;/code>&lt;/strong>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>ImportBeanDefinitionRegistrar&lt;/p>
+&lt;p>可以实现自己的注解管理自己的Bean。例如Spring注解： &lt;strong>&lt;code>@EnableAspectJAutoProxy&lt;/code>&lt;/strong>&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>Tips： 以上的接口都是搭配 @Import、@Configuration使用的。 例如用来实现自定义的Enablexxx功能&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="2-aop相关接口">2. AOP相关接口&lt;/h3>
+&lt;p>对于AOP记住三点就好，Advisor、Advice、Pointcut。所以Spring提供了三个对应的接口来给使用者拓展实现。&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>StaticMethodMatcherPointcut&lt;/p>
+&lt;p>切点实现&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>AbstractBeanFactoryPointcutAdvisor&lt;/p>
+&lt;p>通知器实现&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>MethodInterceptor&lt;/p>
+&lt;p>切面实现&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="3-bean后置处理器接口">3. Bean后置处理器接口&lt;/h3>
+&lt;p>对于Bean的后置处理器接口主要都是实现了 &lt;strong>&lt;code>BeanPostProcessor&lt;/code>&lt;/strong> 接口&lt;/p>
+&lt;ul>
+&lt;li>SmartInstantiationAwareBeanPostProcessor&lt;/li>
+&lt;li>InstantiationAwareBeanPostProcessor&lt;/li>
+&lt;li>DestructionAwareBeanPostProcessor&lt;/li>
+&lt;li>MergedBeanDefinitionPostProcessor&lt;/li>
+&lt;/ul>
+&lt;p>就是来自定义Bean的管理和对Bean进行功能增强。例如Spring AOP的实现就是实现了 &lt;strong>&lt;code>SmartInstantiationAwareBeanPostProcessor&lt;/code>&lt;/strong> 接口。实现自定义注解就可以使用当前的这些处理器来实现。&lt;/p>
+&lt;h3 id="4-aware类型接口">4. Aware类型接口&lt;/h3>
+&lt;p>aware类型接口比较多，主要的作用就是在继承了相对应的aware接口的Bean里面可以获取到相对应的aware对象。这里平时日常的开发过程中使用的比较多的：&lt;/p>
+&lt;ul>
+&lt;li>ApplicationContextAware&lt;/li>
+&lt;li>BeanNameAware&lt;/li>
+&lt;li>ApplicationEventPublisherAware&lt;/li>
+&lt;li>BeanClassLoaderAware&lt;/li>
+&lt;li>BeanFactoryAware&lt;/li>
+&lt;li>NotificationPublisherAware&lt;/li>
+&lt;li>EnvironmentAware&lt;/li>
+&lt;/ul>
+&lt;p>其他的在自定义拓展的过程中使用的频率都没用那么的高&lt;/p>
+&lt;h3 id="5-使用小技巧">5. 使用小技巧&lt;/h3>
+&lt;p>对于上面这么多拓展的接口如何使用，下面有一些自己在开发过程中的一些小心得：&lt;/p>
+&lt;ul>
+&lt;li>参照Spring源码的实现进行拓展，这个准没错。Spring本身实现的源码就是一个很好的例子。例如你要自己开发一个 &lt;strong>&lt;code>@EnableXXXX&lt;/code>&lt;/strong> 的注解功能。那么你可以参照一下Spring源码中实现的 &lt;strong>&lt;code>@EnableAsync、@EnableTransactionManagement&lt;/code>&lt;/strong> 等一些注解来作为参照&lt;/li>
+&lt;li>参照一些开源系统的Spring支持系列框架，这里面有很多基于Spring的自定义注解实现。这些例子也给自己去拓展平时工作中的注解等做了很好的参考和例子。比如：例如 &lt;a href="https://github.com/nacos-group/nacos-spring-project">Nacos Spring 项目&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul></description></item><item><title>Spring-Framework: 如何自定义Spring Enable注解</title><link>/spring-framework/custom-component/spring-extend-enable-annotation/</link><pubDate>Thu, 20 Jan 2022 00:00:00 +0000</pubDate><guid>/spring-framework/custom-component/spring-extend-enable-annotation/</guid><description>
+&lt;p>Spring中有这样一类注解以Enable开头，例如：&lt;strong>@EnableAsync、@EnableWebMvc、@EnableTransactionManagement&lt;/strong> 等等，这三个是在工作中见的比较多也比较常见的一个。从注解字面上的意思来看，主要用于开启某项功能，例如：&lt;strong>@EnableTransactionManagement&lt;/strong> 注解是开启事务管理，然后搭配 &lt;strong>@Transactional&lt;/strong> 注解使用。在工作过程中仅仅是Spring提供的注解是完全不够的，所以需要我们进行自定义Enable类型注解，来开启某一个功能，然后搭配对应的注解来使用。这里先讲如何自定义Enable类型的注解，后面结合拓展AOP类型注解进行搭配使用。&lt;/p>
+&lt;h3 id="1-enable注解原理解析">1. @Enable注解原理解析&lt;/h3>
+&lt;p>@Enable类型注解原理解析流程如下图：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/custom/Enable%E5%8E%9F%E7%90%86%20.png" alt="Enable原理 ">&lt;/p>
+&lt;p>从@Enable注解的解析流程图可以分析一下原理：&lt;/p>
+&lt;ul>
+&lt;li>注解的解析的入口在 &lt;strong>ConfigurationClassPostProcessor&lt;/strong> ，这个类是 &lt;strong>BeanDefinitionRegistryPostProcessor&lt;/strong> 接口的实现，而&lt;strong>BeanDefinitionRegistryPostProcessor&lt;/strong> 接口继承了&lt;strong>BeanFactoryPostProcessor&lt;/strong> 。(Spring容器启动就会调用&lt;strong>BeanFactoryPostProcessor&lt;/strong> 一系列相关的继承和实现实例的方法)&lt;/li>
+&lt;li>&lt;strong>ConfigurationClassPostProcessor&lt;/strong> 从Spring容器中获取被 &lt;strong>@Configuration&lt;/strong> 修饰的类，然后交给新建的 &lt;strong>ConfigurationClassParser&lt;/strong> 实例处理。&lt;/li>
+&lt;li>&lt;strong>ConfigurationClassParser&lt;/strong> 负责处理 &lt;strong>@Component、@PropertySources、@PropertySource、@ComponentScans、@ComponentScan、@ImportResource、@Configuration修饰的类方法上面的@Bean、@Import&lt;/strong>。&lt;/li>
+&lt;li>&lt;strong>@Import&lt;/strong> 作为 &lt;strong>@Enable&lt;/strong> 注解的入口，&lt;strong>@Import&lt;/strong> 导入的配置类需要实现 &lt;strong>DeferredImportSelector、ImportSelector、ImportBeanDefinitionRegistrar&lt;/strong> 三个当中的一个,以这三个类往Spring容器中注入自己实现功能相关的类来达到我们自己的功能实现的目的&lt;/li>
+&lt;/ul>
+&lt;p>通过Spring解析配置了@Configuration的类，然后解析类上面配置了@Import的注解配置 value 值的接口，这些类都是实现了&lt;strong>DeferredImportSelector、ImportSelector、ImportBeanDefinitionRegistrar&lt;/strong> 这三个接口中的一个。执行了三个接口的实现这里就已经完成了我们自定义的类注册到Spring容器。&lt;/p>
+&lt;blockquote>
+&lt;p>Tpis:在自定义Enable用到的Spring原生的注解以及接口&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>注解&lt;/p>
+&lt;p>@Configuration、@Import&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>接口&lt;/p>
+&lt;p>DeferredImportSelector、ImportSelector、ImportBeanDefinitionRegistrar&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/blockquote>
+&lt;h3 id="2-自定义enable注解实战">2. 自定义@Enable注解实战&lt;/h3>
+&lt;p>自定义一个@EnableLog注解，功能：用来是否允许来进行日志记录。自定义需要如下几个步骤：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/custom/Enable%E8%87%AA%E5%AE%9A%E4%B9%89%E6%AD%A5%E9%AA%A4.png" alt="Enable自定义步骤">&lt;/p>
+&lt;h4 id="21-定义enable注解">2.1 定义@Enable注解&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@Documented&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Target&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">({&lt;/span>&lt;span style="color:#000">ElementType&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">TYPE&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">})&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Retention&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">RetentionPolicy&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">RUNTIME&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Inherited&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#5c35cc;font-weight:bold">@interface&lt;/span> &lt;span style="color:#000">EnableLog&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">value&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * use asynchronization method to record log
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @return
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">async&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#204a87;font-weight:bold">false&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * log name
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @return
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">loggerName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">proxyTargetClass&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#204a87;font-weight:bold">false&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>注解里面的属性可以根据实现的功能自己定义。&lt;/p>
+&lt;h4 id="22-实现接口">2.2 实现接口&lt;/h4>
+&lt;p>需要实现三个接口中的任意一个：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>ImportSelector&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>DeferredImportSelector&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>ImportBeanDefinitionRegistrar&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>ImportSelector&lt;/strong>和&lt;strong>DeferredImportSelector&lt;/strong>接口算是一类接口执行的时间不同而已。&lt;strong>ImportBeanDefinitionRegistrar&lt;/strong> 往Spring容器中注入BeanDefinition。这三个接口选择看实现功能的需要。我们这里使用的 &lt;strong>ImportSelector&lt;/strong> (这个也是最常用的)：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">LogImportSelector&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">ImportSelector&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * Select and return the names of which class(es) should be imported based on the {@link AnnotationMetadata} of the
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * importing @{@link Configuration} class.
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> *
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @param importingClassMetadata
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @return the class names, or an empty array if none
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">selectImports&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">AnnotationMetadata&lt;/span> &lt;span style="color:#000">importingClassMetadata&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">AnnotationAttributes&lt;/span> &lt;span style="color:#000">attributes&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">AnnotationAttributes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">fromMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>
+&lt;span style="color:#000">importingClassMetadata&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getAnnotationAttributes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">EnableLog&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(),&lt;/span> &lt;span style="color:#204a87;font-weight:bold">false&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">));&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">value&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">attributes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getBoolean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;value&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">value&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]{&lt;/span>&lt;span style="color:#000">LogConfig&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(),&lt;/span> &lt;span style="color:#000">LogImportBeanDefinitionRegistrar&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()};&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">];&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>这里往Spring容器中注入了一个 &lt;strong>LogConfig&lt;/strong> 的配置类，以及一个 &lt;strong>LogImportBeanDefinitionRegistrar&lt;/strong> 类。&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>LogConfig&lt;/strong>： 主要用来配置记录日志的AOP相关的类实例&lt;/li>
+&lt;li>&lt;strong>LogImportBeanDefinitionRegistrar&lt;/strong>：开启AOP的处理，以及Spring在日志处理过程中使用的代理方式&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>代码具体会在基于AOP拓展的时候进行讲解&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="23-自定义注解增加import注解">2.3 自定义注解增加@Import注解&lt;/h4>
+&lt;p>上面自定义的 &lt;strong>@EnableLog&lt;/strong> 注解只是定义一个普通的注解，那么要如何跟Spring相结合，这就需要用到 &lt;strong>@Import&lt;/strong> 注解。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@Documented&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Target&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">({&lt;/span>&lt;span style="color:#000">ElementType&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">TYPE&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">})&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Retention&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">RetentionPolicy&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">RUNTIME&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Inherited&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Import&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">LogImportSelector&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#5c35cc;font-weight:bold">@interface&lt;/span> &lt;span style="color:#000">EnableLog&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//省略部分代码
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>增加(1)位置的代码。这里就把自定义的注解和Spring框架结合一起。到这里自定义 &lt;strong>@EnableLog&lt;/strong> 完成了。&lt;/p>
+&lt;h4 id="24-配合configuration使用">2.4 配合@Configuration使用&lt;/h4>
+&lt;p>在使用自定义的Enable注解需要搭配Spring原生的 &lt;strong>@Configuration&lt;/strong> 进行使用(原理已经在上面介绍)&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@EnableLog&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Configuration&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">EnableLogConfig&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>如上代码这样就可以使用了。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 如果是SpringBoot项目，可以直接放在@SpringBootApplication注解的类上面，有人会问为什么放在这里可以呢？原因就是 @SpringBootConfiguration注解上面配置了 @Configuration 注解。原因就在这里@SpringBootApplication就相当于一个@Configuration注解，所以我们自定义的Enable注解可以直接放在@SpringBootApplication，当然也可以自定义一个用@Configuration修饰的类上面。&lt;/p>
+&lt;/blockquote>
+&lt;p>代码会在后续的文章给出来。这里涉及到AOP的拓展。&lt;/p>
+&lt;h3 id="3-总结">3. 总结&lt;/h3>
+&lt;ul>
+&lt;li>Enable类型的注解从Spring原生的和自己拓展的来看，相当于一个开关。增加这个注解就开启了一个功能，需要搭配其他的注解来使用，例如：@EnableAsync搭配@Async注解，@EnableTransactionManagement搭配@Transactional注解使用&lt;/li>
+&lt;li>Enable类型注解生效需要搭配@Configuration注解&lt;/li>
+&lt;li>Enable类型注解的实现需要搭配注解@Import导入，功能实现需要实现&lt;strong>DeferredImportSelector、ImportSelector、ImportBeanDefinitionRegistrar&lt;/strong> 三个接口中一个。&lt;/li>
+&lt;/ul>
+&lt;p>将Spring的原生注解和一些特定的拓展接口实现自定义Enable类型注解。&lt;/p></description></item><item><title>Spring-Framework: 基于Spring AOP自定义注解</title><link>/spring-framework/custom-component/spring-extend-aop-annotation/</link><pubDate>Fri, 21 Jan 2022 00:00:00 +0000</pubDate><guid>/spring-framework/custom-component/spring-extend-aop-annotation/</guid><description>
+&lt;p>Spring AOP在Spring项目中有了很多自己的应用，例如@EnableAsync和@Async就是AOP的体现，那么我们如何自己在Spring AOP的原理下自定义自己的注解。&lt;/p>
+&lt;h3 id="1-基于spring-aop自定义注解原理">1. 基于Spring AOP自定义注解原理&lt;/h3>
+&lt;p>Spring AOP基于动态代理来实现，默认如果使用接口的，用JDK提供的动态代理实现，如果是类则使用CGLIB实现。通过@EnableAspectJAutoProxy开启AOP（同时开启对AspectJ的支持）。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/custom/%E5%9F%BA%E4%BA%8EAOP%E6%B3%A8%E8%A7%A3%E8%87%AA%E5%AE%9A%E4%B9%89.png" alt="基于AOP注解自定义">&lt;/p>
+&lt;ul>
+&lt;li>@EnableAspectJAutoProxy启动Spring AOP&lt;/li>
+&lt;li>Spring AOP分为两种实现：
+&lt;ul>
+&lt;li>基于AspectJ注解&lt;/li>
+&lt;li>基于Spring AOP思想，也就是&lt;strong>Advice&lt;/strong> 、 &lt;strong>Pointcut&lt;/strong> 、 &lt;strong>Advisor&lt;/strong> 这个三个，对应MethodInterceptor、AbstractBeanFactoryPointcutAdvisor、StaticMethodMatcherPointcut 三个类。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>在Spring容器启动后生成对应的代理类，在执行方法的时候根据切面来执行对应的方法&lt;/li>
+&lt;/ul>
+&lt;h3 id="2-代码实战">2. 代码实战&lt;/h3>
+&lt;p>将@Enable类型的注解与AOP拓展的接口相结合完成一个完整的功能。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/custom/%E5%9F%BA%E4%BA%8EAOP%E6%B3%A8%E8%A7%A3%E8%87%AA%E5%AE%9A%E4%B9%89%E6%AD%A5%E9%AA%A4.png" alt="基于AOP注解自定义步骤">&lt;/p>
+&lt;h4 id="21-定义enable注解">2.1 定义@Enable注解&lt;/h4>
+&lt;p>结合上一篇文章《&lt;a href="https://juejin.cn/post/7055288159042535460">如何自定义Spring Enable注解&lt;/a>》的@EnableLog的功能&lt;/p>
+&lt;h4 id="22-定义切面注解">2.2 定义切面注解&lt;/h4>
+&lt;p>定义一个@Log注解，功能：用来记录日志&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@Documented&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Target&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">({&lt;/span>&lt;span style="color:#000">ElementType&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">METHOD&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">})&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Retention&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">RetentionPolicy&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">RUNTIME&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Inherited&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#5c35cc;font-weight:bold">@interface&lt;/span> &lt;span style="color:#000">Log&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * log template
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @return
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">template&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="23-实现aop的三个接口">2.3 实现AOP的三个接口&lt;/h4>
+&lt;p>&lt;strong>MethodInterceptor&lt;/strong> 是动态类的方法拦截器，用来拦截执行方法。这里就是AOP动态类的增强&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">LogAdvice&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">MethodInterceptor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">BeanFactoryAware&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//省略了部分代码
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">Object&lt;/span> &lt;span style="color:#000">invoke&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">MethodInvocation&lt;/span> &lt;span style="color:#000">invocation&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">Throwable&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Method&lt;/span> &lt;span style="color:#000">method&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">invocation&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getMethod&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">execute&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">invocation&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">invocation&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getThis&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(),&lt;/span> &lt;span style="color:#000">method&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">invocation&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getArguments&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">Object&lt;/span> &lt;span style="color:#000">execute&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">MethodInvocation&lt;/span> &lt;span style="color:#000">invoker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">Object&lt;/span> &lt;span style="color:#000">target&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">Method&lt;/span> &lt;span style="color:#000">method&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">Object&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">Throwable&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">try&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">LogWorker&lt;/span> &lt;span style="color:#000">worker&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">LogWorker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">target&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">method&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">async&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">logExecutor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">submit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">worker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">else&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">worker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span> &lt;span style="color:#204a87;font-weight:bold">catch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Exception&lt;/span> &lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//e.printStackTrace();
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">logger&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">warn&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;Failure to record logs!&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">e&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">invoker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">proceed&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>主要是实现 &lt;strong>invoke&lt;/strong> 方法，这里实现了日志记录的方法。和调用目标类的返回执行结果。&lt;/p>
+&lt;p>&lt;strong>StaticMethodMatcherPointcut&lt;/strong> 切入点的实现类：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">LogPointcut&lt;/span> &lt;span style="color:#204a87;font-weight:bold">extends&lt;/span> &lt;span style="color:#000">StaticMethodMatcherPointcut&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">matches&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Method&lt;/span> &lt;span style="color:#000">method&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">Class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;?&amp;gt;&lt;/span> &lt;span style="color:#000">targetClass&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">AnnotatedElementUtils&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">hasAnnotation&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">method&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">Log&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>这里决定了切入点，代码表示了当方法被注解@Log标注了就是匹配到了切入点&lt;/p>
+&lt;p>&lt;strong>AbstractBeanFactoryPointcutAdvisor&lt;/strong> ：通知器用来组织 Advice 和 Pointcut&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">LogAdvisor&lt;/span> &lt;span style="color:#204a87;font-weight:bold">extends&lt;/span> &lt;span style="color:#000">AbstractBeanFactoryPointcutAdvisor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">Pointcut&lt;/span> &lt;span style="color:#000">logPointcut&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">LogAdvisor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Pointcut&lt;/span> &lt;span style="color:#000">logPointcut&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">logPointcut&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">logPointcut&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * Get the Pointcut that drives this advisor.
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">Pointcut&lt;/span> &lt;span style="color:#000">getPointcut&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">logPointcut&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>这三个接口实现后把 &lt;strong>Advice&lt;/strong> 、 &lt;strong>Pointcut&lt;/strong> 、 &lt;strong>Advisor&lt;/strong> 三者组织起来，然后注册到Spring IOC容器。&lt;/p>
+&lt;h4 id="24-使用切面注解在需要的方法类">2.4 使用切面注解在需要的方法(类)&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@SpringBootApplication&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@EnableLog&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">Application&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">main&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">SpringApplication&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Application&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>&lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Component&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">Test&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">test&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(){&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1111&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Log&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">template&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;用户${#user.name}信息：${@test.getName(#user)}&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">addUser&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">User&lt;/span> &lt;span style="color:#000">user&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">getName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">User&lt;/span> &lt;span style="color:#000">user&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">user&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>首先在SpringBoot启动类上加入 &lt;strong>@EnableLog&lt;/strong> 然后在需要记录的类的方法上加上 &lt;strong>@Log&lt;/strong>&lt;/p>
+&lt;blockquote>
+&lt;p>AOP注解定义代码：https://github.com/mxsm/mxsm-log4j&lt;/p>
+&lt;p>测试代码：https://github.com/mxsm/spring-sample/tree/spring-5.3.x/spring-boot&lt;/p>
+&lt;/blockquote>
+&lt;p>这里是基于Spring AOP接口来实现自定义接口的功能实现，在Spring中还有可以根据AspectJ注解来实现。这里就不详细讲解。想要了解的同学可以在&lt;a href="https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#aop">Spring官网 AOP&lt;/a> 的 &lt;strong>Aspect Oriented Programming with Spring&lt;/strong> 章节查看。所以基于Spring AOP的注解定义就有两种方式。&lt;/p>
+&lt;h3 id="3-总结">3. 总结&lt;/h3>
+&lt;ul>
+&lt;li>基于AspectJ的定义实现比较简单，无需搭配自定义的@Enablexxx注解使用，只需要用@EnableAspectJAutoProxy(完成了我们自定义@Enablexxx的注解)开启AOP即可。&lt;/li>
+&lt;li>基于Spring AOP定义注解底层是基于动态代理。Spring动态代理可以选择JDK或者Cglib&lt;/li>
+&lt;/ul></description></item><item><title>Spring-Framework: Spring AOP+SpEL实现自定义模板记录日志</title><link>/spring-framework/custom-component/spring-custom-logging/</link><pubDate>Sat, 05 Feb 2022 00:00:00 +0000</pubDate><guid>/spring-framework/custom-component/spring-custom-logging/</guid><description>
+&lt;p>「这是我参与2022首次更文挑战的第20天，活动详情查看：&lt;a href="https://juejin.cn/post/7052884569032392740">2022首次更文挑战&lt;/a>」&lt;/p>
+&lt;h3 id="1-前言">1. 前言&lt;/h3>
+&lt;p>开发项目中的日志记录是必不可少的，对于非业务项目日志记录的一般是关键信息例如项目启动的配置信息等等，而对于业务系统，那记录的主要是请求的接口的数据。这种情况如果以硬编码的方式，业务代码有改动就同时需要改动日志。同时如果不需要记录日志就需要删除所有的日志记录代码。今天我们用Spring AOP+SpEL 来实现自定义模板记录日志：&lt;/p>
+&lt;p>&lt;img src="E:%5Cdownload%5C%E6%97%A5%E5%BF%97%E8%AE%B0%E5%BD%95%E5%AE%9E%E7%8E%B0.png" alt="日志记录实现">&lt;/p>
+&lt;h3 id="2-mxsmlog定义">2. @MxsmLog定义&lt;/h3>
+&lt;p>&lt;img src="E:%5Cdownload@MxsmLog.png" alt="@MxsmLog">&lt;/p>
+&lt;p>&lt;strong>@MxsmLog&lt;/strong> 包含两个属性：&lt;/p>
+&lt;ol>
+&lt;li>&lt;strong>template&lt;/strong>&lt;/li>
+&lt;/ol>
+&lt;p>用户可以自定义日志记录模板，模板符合SpEL表达式。就可以被SpEL进行解析。&lt;/p>
+&lt;ol start="2">
+&lt;li>
+&lt;p>&lt;strong>operateType&lt;/strong>&lt;/p>
+&lt;p>修饰的方法的操作类型，默认为 &lt;strong>UNKNOWN&lt;/strong>，operateType的取值如下：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">enum&lt;/span> &lt;span style="color:#000">OperateType&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">UNKNOWN&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>
+&lt;span style="color:#000">ADD&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>
+&lt;span style="color:#000">DELETE&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>
+&lt;span style="color:#000">UPDATE&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>
+&lt;span style="color:#000">SEARCH&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>Tips: 包含了接口的主要是个操作增删改查，因为也可用于非Controller类上面，所以增加了一个默认的UNKNOWN&lt;/p>
+&lt;/blockquote>
+&lt;/li>
+&lt;/ol>
+&lt;p>代码：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@Documented&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Target&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">({&lt;/span>&lt;span style="color:#000">ElementType&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">METHOD&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">})&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Retention&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">RetentionPolicy&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">RUNTIME&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Inherited&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#5c35cc;font-weight:bold">@interface&lt;/span> &lt;span style="color:#000">Log&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * log template
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @return
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">template&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> *
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @return
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#000">OperateType&lt;/span> &lt;span style="color:#000">operateType&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#000">OperateType&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">UNKNOWN&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="3-enablemxsmlog">3. @EnableMxsmLog&lt;/h3>
+&lt;p>&lt;img src="E:%5Cdownload@EnableMxsmLog.png" alt="@EnableMxsmLog">&lt;/p>
+&lt;p>&lt;strong>@EnableMxsmLog&lt;/strong> 包含是个属性：&lt;/p>
+&lt;ol>
+&lt;li>&lt;strong>value是否开启日志记录，默认为true&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>async是否开启同步的方式记录日志&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>loggerName logger的名称，这样可以设置不同的logger&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>proxyTargetClass使用jdk还是cglib作为代理实现&lt;/strong>&lt;/li>
+&lt;/ol>
+&lt;p>代码:&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@Documented&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Target&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">({&lt;/span>&lt;span style="color:#000">ElementType&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">TYPE&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">})&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Retention&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">RetentionPolicy&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">RUNTIME&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Inherited&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Import&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">LogImportSelector&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#5c35cc;font-weight:bold">@interface&lt;/span> &lt;span style="color:#000">EnableMxsmLog&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">value&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * use asynchronization method to record log
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @return
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">async&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#204a87;font-weight:bold">false&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * log name
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @return
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">loggerName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">proxyTargetClass&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#204a87;font-weight:bold">false&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="4-spring-aopspel实现解析模板">4. Spring AOP+SpEL实现解析模板&lt;/h3>
+&lt;p>主要的逻辑都在AOP的实现和SpEL的解析。AOP主要负责拦截执行方法上标注了**@MxsmLog** 的，然后获取注解中的模板信息，把模板信息给到SpEL进行模板解析。最后由日志进行打印出来。&lt;/p>
+&lt;h4 id="41-aop实现">4.1 AOP实现&lt;/h4>
+&lt;p>&lt;strong>Enable&lt;/strong> 类型的注解主要是配合 &lt;strong>@Import&lt;/strong> 注解来实现，如上的 &lt;strong>@EnableMxsmLog&lt;/strong> 注解用 &lt;strong>@Import&lt;/strong> 导入了 &lt;strong>&lt;code>LogImportSelector&lt;/code>&lt;/strong> 这个类实现了 &lt;strong>ImportSelector&lt;/strong> 接口：&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220205142108722.png" alt="image-20220205142108722">&lt;/p>
+&lt;p>在上图标注的地方导入了AOP的实现。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 如果对AOP不是很了解可以看一下《&lt;a href="https://juejin.cn/post/7055664320616595492">基于Spring AOP自定义注解&lt;/a>》&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220205142138055.png" alt="image-20220205142138055">&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>LogAdvisor实现了AbstractBeanFactoryPointcutAdvisor类&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>LogAdvice实现了MethodInterceptor接口&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>LogPointcut实现了StaticMethodMatcherPointcut类&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;p>上面三个被实现的类组成Spring中的AOP,这里也就完成了AOP的除了模板解析的所有功能。&lt;/p>
+&lt;p>&lt;strong>&lt;code>LogImportBeanDefinitionRegistrar&lt;/code>&lt;/strong> 类负责注册生成代理的类的处理：&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220205143450758.png" alt="image-20220205143450758">&lt;/p>
+&lt;p>有部分人很可能会发现这段代码好像和 &lt;strong>&lt;code>AutoProxyRegistrar&lt;/code>&lt;/strong> 里面的代码相似。没错就是差不多因为都是利用AOP来实现的功能。这里主要是在获取类的时候自动创建代理类。&lt;/p>
+&lt;h4 id="42-spel实现解析模板">4.2 SpEL实现解析模板&lt;/h4>
+&lt;p>模板解析主要是用了Spring SpEL表达式来实现的。&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220205144154908.png" alt="image-20220205144154908">&lt;/p>
+&lt;p>模板的解析，因为考虑到有可能是异步的情况所以，这里抽象了一个 &lt;strong>LogWorker&lt;/strong> 来执行日志解析和记录。&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220205144312893.png" alt="image-20220205144312893">&lt;/p>
+&lt;p>在这个 &lt;strong>LogWorker#run&lt;/strong> 方法里实现了模板的绩效和日志的记录。&lt;/p>
+&lt;h4 id="43-错误处理">4.3 错误处理&lt;/h4>
+&lt;p>如下代码所示：&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220205144619676.png" alt="image-20220205144619676">&lt;/p>
+&lt;p>如果日志解析和记录错误的情况下不会影响到整个业务的执行。&lt;/p>
+&lt;h3 id="5-案例演示">5. 案例演示&lt;/h3>
+&lt;p>增加maven依赖：&lt;/p>
+&lt;pre>&lt;code>&amp;lt;dependency&amp;gt;
+&amp;lt;groupId&amp;gt;com.github.mxsm&amp;lt;/groupId&amp;gt;
+&amp;lt;artifactId&amp;gt;mxsm-log&amp;lt;/artifactId&amp;gt;
+&amp;lt;version&amp;gt;1.0.0&amp;lt;/version&amp;gt;
+&amp;lt;/dependency&amp;gt;
+&lt;/code>&lt;/pre>&lt;p>编写测试类：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@RestController&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@RequestMapping&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;/log&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">AsyncController&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Autowired&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">Test&lt;/span> &lt;span style="color:#000">test&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@PostMapping&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;/user&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">long&lt;/span> &lt;span style="color:#000">currentTime1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#5c35cc;font-weight:bold">@RequestParam&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">value&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;name&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>&lt;span style="color:#000">required&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">false&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">name&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@RequestBody&lt;/span> &lt;span style="color:#000">User&lt;/span> &lt;span style="color:#000">user&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#000">test&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">addUser&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">user&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">currentTimeMillis&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Component&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">Test&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">test&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(){&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1111&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@MxsmLog&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">template&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;用户名称${#user.name}信息：${@test.getName(#user)}&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">addUser&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">User&lt;/span> &lt;span style="color:#000">user&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">getName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">User&lt;/span> &lt;span style="color:#000">user&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">user&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>启动开始测试：&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CDesktop%5Cpic%5C%E8%87%AA%E5%AE%9A%E4%B9%89%E6%97%A5%E5%BF%97%E8%AE%B0%E5%BD%95%E6%B5%8B%E8%AF%95.gif" alt="自定义日志记录测试">&lt;/p>
+&lt;p>从这里可以看到已经可以使用了&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: jar包已经发布到maven中央仓库&lt;/p>
+&lt;p>源码地址：https://github.com/mxsm/mxsm-log4j&lt;/p>
+&lt;p>测试代码地址：https://github.com/mxsm/spring-sample/tree/master/spring-boot&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="6-总结">6 总结&lt;/h3>
+&lt;p>这个只是实现了一个初步的只能说可以用。后续会基于这个实现更多的功能以及优化其实用性。能够直接用于生产！&lt;/p>
+&lt;p>&lt;strong>不足：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>依赖的Spring的版本较高，需要Spring5以上&lt;/li>
+&lt;li>异步的线程池配置没有给到用户自定义&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助可以点个赞关注，关注我，你的点赞、关注是我前进的动力，文章有不正确的地方请您斧正留言评论~谢谢！&lt;/p>
+&lt;/blockquote></description></item><item><title>Spring-Framework: Spring如何解析自定义xml的源码解析</title><link>/spring-framework/custom-component/spring-customxml-source-analysis/</link><pubDate>Fri, 19 Oct 2018 00:00:00 +0000</pubDate><guid>/spring-framework/custom-component/spring-customxml-source-analysis/</guid><description>
+&lt;h3 id="1-spring如何加载自定义的xml-element">1. Spring如何加载自定义的xml Element&lt;/h3>
+&lt;p>下面来通过代码的Debug来看Spring是如何加载自定义的xml Element&lt;/p>
+&lt;blockquote>
+&lt;p>代码：&lt;a href="https://github.com/mxsm/spring-sample/tree/master/namespace-handler">https://github.com/mxsm/spring-sample/tree/master/namespace-handler&lt;/a>&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="2-namespacehandler的继承关系">2. NamespaceHandler的继承关系&lt;/h3>
+&lt;p>首先看一下 &lt;strong>&lt;code>NamespaceHandler&lt;/code>&lt;/strong> 的继承关系&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/Spring/Springframework/NamespaceHandler.png?raw=true" alt="图">&lt;/p>
+&lt;p>从上图可以看出来几个比较熟悉的：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>AopNamespaceHandler&lt;/p>
+&lt;p>&lt;strong>aop&lt;/strong> 的 &lt;strong>Element&lt;/strong> 处理&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>TxNamespaceHandler&lt;/p>
+&lt;p>事务的处理节点&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;p>在继承过程中抽象类 &lt;strong>&lt;code>NamespaceHandlerSupport&lt;/code>&lt;/strong> 实现了 &lt;strong>&lt;code>NamespaceHandler&lt;/code>&lt;/strong> 。自定义也是主要通过 &lt;strong>&lt;code>NamespaceHandlerSupport&lt;/code>&lt;/strong> 实现这个抽象类。&lt;/p>
+&lt;h3 id="3-如何加载使用namespacehandler的实现类">3. 如何加载使用NamespaceHandler的实现类&lt;/h3>
+&lt;p>在 &lt;strong>Spring&lt;/strong> 中定义了一个 &lt;strong>&lt;code>NamespaceHandlerResolver&lt;/code>&lt;/strong> 接口用来解析 &lt;strong>&lt;code>NamespaceHandler&lt;/code>&lt;/strong>&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@FunctionalInterface&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">interface&lt;/span> &lt;span style="color:#000">NamespaceHandlerResolver&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * Resolve the namespace URI and return the located {@link NamespaceHandler}
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * implementation.
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @param namespaceUri the relevant namespace URI
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @return the located {@link NamespaceHandler} (may be {@code null})
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Nullable&lt;/span>
+&lt;span style="color:#000">NamespaceHandler&lt;/span> &lt;span style="color:#000">resolve&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">namespaceUri&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>这个接口就一个人方法，方法的参数传入的是命名空间的Uri。在 Spring中实现了这个接口的只有一个类 &lt;strong>&lt;code>DefaultNamespaceHandlerResolver&lt;/code>&lt;/strong> 。下面一下这类的代码实现(主要关注一下resolve方法)：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">DefaultNamespaceHandlerResolver&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">NamespaceHandlerResolver&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * 空间URI和处理器对应关系存放的文件(自定义同样会被加载)
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">DEFAULT_HANDLER_MAPPINGS_LOCATION&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;META-INF/spring.handlers&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/** Logger available to subclasses. */&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">protected&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">Log&lt;/span> &lt;span style="color:#000">logger&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">LogFactory&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getLog&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">getClass&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/** ClassLoader to use for NamespaceHandler classes. */&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Nullable&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">ClassLoader&lt;/span> &lt;span style="color:#000">classLoader&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/** Resource location to search for. */&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">final&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">handlerMappingsLocation&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/** Stores the mappings from namespace URI to NamespaceHandler class name / instance. */&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Nullable&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">volatile&lt;/span> &lt;span style="color:#000">Map&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">Object&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">handlerMappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * Create a new {@code DefaultNamespaceHandlerResolver} using the
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * default mapping file location.
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * &amp;lt;p&amp;gt;This constructor will result in the thread context ClassLoader being used
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * to load resources.
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @see #DEFAULT_HANDLER_MAPPINGS_LOCATION
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">DefaultNamespaceHandlerResolver&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">DEFAULT_HANDLER_MAPPINGS_LOCATION&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * Create a new {@code DefaultNamespaceHandlerResolver} using the
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * default mapping file location.
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @param classLoader the {@link ClassLoader} instance used to load mapping resources
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * (may be {@code null}, in which case the thread context ClassLoader will be used)
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * @see #DEFAULT_HANDLER_MAPPINGS_LOCATION
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">DefaultNamespaceHandlerResolver&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#5c35cc;font-weight:bold">@Nullable&lt;/span> &lt;span style="color:#000">ClassLoader&lt;/span> &lt;span style="color:#000">classLoader&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">classLoader&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">DEFAULT_HANDLER_MAPPINGS_LOCATION&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">DefaultNamespaceHandlerResolver&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#5c35cc;font-weight:bold">@Nullable&lt;/span> &lt;span style="color:#000">ClassLoader&lt;/span> &lt;span style="color:#000">classLoader&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">handlerMappingsLocation&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Assert&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">notNull&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">handlerMappingsLocation&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;Handler mappings location must not be null&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">classLoader&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">classLoader&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">!=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">?&lt;/span> &lt;span style="color:#000">classLoader&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">:&lt;/span> &lt;span style="color:#000">ClassUtils&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getDefaultClassLoader&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">handlerMappingsLocation&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">handlerMappingsLocation&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * 解析传入的命名空间的URI
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Nullable&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">NamespaceHandler&lt;/span> &lt;span style="color:#000">resolve&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">namespaceUri&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Map&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">Object&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">handlerMappings&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">getHandlerMappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">Object&lt;/span> &lt;span style="color:#000">handlerOrClassName&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">handlerMappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">get&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">namespaceUri&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">handlerOrClassName&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">else&lt;/span> &lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">handlerOrClassName&lt;/span> &lt;span style="color:#204a87;font-weight:bold">instanceof&lt;/span> &lt;span style="color:#000">NamespaceHandler&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">NamespaceHandler&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#000">handlerOrClassName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">else&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">className&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#000">handlerOrClassName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">try&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;?&amp;gt;&lt;/span> &lt;span style="color:#000">handlerClass&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">ClassUtils&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">forName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">className&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">classLoader&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(!&lt;/span>&lt;span style="color:#000">NamespaceHandler&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">isAssignableFrom&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">handlerClass&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">))&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">throw&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">FatalBeanException&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;Class [&amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">className&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;] for namespace [&amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">namespaceUri&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span>
+&lt;span style="color:#4e9a06">&amp;#34;] does not implement the [&amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">NamespaceHandler&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;] interface&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000">NamespaceHandler&lt;/span> &lt;span style="color:#000">namespaceHandler&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">NamespaceHandler&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#000">BeanUtils&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">instantiateClass&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">handlerClass&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//调用init方法--所以在实现 NamespaceHandlerSupport只需要
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//实现init方法原因就在这里
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">namespaceHandler&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">init&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">handlerMappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">put&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">namespaceUri&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">namespaceHandler&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">namespaceHandler&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">catch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ClassNotFoundException&lt;/span> &lt;span style="color:#000">ex&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">throw&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">FatalBeanException&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;Could not find NamespaceHandler class [&amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">className&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span>
+&lt;span style="color:#4e9a06">&amp;#34;] for namespace [&amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">namespaceUri&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;]&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">ex&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">catch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">LinkageError&lt;/span> &lt;span style="color:#000">err&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">throw&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">FatalBeanException&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;Unresolvable class definition for NamespaceHandler class [&amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span>
+&lt;span style="color:#000">className&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;] for namespace [&amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">namespaceUri&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;]&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">err&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">/**
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * 获取META-INF/spring.handlers里面的对应的命名空间URI和空间处理器的
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> * 对应的关系
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> */&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">Map&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">Object&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">getHandlerMappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Map&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">Object&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">handlerMappings&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">handlerMappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">handlerMappings&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">synchronized&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">handlerMappings&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">handlerMappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">handlerMappings&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">logger&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">isTraceEnabled&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">())&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">logger&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">trace&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;Loading NamespaceHandler mappings from [&amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">handlerMappingsLocation&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;]&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">try&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Properties&lt;/span> &lt;span style="color:#000">mappings&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>
+&lt;span style="color:#000">PropertiesLoaderUtils&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">loadAllProperties&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">handlerMappingsLocation&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">classLoader&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">logger&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">isTraceEnabled&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">())&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">logger&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">trace&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;Loaded NamespaceHandler mappings: &amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">mappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000">handlerMappings&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">ConcurrentHashMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&amp;gt;(&lt;/span>&lt;span style="color:#000">mappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">size&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#000">CollectionUtils&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">mergePropertiesIntoMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">mappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">handlerMappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">handlerMappings&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">handlerMappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">catch&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">IOException&lt;/span> &lt;span style="color:#000">ex&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">throw&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">IllegalStateException&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>
+&lt;span style="color:#4e9a06">&amp;#34;Unable to load NamespaceHandler mappings from location [&amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#204a87;font-weight:bold">this&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">handlerMappingsLocation&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;]&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">ex&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">handlerMappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">toString&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;NamespaceHandlerResolver using mappings &amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">getHandlerMappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>通过断点的方式来看一下整个调用方法的调用如下图：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/Spring/Springframework/Spring%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8B%93%E5%B1%95xml%E8%B0%83%E7%94%A8%E9%93%BE.png?raw=true" alt="图">&lt;/p>
+&lt;p>下面来分一下整个调用链的过程，上面断点打在 &lt;strong>&lt;code>DefaultNamespaceHandlerResolver&lt;/code>&lt;/strong> 的 &lt;strong>&lt;code>resolve&lt;/code>&lt;/strong> 方法的下面这段代码处&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#000">handlerMappings&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">put&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">namespaceUri&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">namespaceHandler&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>细心的话可能你会发现debug的过程中，如果你xml中包含 bean这个节点你会发现并不会走到你的断点这个地方来这个是为什么呢？(答案会在下面的分析过程中给出来)&lt;/p>
+&lt;p>Debug的代码在上面已经给出来了。&lt;/p>
+&lt;/blockquote>
+&lt;p>在调用过程中有一个 &lt;strong>&lt;code>DefaultBeanDefinitionDocumentReader&lt;/code>&lt;/strong> 类。通过上图可以看出调用了这样一段方法&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java"> &lt;span style="color:#204a87;font-weight:bold">protected&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">parseBeanDefinitions&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Element&lt;/span> &lt;span style="color:#000">root&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">BeanDefinitionParserDelegate&lt;/span> &lt;span style="color:#000">delegate&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//判断是否为http://www.springframework.org/schema/beans默认的空间
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">delegate&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">isDefaultNamespace&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">root&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">))&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">NodeList&lt;/span> &lt;span style="color:#000">nl&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">root&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getChildNodes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span> &lt;span style="color:#000">nl&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getLength&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span> &lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">++)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Node&lt;/span> &lt;span style="color:#000">node&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">nl&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">item&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">node&lt;/span> &lt;span style="color:#204a87;font-weight:bold">instanceof&lt;/span> &lt;span style="color:#000">Element&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Element&lt;/span> &lt;span style="color:#000">ele&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Element&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#000">node&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//判断是否为默认的命名空间
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">if&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">delegate&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">isDefaultNamespace&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ele&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">))&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">parseDefaultElement&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ele&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">delegate&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">else&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//自定义的命名空间--用户自定义的和Spring AOP等等
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">delegate&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">parseCustomElement&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ele&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">else&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">delegate&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">parseCustomElement&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">root&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>上面的方法给出了为什么没有进入 &lt;strong>DefaultNamespaceHandlerResolver&lt;/strong> 中，因为只有http://www.springframework.org/schema/bean才是默认的命名空间&lt;/p>
+&lt;/blockquote></description></item><item><title>Spring-Framework: Spring中常用的工具类</title><link>/spring-framework/custom-component/spring-common-utils/</link><pubDate>Fri, 04 May 2018 00:00:00 +0000</pubDate><guid>/spring-framework/custom-component/spring-common-utils/</guid><description>
+&lt;h3 id="spring常用的工具类说明">Spring常用的工具类说明&lt;/h3>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th style="text-align:center">工具类名称&lt;/th>
+&lt;th style="text-align:center">使用说明&lt;/th>
+&lt;th style="text-align:center">例子&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td style="text-align:center">AnnotationUtils&lt;/td>
+&lt;td style="text-align:center">注解相关的工具类&lt;/td>
+&lt;td style="text-align:center">&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td style="text-align:center">ReflectionUtils&lt;/td>
+&lt;td style="text-align:center">反射工具类&lt;/td>
+&lt;td style="text-align:center">&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td style="text-align:center">&lt;/td>
+&lt;td style="text-align:center">&lt;/td>
+&lt;td style="text-align:center">&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td style="text-align:center">&lt;/td>
+&lt;td style="text-align:center">&lt;/td>
+&lt;td style="text-align:center">&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td style="text-align:center">&lt;/td>
+&lt;td style="text-align:center">&lt;/td>
+&lt;td style="text-align:center">&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table></description></item></channel></rss>

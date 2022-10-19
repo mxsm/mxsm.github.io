@@ -1,0 +1,334 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Java日志</title><link>/blog/java-log/</link><description>Recent content in Java日志 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/blog/java-log/index.xml" rel="self" type="application/rss+xml"/><item><title>Blog: 如何优雅有效的记录日志</title><link>/blog/java-log/elegant-logging/</link><pubDate>Thu, 25 Nov 2021 00:00:00 +0000</pubDate><guid>/blog/java-log/elegant-logging/</guid><description>
+&lt;p>操作日志在每一个系统中都普遍存在，系统中都有一套自己记录日志的API与之想配套。而对于不同的系统日志又不近相同。大体可以分为两类：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>系统日志&lt;/p>
+&lt;p>主要用于开发者问题排查和一些信息打印方便调试和问题排查的日志。打印在日志文件中&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>业务日志&lt;/p>
+&lt;p>有一定的业务规则，给业务人员进行查看的日志。这一类日志要求简单易懂(可能还设计一些日志的模板，不同类型的业务需要不同的模板)。打印在日志文件同时也需要进行数据库的持久化以便运营人员和关联人员的查看等等。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;p>不管是系统日志还是业务日志，主要的作用就是用来记录操作的信息给需要的人进行查看。今天就来说一下在工作中如何优雅的记录日志。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips：主要讲解业务日志如何记录&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/java/log/%E4%B8%9A%E5%8A%A1%E6%97%A5%E5%BF%97%E8%AE%B0%E5%BD%95%E6%B5%81%E7%A8%8B%E5%9B%BE.png?raw=true" alt="">&lt;/p>
+&lt;h3 id="1-业务日志如何优雅的记录">1. 业务日志如何优雅的记录&lt;/h3>
+&lt;p>针对不同的业务需要记录不同的内容，同时不同业务也有相同的东西。所以需要分析出共性和差异内容。基于自己的工作来看一下如何设计。&lt;/p>
+&lt;h4 id="11-日志需要记录哪些东西">1.1 日志需要记录哪些东西&lt;/h4>
+&lt;ul>
+&lt;li>操作人(操作用户一般记录ID和名称)&lt;/li>
+&lt;li>操作人终端IP地址(可以用于风控和一些智能推荐)&lt;/li>
+&lt;li>操作终端相关信息(可选根据不同公司和业务需求)&lt;/li>
+&lt;li>操作时间(这个比较重要)&lt;/li>
+&lt;li>操作类型(删除、查询、更新等等&amp;ndash;根据需求进行个性化设计)&lt;/li>
+&lt;/ul>
+&lt;p>上面这些都是通用的，绝大多数业务都可以用的到。也基本上相同。但是对于业务操作日志最重要的是把业务的内容记录下来。这里就是我们通常说的业务模板&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>业务模板&lt;/p>
+&lt;p>业务模板需要根据不同的业务进行定制，在定制过程中可能还需要进行动态加载等等。例如：**&lt;code>123用户2021-09-16 10:00 订单创建，订单号：NO.88888888&lt;/code>**在订单信息中可能还包含了用户信息时间以及订单信息等等。这种是比较复杂的业务模板&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>日志模板格式其实还可以自定义如下格式：文件中一行作为一条记录，用分隔符进行分割。在读取的时候回按一行进行读取然后进行分隔符分割，每一个位置固定是一个约定好的内容。(这种格式之前在做游戏服务器日志记录的时候就是采用这种)。&lt;/p>
+&lt;p>优点：就是格式固定解析起来方便，也便于后续的数据处理以及表格的呈现。&lt;/p>
+&lt;p>缺点：不能直观的表达内容。需要处理加工后才能知道表达什么。&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="12-静态实现方式">1.2 静态实现方式&lt;/h4>
+&lt;h5 id="121-canalhttpsgithubcomalibabacanal监听数据库操作日志">1.2.1 &lt;a href="https://github.com/alibaba/canal">Canal&lt;/a>监听数据库操作日志&lt;/h5>
+&lt;p>&lt;a href="https://github.com/alibaba/canal">Canal&lt;/a> 是一款基于 MySQL 数据库增量日志解析，提供增量数据订阅和消费的开源组件，通过采用监听数据库 Binlog 的方式，这样可以从底层知道是哪些数据做了修改，然后根据更改的数据记录操作日志。&lt;/p>
+&lt;p>优点：对代码没有侵入和业务逻辑完全分离。&lt;/p>
+&lt;p>缺点：只能记录操作数据库的操作，并且记录的字段只能是表中包含的字段，例如我想记录一下操作人的IP地址就没办法。&lt;/p>
+&lt;h5 id="122-java框架日志记录文件中">1.2.2 Java框架日志记录文件中&lt;/h5>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#000">log&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">info&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;用户登录&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#000">log&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">info&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#a40000">&amp;#34;&lt;/span>&lt;span style="color:#000">用户&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">{}&lt;/span>&lt;span style="color:#a40000">，&lt;/span>&lt;span style="color:#000">ip地址&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">{}&lt;/span>&lt;span style="color:#000">登出&lt;/span>&lt;span style="color:#a40000">“，&lt;/span>&lt;span style="color:#000">userId&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>&lt;span style="color:#000">ip&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>Tips：常用的日志Java日志工具:&lt;/p>
+&lt;ul>
+&lt;li>log4j&lt;/li>
+&lt;li>log4j2&lt;/li>
+&lt;li>logback&lt;/li>
+&lt;/ul>
+&lt;/blockquote>
+&lt;p>这种记录有几个问题：&lt;/p>
+&lt;p>&lt;strong>问题1：&lt;/strong> 用户ID和ip地址如何获取？&lt;/p>
+&lt;p>借助 SLF4J 中的 MDC 工具类，把操作人放在日志中，然后在日志中统一打印出来。首先在用户的拦截器中把用户的标识 Put 到 MDC 中：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">UserInterceptor&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">AsyncHandlerInterceptor&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Override&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">preHandle&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HttpServletRequest&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">HttpServletResponse&lt;/span> &lt;span style="color:#000">response&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">Object&lt;/span> &lt;span style="color:#000">handler&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">Exception&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//获取到用户标识
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">userId&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">getUserId&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//把用户 ID 放到 MDC 上下文中
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">MDC&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">put&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;userId&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">userId&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">MDC&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">put&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;ip&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getRemoteAddr&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">AsyncHandlerInterceptor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">super&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">preHandle&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">response&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">handler&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">getUserId&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HttpServletRequest&lt;/span> &lt;span style="color:#000">request&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">// 通过 SSO 或者Cookie 或者 Auth信息获取到 当前登陆的用户信息
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>其次，把 userId,ip格式化到日志中，使用 %X{userId} ,%X{ip}可以取到 MDC 中用户标识。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml">&lt;span style="color:#204a87;font-weight:bold">&amp;lt;pattern&amp;gt;&lt;/span>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %X{userId} %X{ip} %logger{50} - %msg%n&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/pattern&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;strong>问题2：&lt;/strong> 如何生成可读性的日志&lt;/p>
+&lt;p>针对每一个业务在代码中写成对应的日志模板。写到日志文件中。然后通过日志收集工具将日志收集到Elasticsearch或者数据库当中。&lt;/p>
+&lt;h4 id="13-动态日志实现方式">1.3 动态日志实现方式&lt;/h4>
+&lt;p>为了解决上面的问题，一般采用AOP的方式记录操作日志和业务逻辑的解耦。下面来看一下：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@Service&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">UserServiceImpl&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Log&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">template&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;新增用户-名称为:${#user.name} 用户地址：${#user.address}, &amp;#34;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;年龄:${#user.age}, 用户的信息：${@userServiceImpl.getUserInfo(#user)}&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">addUser&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">User&lt;/span> &lt;span style="color:#000">user&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#000">StringBuilder&lt;/span> &lt;span style="color:#000">sb&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">StringBuilder&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">Random&lt;/span> &lt;span style="color:#000">random&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Random&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span> &lt;span style="color:#000">30000&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">++&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#000">sb&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">append&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">random&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">nextInt&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">getUserInfo&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">User&lt;/span> &lt;span style="color:#000">use&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">use&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">toString&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>这里记录日志实现的是一个静态，通过AOP的方式来实现的。那么如何实现动态模板，就会涉及到让变量通过占位符的方式解析模板，从而达到通过注解记录操作日志的目的。模板解析的方式有很多种。Java使用者用的最多的框架就是Spring， 这里实现我们也使用SpEL（Spring Expression Language，Spring表达式语言）来实现。&lt;/p>
+&lt;p>需要实现的功能设想，已最常用的用户在电商网站购买商品创建购买订单为例子：&lt;/p>
+&lt;p>业务日志模板: 用户[xxx]在[xxxx时间]购买了[xxxx商品]，用户的所使用的终端为[xxxxx,ip地址为]，操作类型:[xxxx]&lt;/p>
+&lt;h4 id="14-模块介绍">1.4 模块介绍&lt;/h4>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/java/log/%E5%8A%A8%E6%80%81%E6%97%A5%E5%BF%97%E5%8A%9F%E8%83%BD%E6%A8%A1%E5%9D%97.png?raw=true" alt="功能模块图">&lt;/p>
+&lt;p>主要分为三大功能：&lt;/p>
+&lt;ol>
+&lt;li>
+&lt;p>&lt;strong>日志AOP拦截模块&lt;/strong>&lt;/p>
+&lt;p>主要用于处理用户的日志拦截的切入点&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>日志解析模块&lt;/strong>&lt;/p>
+&lt;p>提供了对动态模板的解析，生成最终业务需要的模板具体实例数据&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>日志存储模块&lt;/strong>&lt;/p>
+&lt;p>存储主要是为了提供给后续使用这个查询&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;h4 id="15-代码实现模块">1.5 代码实现模块&lt;/h4>
+&lt;p>从代码的实现上来说主要分成一下几个步骤：&lt;/p>
+&lt;ul>
+&lt;li>AOP拦截逻辑&lt;/li>
+&lt;li>日志解析逻辑
+&lt;ul>
+&lt;li>模板解析&lt;/li>
+&lt;li>日志上下文实现&lt;/li>
+&lt;li>公共字段处理逻辑&lt;/li>
+&lt;li>自定义函数的处理逻辑&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>日志持久化逻辑
+&lt;ul>
+&lt;li>默认持久化(现在是Java日志持久化到本地文件)&lt;/li>
+&lt;li>持久化的方式（文件还是数据库），同步还是异步模式&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>项目如何进行集成(Spring start开发)&lt;/li>
+&lt;/ul>
+&lt;p>&lt;img src="https://github.com/mxsm/picture/blob/main/java/log/%E9%A1%B9%E7%9B%AE%E5%AE%9E%E7%8E%B0.png?raw=true" alt="">&lt;/p>
+&lt;p>主要使用了Spring的AOP和Spel来实现动态日志记录功能。直接可以使用Spel表达式来。&lt;/p>
+&lt;blockquote>
+&lt;p>项目github地址：https://github.com/mxsm/mxsm-log4j&lt;/p>
+&lt;/blockquote>
+&lt;p>参考资料:&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://mp.weixin.qq.com/s/JC51S_bI02npm4CE5NEEow">https://mp.weixin.qq.com/s/JC51S_bI02npm4CE5NEEow&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#expressions">https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#expressions&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Blog: Logback MDC</title><link>/blog/java-log/logback-mdc/</link><pubDate>Tue, 21 Dec 2021 00:00:00 +0000</pubDate><guid>/blog/java-log/logback-mdc/</guid><description>
+&lt;p>在我去开发 &lt;a href="https://github.com/mxsm/mxsm-log4j">mxsm-log4j&lt;/a>项目之前，对于日志记录只是停留在会用的基础上，集成到项目。等到写了这个项目发现需要更好的去了解日志记录的一些接口和一些具体的细节。然后看到了MDC这个概念。所以决定深入的了解和记录一下&lt;/p>
+&lt;h3 id="1-mdcmapped-diagnostic-context">1. MDC(Mapped Diagnostic Context)&lt;/h3>
+&lt;p>&lt;strong>&lt;code>MDC&lt;/code>&lt;/strong> 是 &lt;strong>&lt;code>Mapped Diagnostic Context&lt;/code>&lt;/strong> 的简称。 在&lt;a href="https://www.slf4j.org/manual.html">SLF4J的官网&lt;/a>给出的解释总结一下就是：接口是由SLF4J提供。但是具体的实现取决于具体的日志系统。例如大多数现实世界的分布式系统都需要同时处理多个客户机。在此类系统的典型多线程实现中，不同的线程将处理不同的客户端。区分一个客户机和另一个客户机的日志记录输出的一种可能但不太理想的方法是为每个客户机实例化一个新的独立的日志记录器。这种技术促进了记录器的激增，并可能增加它们的管理开销。MDC就很好的处理这一点。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 目前只有Log4j和Logback支持MDC&lt;/p>
+&lt;/blockquote>
+&lt;ul>
+&lt;li>MDC 主要用于保存上下文，区分不同的请求来源&lt;/li>
+&lt;/ul>
+&lt;h3 id="2-mdc类">2. MDC类&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">MDC&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//省略了部分代码
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//Put a context value as identified by key
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//into the current thread&amp;#39;s context map.
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">put&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">key&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">val&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//Get the context identified by the key parameter.
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">get&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">key&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//Remove the context identified by the key parameter.
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">remove&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">key&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//Clear all entries in the MDC.
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">clear&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;strong>&lt;code>MDC&lt;/code>&lt;/strong> 主要是是通过调用 &lt;strong>&lt;code>MDCAdapter&lt;/code>&lt;/strong> 接口的实现。 也就是在SLF4J的日志记录实现要支持MDC就需要实现 &lt;strong>&lt;code>MDCAdapter&lt;/code>&lt;/strong> 接口。&lt;/p>
+&lt;h3 id="3-logback的mdc支持">3. Logback的MDC支持&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">LogbackMDCAdapter&lt;/span> &lt;span style="color:#204a87;font-weight:bold">implements&lt;/span> &lt;span style="color:#000">MDCAdapter&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//省略代码
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>logback 的 MDC是基于每个线程进行管理的。注意，&lt;strong>子线程不会继承父线程的MDC&lt;/strong>。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: log4j2的MDC 子线程会自动继承父线程的MDC&lt;/p>
+&lt;/blockquote>
+&lt;p>下面看一下官网的例子（https://github.com/qos-ch/logback/blob/master/logback-examples/src/main/java/chapters/mdc/SimpleMDC.java）：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">package&lt;/span> &lt;span style="color:#000">chapters.mdc&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">import&lt;/span> &lt;span style="color:#000">org.slf4j.Logger&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">import&lt;/span> &lt;span style="color:#000">org.slf4j.LoggerFactory&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">import&lt;/span> &lt;span style="color:#000">org.slf4j.MDC&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">import&lt;/span> &lt;span style="color:#000">ch.qos.logback.classic.PatternLayout&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">import&lt;/span> &lt;span style="color:#000">ch.qos.logback.core.ConsoleAppender&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">SimpleMDC&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">main&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">Exception&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">// You can put values in the MDC at any time. Before anything else
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#8f5902;font-style:italic">// we put the first name
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">MDC&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">put&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;first&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;Dorothy&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//[ SNIP ]
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>
+&lt;span style="color:#000">Logger&lt;/span> &lt;span style="color:#000">logger&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">LoggerFactory&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getLogger&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">SimpleMDC&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">// We now put the last name
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">MDC&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">put&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;last&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;Parker&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">// The most beautiful two words in the English language according
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#8f5902;font-style:italic">// to Dorothy Parker:
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">logger&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">info&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;Check enclosed.&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">logger&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">debug&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;The most beautiful two words in English.&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">MDC&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">put&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;first&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;Richard&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">MDC&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">put&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;last&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;Nixon&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">logger&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">info&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;I am not a crook.&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">logger&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">info&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;Attributed to the former US president. 17 Nov 1973.&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//[ SNIP ]
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>假设Logback配置文件是这样配置的:&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml">&lt;span style="color:#204a87;font-weight:bold">&amp;lt;appender&lt;/span> &lt;span style="color:#c4a000">name=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;CONSOLE&amp;#34;&lt;/span> &lt;span style="color:#c4a000">class=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;ch.qos.logback.core.ConsoleAppender&amp;#34;&lt;/span>&lt;span style="color:#204a87;font-weight:bold">&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;layout&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;Pattern&amp;gt;&lt;/span>%X{first} %X{last} - %m%n&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/Pattern&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/layout&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/appender&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>输出的结果：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">Dorothy Parker - Check enclosed.
+Dorothy Parker - The most beautiful two words in English.
+Richard Nixon - I am not a crook.
+Richard Nixon - Attributed to the former US president. &lt;span style="color:#0000cf;font-weight:bold">17&lt;/span> Nov 1973.
+&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="4-mdc具体应用">4. MDC具体应用&lt;/h4>
+&lt;p>映射诊断上下文在客户端服务器架构中最为突出。通常，服务器上的多个线程将为多个客户机提供服务。尽管MDC类中的方法是静态的，但诊断上下文是按每个线程管理的，这允许每个服务器线程具有不同的MDC戳。像put()和get()这样的MDC操作只影响当前线程的MDC，以及当前线程的子线程。其他线程中的MDC不受影响。假定MDC信息是在每个线程的基础上进行管理的，那么每个线程都将拥有自己的MDC副本。因此，在使用MDC编程时，开发人员不需要担心线程安全或同步问题，因为它可以安全且透明地处理这些问题。&lt;/p>
+&lt;h4 id="41-获取用户的名称">4.1 获取用户的名称&lt;/h4>
+&lt;p>例子参照 &lt;a href="https://github.com/qos-ch/logback/blob/master/logback-examples/src/main/java/chapters/mdc/UserServletFilter.java">https://github.com/qos-ch/logback/blob/master/logback-examples/src/main/java/chapters/mdc/UserServletFilter.java&lt;/a>。&lt;/p>
+&lt;p>正如我们所看到的，MDC在处理多个客户端时非常有用。对于管理用户身份验证的web应用程序，一个简单的解决方案是在MDC中设置用户名，并在用户退出时删除该用户名。不幸的是，使用这种技术并不总是能够获得可靠的结果。由于MDC在每个线程的基础上管理数据，因此回收线程的服务器可能会导致MDC中包含错误信息。&lt;/p>
+&lt;p>要使MDC中包含的信息在处理请求时始终正确，一种可能的方法是在进程开始时存储用户名，并在该进程结束时删除该用户名。在这种情况下，servlet Filter就派上用场了。&lt;/p>
+&lt;p>在servlet过滤器的doFilter方法中，我们可以通过请求(或其中的cookie)检索相关的用户数据，并将其存储在MDC中。其他过滤器和servlet的后续处理将自动受益于先前存储的MDC数据。最后，当servlet过滤器重新获得控制权时，我们就有机会清理MDC数据。&lt;/p>
+&lt;h4 id="42-对于web项目获取请求地址等">4.2 对于Web项目获取请求地址等&lt;/h4>
+&lt;p>在logback的中有实现就是 &lt;strong>&lt;code>MDCInsertingServletFilter&lt;/code>&lt;/strong> 。将uri,客户端请求地址等一些数据存入MDC。具体的一些值如下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/test/image-20211221225852196.png" alt="image-20211221225852196">&lt;/p>
+&lt;p>spring boot的配置：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@Configuration&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">MonitoringConfig&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Bean&lt;/span>
+&lt;span style="color:#000">FilterRegistrationBean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">MDCInsertingServletFilter&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">mdcFilterRegistrationBean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">FilterRegistrationBean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">MDCInsertingServletFilter&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">registrationBean&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">FilterRegistrationBean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&amp;gt;();&lt;/span>
+&lt;span style="color:#000">registrationBean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setFilter&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">MDCInsertingServletFilter&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#000">registrationBean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">addUrlPatterns&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;/*&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">registrationBean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setOrder&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Integer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">MIN_VALUE&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">registrationBean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>Tpis: 工作线程不能总是从发起线程继承映射的诊断上下文的副本。这就是java.util.concurrent. executor用于线程管理时的情况。例如，newCachedThreadPool方法创建了一个ThreadPoolExecutor，和其他线程池代码一样，它有复杂的线程创建逻辑。在这种情况下，建议在将任务提交给执行器之前在原始(主)线程上调用MDC.getCopyOfContextMap()。当任务运行时，作为它的第一个操作，它应该调用MDC. setcontextmapvalues()来将原始MDC值的存储副本与新的Executor托管线程关联起来。&lt;/p>
+&lt;/blockquote>
+&lt;p>具体的使用过程可用参考 &lt;a href="https://github.com/mxsm/mxsm-log4j">mxsm-log4j&lt;/a> 这个项目(争取把这个做到一个开箱即用的地步，后续会把项目的jar包发布到maven的中央仓库，需要等一段时间)。&lt;/p>
+&lt;p>参考资料：&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://logback.qos.ch/manual/mdc.html">https://logback.qos.ch/manual/mdc.html&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/qos-ch/logback">https://github.com/qos-ch/logback&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Blog: Java日志系统梳理-图文详解</title><link>/blog/java-log/logging-system-overview/</link><pubDate>Sun, 17 Jul 2022 00:00:00 +0000</pubDate><guid>/blog/java-log/logging-system-overview/</guid><description>
+&lt;h3 id="1-概述">1. 概述&lt;/h3>
+&lt;p>平时Java开发的时候，会发现各种各样的日志框架在不同的项目中。Log之间的关系如何、如何依赖、作用。通过了解这些让我们能够在工作中更好的排查日志的问题，例如：&lt;strong>日志打印不出来，日志冲突等等相关问题&lt;/strong>。 单个项目中集成多个Jar，使用的是不同的日志体系。通过了解日志的依赖关系以及实现原理将日志进行统一输出。同时可以帮助更好的基于现有的日志框架设计项目定制化的日志输出。&lt;/p>
+&lt;h3 id="2-log发展">2. Log发展&lt;/h3>
+&lt;p>&lt;strong>第一步：&lt;/strong>&lt;/p>
+&lt;p>Java没有日志库，打印日志全凭&lt;strong>System.out&lt;/strong>和&lt;strong>System.err&lt;/strong> 。 这个也是平时开发过程中很多人使用的快捷打印日志的方法。这个是平时开发的过程中使用的比较多。在项目正式发布的时候大多数会删除掉。&lt;/p>
+&lt;p>&lt;strong>第二步：&lt;/strong>&lt;/p>
+&lt;p>&lt;strong>ceki Gulcü&lt;/strong>搞了一个日志框架 log4j(Apache项目)，Apache建议SUN公司引入Log4j但是被拒绝。Log4j使用就在后面很长一段时间内流行起来了。&lt;/p>
+&lt;p>&lt;strong>第三步：&lt;/strong>&lt;/p>
+&lt;p>SUN公司推出直接的JDK层面的日志标准库JUL（Java Util Logging），笔者没用过，只是在开发一些框架的时候可能会用到这个。这个优点就是JDK集成无需引入其他的Jar包。缺点就是不怎么好用。所以用的人比较少也不流行。&lt;/p>
+&lt;p>&lt;strong>第四步:&lt;/strong>&lt;/p>
+&lt;p>Apache 推出日志抽象(Logging Facade) &lt;strong>JCL&lt;/strong> (Jakarta Commons Logging), 支持运行时动态加载日志实现。例如加载Log4j,然后基于JCL的标准实现日志系统。&lt;/p>
+&lt;p>&lt;strong>第五步:&lt;/strong>&lt;/p>
+&lt;p>&lt;strong>ceki Gulcü&lt;/strong>l离开Apache组织后觉得JCL不好用就重新搞了一套 &lt;strong>Logging Facade&lt;/strong> 也就是现在比较流行的 &lt;strong>SL4J&lt;/strong> 。同时基于SL4J的日志标准实现了&lt;strong>logback&lt;/strong> （logback现在是Spring默认的日志输出）。 这个日志标准也是现在众多项目中使用的日志标准。&lt;/p>
+&lt;h3 id="3-日志框架类别">3. 日志框架类别&lt;/h3>
+&lt;p>通过上面可以看出来日志框架主要分为两类：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>标准接口类型&lt;/strong>&lt;/p>
+&lt;ol>
+&lt;li>&lt;strong>JCL&lt;/strong>:Apache基金会所属的项目，是一套Java日志接口，之前叫Jakarta Commons Logging，后更名为Commons Logging&lt;/li>
+&lt;li>&lt;strong>SLF4J&lt;/strong>: 是一套简易Java日志Facade，&lt;strong>本身并无日志的实现&lt;/strong>。（Simple Logging Facade for Java，缩写Slf4j）&lt;/li>
+&lt;/ol>
+&lt;p>这种也叫作 &lt;strong>&lt;code>Facade&lt;/code>&lt;/strong> ，也就是只提供接口，没有具体实现。开发者可以基于日志标准接口提供的规范自己实现一套。例如 &lt;strong>&lt;code>SLF4J&lt;/code>&lt;/strong> 的实现就有 &lt;strong>&lt;code>Logback&lt;/code>&lt;/strong> 日志框架。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>底层日志实现框架&lt;/strong>&lt;/p>
+&lt;p>这一类框架主要基于日志的标准接口规范实现或者就是单纯的实现不依赖任何标准，&lt;strong>Log4j/Log4j2、Logback、JUL&lt;/strong> 这四个实现是比较常用的日志实现。有基于日志的标准接口实现例如：Logback基于SLF4J，也有就是单纯的实现例如：JUL。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;p>在项目中使用也以下两种情况：&lt;/p>
+&lt;p>&lt;strong>第一种：通过引入标准接口和具体的实现来打印记录日志&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/log/Java%E5%B8%B8%E7%94%A8%E7%9A%84%E6%97%A5%E5%BF%97%E7%BB%84%E4%BB%B6%E5%85%B3%E7%B3%BB.png" alt="Java常用的日志组件关系" style="zoom:80%;" />&lt;/p>
+&lt;p>&lt;strong>第二种：直接引入底层的具体实现来打印记录日志&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/log/%E7%9B%B4%E6%8E%A5%E6%97%A5%E5%BF%97%E5%AE%9E%E7%8E%B0.png" alt="直接日志实现" style="zoom:80%;" />&lt;/p>
+&lt;h3 id="4-日志系统依赖关系">4. 日志系统依赖关系&lt;/h3>
+&lt;p>日志Facade，通过适配器以及桥接的方式将日志实现全部连接起来。通过图来直观的展示各个日志之间的关系以及日志之前依赖和桥接&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/log/%E6%97%A5%E5%BF%97%E6%A0%87%E5%87%86%E6%8E%A5%E5%8F%A3%E7%9A%84%E9%93%BE%E6%8E%A5%E5%85%B3%E7%B3%BB%E5%9B%BE.png" alt="日志标准接口的链接关系图">&lt;/p>
+&lt;p>主要通过适配器和桥接的方式将不同的日志进行连接起来。通过上图的关系可以发现，不同日志框架之间都是可以互相转换的。例如SLF4J和Log4j2是可以通过引入不同的适配或者桥接的Jar包来实现互相转换。通过图上的依赖关系就能很清楚的知道需要引入哪些依赖包。&lt;/p>
+&lt;p>然后分别看一下现在流行的两个日志框架：Log4j2以及SLF4J&lt;/p>
+&lt;h4 id="41-log4j2">4.1 Log4j2&lt;/h4>
+&lt;p>对于Log4j2需要哪些jar文件，至少需要两个&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml">&lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>org.apache.logging.log4j&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>log4j-api&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>2.18.0&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>org.apache.logging.log4j&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>log4j-core&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>2.18.0&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependency&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>如果您的应用程序调用另一个日志记录框架的API，并且您希望将日志记录调用路由到log4j2实现,需要增加如下(图片来源&lt;a href="https://logging.apache.org/log4j/2.x/index.html">Log4j2官网&lt;/a>)：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/log/whichjar-2.x.png" alt="">&lt;/p>
+&lt;p>同时可以使用 log4j-to-slf4j 将Log4j2 API路由到SLF4J的实现上面，比如logback日志系统。如下(图片来源&lt;a href="https://logging.apache.org/log4j/2.x/index.html">Log4j2官网&lt;/a>)：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/log/whichjar-slf4j-2.x.png" alt="">&lt;/p>
+&lt;p>同时还可以将Log4j桥接到Log4j2. 只需要将 &lt;strong>&lt;code>Log4j 1.x jar&lt;/code>&lt;/strong> 替换成 &lt;strong>&lt;code>log4j-1.2-api.jar&lt;/code>&lt;/strong>。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/log/whichjar-log4j-1.2-api.png" alt="图片来源Apache官网">&lt;/p>
+&lt;p>从上面可以看出来不管你使用的是那种Log API都可以通过桥接或者适配的方式最后由Log4j2实现。同时也可以将 &lt;strong>&lt;code>Log4j2&lt;/code>&lt;/strong> 的API桥接成为 &lt;strong>&lt;code>SLF4J API&lt;/code>&lt;/strong> .与此同时就可以使用SLF4J的底层日志实现来纪录日志。&lt;/p>
+&lt;h4 id="42-slf4j">4.2 SLF4J&lt;/h4>
+&lt;p>&lt;strong>&lt;code>SLF4J&lt;/code>&lt;/strong> 是一个 &lt;strong>&lt;code>Facade&lt;/code>&lt;/strong> , 从2.0.0版本开始，SLF4J绑定被称为提供程序。尽管如此，总体思路还是一样的。SLF4J API版本2.0.0依赖ServiceLoader机制来查找日志记录后端，总的思想图解如下(图片来源&lt;a href="https://www.slf4j.org/manual.html">SLF4J官网&lt;/a>)：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/log/concrete-bindings.png" alt="">&lt;/p>
+&lt;p>直接实现的有如下框架：&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://logback.qos.ch/">Logback&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/jhannes/logevents">LogEvents&lt;/a>&lt;/li>
+&lt;li>SLF4J Simple&lt;/li>
+&lt;li>SLF4J nop&lt;/li>
+&lt;/ul>
+&lt;p>通过桥接适配的方式能够使用大多数的底层日志框架，例如 Log4j、Log4j2等等&lt;/p>
+&lt;h3 id="5-总结">5. 总结&lt;/h3>
+&lt;p>日志的使用有两种方式：&lt;/p>
+&lt;ul>
+&lt;li>直接使用底层实现的日志框架&lt;/li>
+&lt;li>用日志Facade,然后通过桥接的方式来使用底层的日志框架或者使用实现了日志Facade日志框架&lt;/li>
+&lt;/ul>
+&lt;p>日志框架之前的相互转换主要是通过桥接或者适配的方式来实现。如果一个项目引入了另一个项目但是两个项目使用的日志框架不一样，首先确定要使用哪个底层的日志框架。然后排除另一个不是选中底层的日志框架。加上适当的桥接jar即可&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢&lt;/p>
+&lt;/blockquote>
+&lt;p>参考资料&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://www.slf4j.org/docs.html">https://www.slf4j.org/docs.html&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://logging.apache.org/log4j/2.x/">https://logging.apache.org/log4j/2.x/&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://logback.qos.ch/">https://logback.qos.ch/&lt;/a>&lt;/li>
+&lt;/ul></description></item></channel></rss>

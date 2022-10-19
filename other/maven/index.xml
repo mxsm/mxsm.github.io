@@ -1,0 +1,169 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Maven</title><link>/other/maven/</link><description>Recent content in Maven on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/maven/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: maven-mvnd比maven更快的maven</title><link>/other/maven/maven-mvnd/</link><pubDate>Sun, 26 Dec 2021 00:00:00 +0000</pubDate><guid>/other/maven/maven-mvnd/</guid><description>
+&lt;h3 id="1-前言">1. 前言&lt;/h3>
+&lt;p>对于Java开发者而言，Maven和Gradle是使用的比较多的两个打包构建项目的工具。以前使用Java后端开发使用Maven的比较多，安卓开发使用Gradle。这两年Gradle开始慢慢的蚕食Maven。随着Spring-Boot项目由Maven迁移到了Gradle(太惨了Maven,我个人比价喜欢Maven)。在github上无意间看到了apache 下面有一个项目叫 Mavan-mvnd(开始还以为是一个插件)。下面来看一下这个工具&lt;/p>
+&lt;h3 id="2-什么是maven-mvnd">2. 什么是maven-mvnd?&lt;/h3>
+&lt;p>maven-mvnd全称：Apache Maven Daemon。主要借鉴了Gradle和Takari所知的技术提供更快的Maven构建。&lt;/p>
+&lt;p>maven-mvnd架构：&lt;/p>
+&lt;ul>
+&lt;li>mvnd内嵌Maven(所以不需要单独安装Maven)&lt;/li>
+&lt;li>实际的构建发生在一个长期存在的后台进程中(守护进程)&lt;/li>
+&lt;li>一个守护进程实例可以服务于来自mvnd客户端的多个连续请求&lt;/li>
+&lt;li>mvnd客户端是一个使用GraalVM构建的本地可执行文件。与启动传统JVM相比，它启动得更快，占用的内存更少&lt;/li>
+&lt;li>没有空闲守护进程来服务一个构建请求，可以并行地生成多个守护进程&lt;/li>
+&lt;/ul>
+&lt;p>架构带来的好处：&lt;/p>
+&lt;ul>
+&lt;li>用于运行实际构建的JVM不需要每次构建都重新启动&lt;/li>
+&lt;li>持有Maven插件类的类加载器在多个构建中被缓存。因此，插件jar文件只被读取和解析一次。快照版本(SNAPSHOT)的Maven插件不会被缓存。&lt;/li>
+&lt;li>JVM中即时(JIT)编译器生成的本地代码也被保留。与常规Maven相比，JIT编译所花费的时间更少。在重复构建期间，jit优化的代码立即可用。这不仅适用于来自Maven插件和Maven Core的代码，也适用于所有来自JDK本身的代码。&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>GraalVM的核心就是Graal编译器，一款优秀的JIT编译器.&lt;/p>
+&lt;/blockquote>
+&lt;p>在官方网站还给了一个测试的动态图来说明：&lt;/p>
+&lt;p>&lt;img src="https://user-images.githubusercontent.com/1826249/103917178-94ee4500-510d-11eb-9abb-f52dae58a544.gif" alt="">&lt;/p>
+&lt;h3 id="3-linux如何安装mvnd">3. Linux如何安装mvnd&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">wget https://github.com/apache/maven-mvnd/releases/download/0.7.1/mvnd-0.7.1-linux-amd64.zip
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>下载然后解压&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">unzip mvnd-0.7.1-linux-amd64.zip
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>将bin添加到PATH。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/maven/mvndversion.png" alt="">&lt;/p>
+&lt;p>到这里就按照完成了。&lt;/p>
+&lt;h3 id="4-mvn和mvnd打包rocketmq的时间对比">4. mvn和mvnd打包rocketmq的时间对比&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">mvn -Prelease-all -DskipTests clean install -U
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/maven/mvn%E6%89%93%E5%8C%85.png" alt="">&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">mvnd -T &lt;span style="color:#0000cf;font-weight:bold">4&lt;/span> -Prelease-all -DskipTests clean install -U -Dquickly -Dmvnd.serial&lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span>&lt;span style="color:#0000cf;font-weight:bold">4&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/maven/mvnd%E6%89%93%E5%8C%85.png" alt="">&lt;/p>
+&lt;p>从上面对比可以看出来打包时间明显缩短很多。&lt;/p>
+&lt;h3 id="5-总结">5. 总结&lt;/h3>
+&lt;p>从使用来说打包时间有较大的缩短。还是有很大的提升。但是现在这个项目估计还在测试阶段和发展阶段。后续还需要开发工具的支持等等。可以观望一下，但是如果在服务器自己使用我感觉完全可以。还有一个问题现在这个项目的资料比较少。主要都来自Github项目介绍，遇到问题就需要自己去摸索，使用也需要自己探索。&lt;/p>
+&lt;p>参考文档：&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://github.com/apache/maven-mvnd">https://github.com/apache/maven-mvnd&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Other: Maven-自定义archetype</title><link>/other/maven/maven-custom-archetype/</link><pubDate>Sat, 16 May 2020 00:00:00 +0000</pubDate><guid>/other/maven/maven-custom-archetype/</guid><description>
+&lt;blockquote>
+&lt;p>基于Maven 3.6.3版本&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="什么是archetype">什么是archetype&lt;/h3>
+&lt;p>简单一点说archetype就是一个创建工程的模板。这样的好处在哪里呢？就是不用每次新建一个项目就要去把maven中的配置pom配置一遍我们需要的一些通用的东西。&lt;/p>
+&lt;p>这里举个栗子：比如你搭建spring-boot项目简单的无非不是在pom文件中添加一些spring-boot的必须的依赖。那么你新建十个项目你就要添加十次。想想累不累烦不烦。所以maven archetype就是来解决这个问题的。那么我们来看一下怎么开发这样一个模板。然后倒入idea中在后续的过程中使用&lt;/p>
+&lt;h3 id="自定义archetype">自定义archetype&lt;/h3>
+&lt;p>自定义从现有网上和官网的资料来看有两种方式：&lt;/p>
+&lt;ol>
+&lt;li>从现有的个人项目生成模板(通过命令)&lt;/li>
+&lt;li>手写添加模板&lt;/li>
+&lt;/ol>
+&lt;h4 id="从现有的个人项目生成模板通过命令">从现有的个人项目生成模板(通过命令)&lt;/h4>
+&lt;p>我这边就以创建一个spring-boot项目为例子。首先新建一个如下图所示的项目，这个项目是一个标准的Spring-boot web项目：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/%E5%BC%80%E5%8F%91%E5%B7%A5%E5%85%B7/Maven/archtypeslearning.gif?raw=true" alt="">&lt;/p>
+&lt;p>项目创建好了以后去到项目下面执行(E:\develop\workspace\mxsm\archtypes-learning) ： &lt;strong>&lt;code>mvn archetype:create-from-project&lt;/code>&lt;/strong>&lt;/p>
+&lt;p>如下图所示：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/%E5%BC%80%E5%8F%91%E5%B7%A5%E5%85%B7/Maven/archtypeslearningcreate.gif?raw=true" alt="">&lt;/p>
+&lt;p>执行完成脚本后。会在 &lt;strong>target/generated-sources/archetype&lt;/strong> 这样一个目录：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/%E5%BC%80%E5%8F%91%E5%B7%A5%E5%85%B7/Maven/archtypestruct.png?raw=true" alt="">&lt;/p>
+&lt;p>然后去目录下面执行： &lt;strong>&lt;code>mvn install&lt;/code>&lt;/strong> 命令&lt;/p>
+&lt;blockquote>
+&lt;p>这里需要注意，如果你和我一样都是用的 idea 新建的项目然后生成的。那么需要稍微处理一下。&lt;/p>
+&lt;ol>
+&lt;li>
+&lt;p>找到target\generated-sources\archetype\src\main\resources\META-INF\maven目录下面的archetype-metadata.xml文件删除和idea相关的东西。把下图注释的部分删掉。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml">&lt;span style="color:#8f5902;font-style:italic">&amp;lt;?xml version=&amp;#34;1.0&amp;#34; encoding=&amp;#34;UTF-8&amp;#34;?&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;archetype-descriptor&lt;/span> &lt;span style="color:#c4a000">xsi:schemaLocation=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;https://maven.apache.org/plugins/maven-archetype-plugin/archetype-descriptor/1.1.0 http://maven.apache.org/xsd/archetype-descriptor-1.1.0.xsd&amp;#34;&lt;/span> &lt;span style="color:#c4a000">name=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;archtypes-learning&amp;#34;&lt;/span>
+&lt;span style="color:#c4a000">xmlns=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;https://maven.apache.org/plugins/maven-archetype-plugin/archetype-descriptor/1.1.0&amp;#34;&lt;/span>
+&lt;span style="color:#c4a000">xmlns:xsi=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;http://www.w3.org/2001/XMLSchema-instance&amp;#34;&lt;/span>&lt;span style="color:#204a87;font-weight:bold">&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;fileSets&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;fileSet&lt;/span> &lt;span style="color:#c4a000">filtered=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;true&amp;#34;&lt;/span> &lt;span style="color:#c4a000">packaged=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;true&amp;#34;&lt;/span> &lt;span style="color:#c4a000">encoding=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;UTF-8&amp;#34;&lt;/span>&lt;span style="color:#204a87;font-weight:bold">&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;directory&amp;gt;&lt;/span>src/main/java&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/directory&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;includes&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;include&amp;gt;&lt;/span>**/*.java&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/include&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/includes&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/fileSet&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;fileSet&lt;/span> &lt;span style="color:#c4a000">encoding=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;UTF-8&amp;#34;&lt;/span>&lt;span style="color:#204a87;font-weight:bold">&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;directory&amp;gt;&lt;/span>src/main/resources&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/directory&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;includes&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;include&amp;gt;&lt;/span>**/*.yml&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/include&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/includes&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/fileSet&amp;gt;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">&amp;lt;!-- &amp;lt;fileSet filtered=&amp;#34;true&amp;#34; encoding=&amp;#34;UTF-8&amp;#34;&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;directory&amp;gt;.idea&amp;lt;/directory&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;includes&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;include&amp;gt;**/*.xml&amp;lt;/include&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;/includes&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;/fileSet&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;fileSet encoding=&amp;#34;UTF-8&amp;#34;&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;directory&amp;gt;.idea&amp;lt;/directory&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;includes&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;include&amp;gt;**/*.gitignore&amp;lt;/include&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;/includes&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;/fileSet&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;fileSet encoding=&amp;#34;UTF-8&amp;#34;&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;directory&amp;gt;&amp;lt;/directory&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;includes&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;include&amp;gt;archtypes-learning.iml&amp;lt;/include&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;/includes&amp;gt;
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic"> &amp;lt;/fileSet&amp;gt;--&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/fileSets&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/archetype-descriptor&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;/li>
+&lt;li>
+&lt;p>找到target\generated-sources\archetype\src\main\resources\archetype-resources目录删除 .iml文件和.idea目录&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;p>这样生成的才不会有问题后续的使用。&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/%E5%BC%80%E5%8F%91%E5%B7%A5%E5%85%B7/Maven/archtypeslearninginstall.gif?raw=true" alt="">&lt;/p>
+&lt;blockquote>
+&lt;p>Maven的官方地址：https://maven.apache.org/archetype/maven-archetype-plugin/advanced-usage.html&lt;/p>
+&lt;/blockquote>
+&lt;p>这个archtype在本地maven仓库的一个archetype-catalog.xml文件中可以看到：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/%E5%BC%80%E5%8F%91%E5%B7%A5%E5%85%B7/Maven/archtypecatolog.png?raw=true" alt="">&lt;/p>
+&lt;p>接下来演示如何如何在idea中使用。如下图：&lt;/p>
+&lt;p>&lt;img src="https://github.com/mxsm/document/blob/master/image/%E5%BC%80%E5%8F%91%E5%B7%A5%E5%85%B7/Maven/archtypeslearninguse1.gif?raw=true" alt="">&lt;/p>
+&lt;p>这样就创建好了一个自定义的模板以后就可以使用了。&lt;/p>
+&lt;h4 id="手动创建">手动创建&lt;/h4>
+&lt;p>手动创建又是怎么一回事，说白了就是把 &lt;strong>&lt;code>mvn archetype:create-from-project&lt;/code>&lt;/strong> 命令干的活自己干一遍。&lt;/p>
+&lt;blockquote>
+&lt;p>Maven的官方教程：http://maven.apache.org/guides/mini/guide-creating-archetypes.html&lt;/p>
+&lt;/blockquote>
+&lt;p>这里就不多说，但是需要大家注意一个地方就是如下图结构(官方拷贝)&lt;/p>
+&lt;pre>&lt;code>archetype
+|-- pom.xml -- 这个pom里面的packaging是需要注意的
+`-- src
+`-- main
+`-- resources
+|-- META-INF
+| `-- maven
+| `--archetype-metadata.xml
+`-- archetype-resources
+|-- pom.xml
+`-- src
+|-- main
+| `-- java
+| `-- App.java
+`-- test
+`-- java
+`-- AppTest.java
+&lt;/code>&lt;/pre>&lt;p>看一下archetype下面的这个pom文件(内容来自官方文档)：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml">&lt;span style="color:#204a87;font-weight:bold">&amp;lt;project&lt;/span> &lt;span style="color:#c4a000">xmlns=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;http://maven.apache.org/POM/4.0.0&amp;#34;&lt;/span> &lt;span style="color:#c4a000">xmlns:xsi=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;http://www.w3.org/2001/XMLSchema-instance&amp;#34;&lt;/span>
+&lt;span style="color:#c4a000">xsi:schemaLocation=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd&amp;#34;&lt;/span>&lt;span style="color:#204a87;font-weight:bold">&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;modelVersion&amp;gt;&lt;/span>4.0.0&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/modelVersion&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>my.groupId&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>my-archetype-id&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>1.0-SNAPSHOT&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;packaging&amp;gt;&lt;/span>maven-archetype&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/packaging&amp;gt;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">&amp;lt;!-- 这个地方是maven-archetype --&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;build&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;extensions&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;extension&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>org.apache.maven.archetype&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>archetype-packaging&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>3.1.1&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/extension&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/extensions&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/build&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/project&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>里面的packaging这个地方不熟pom或者jar。而是maven-archetype这个地方一定要注意。这种手动的方式我就演示了具体的例子我提供了两种：&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://github.com/apache/maven-archetypes">官方例子&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/mxsm/mxsm-archetypes">我的例子&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;p>官方例子就是在IDEA中使用的那些。最基本的，我这是spring-boot的一个脚手架。后续这里会更新更多的脚手架：Dubbo、spring cloud等等后续会进行更新。&lt;/p></description></item></channel></rss>

@@ -1,0 +1,387 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – 复合查询</title><link>/other/db/elasticsearch/search-dsl/complex-search/</link><description>Recent content in 复合查询 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/db/elasticsearch/search-dsl/complex-search/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: Elasticsearch复合查询-boosting query查询</title><link>/other/db/elasticsearch/search-dsl/complex-search/elasticsearch-boosting-query/</link><pubDate>Sat, 15 Feb 2020 00:00:00 +0000</pubDate><guid>/other/db/elasticsearch/search-dsl/complex-search/elasticsearch-boosting-query/</guid><description>
+&lt;blockquote>
+&lt;p>注意：以下语法都是基于Elasticsearch的7.6版本&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="boosting-query">boosting query&lt;/h3>
+&lt;p>在前面的boolean的复合查询我们可以通过&lt;code>must_not+must&lt;/code> 先剔除不想匹配的文档，再获取匹配的文档，但是有一种场景就是我并不需要完全剔除，而是把需要剔除的那部分文档的分数降低。这个时候就可以使用boosting query。下面会举例说明（官方例子）：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-json" data-lang="json">&lt;span style="color:#a40000">GET&lt;/span> &lt;span style="color:#a40000">/_search&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;query&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;boosting&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;positive&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;term&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;text&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;apple&amp;#34;&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">},&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;negative&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;term&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;text&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;pie tart fruit crumble tree&amp;#34;&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">},&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;negative_boost&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">0.5&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;pre>&lt;code>说明`boosting需要搭配三个关键字 `positive` , `negative` , `negative_boost
+&lt;/code>&lt;/pre>&lt;p>只有匹配了 &lt;strong>positive查询&lt;/strong> 的文档才会被包含到结果集中，但是同时匹配了&lt;strong>negative查询&lt;/strong> 的文档会被降低其相关度，通过将文档原本的&lt;code>_score和negative_boost&lt;/code>参数进行&lt;/p>
+&lt;p>相乘来得到新的_score。因此，&lt;code>negative_boost参数一般小于1.0&lt;/code>。在上面的例子中，任何包含了指定负面词条的文档的&lt;code>_score&lt;/code>都会是其原本_score的一半。&lt;/p></description></item><item><title>Other: Elasticsearch复合查询-Constant score query查询</title><link>/other/db/elasticsearch/search-dsl/complex-search/elasticsearch-constant-score-query/</link><pubDate>Sat, 15 Feb 2020 00:00:00 +0000</pubDate><guid>/other/db/elasticsearch/search-dsl/complex-search/elasticsearch-constant-score-query/</guid><description>
+&lt;blockquote>
+&lt;p>注意：以下语法都是基于Elasticsearch的7.6版本&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="constant-score-query">Constant score query&lt;/h3>
+&lt;p>包装筛选器查询，并返回每个匹配的文档，其相关性得分等于boost参数值。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-json" data-lang="json">&lt;span style="color:#a40000">POST&lt;/span> &lt;span style="color:#a40000">twitter/_search&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;query&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;constant_score&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;filter&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;match&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;content&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;apple&amp;#34;&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">},&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;boost&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">100&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>filter&lt;/strong>&lt;/p>
+&lt;p>(必选，查询对象)筛选您希望运行的查询。任何返回的文档都必须匹配此查询。过滤查询不计算相关分数。为了提高性能，Elasticsearch自动缓存常用的过滤查询。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>boost&lt;/strong>&lt;/p>
+&lt;p>(可选，浮点数)浮点数用作与筛选器查询匹配的每个文档的常数相关分数。默认为1.0。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;p>结果：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-json" data-lang="json">&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;took&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">4&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;timed_out&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#204a87;font-weight:bold">false&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_shards&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;total&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">3&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;successful&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">3&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;skipped&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">0&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;failed&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">0&lt;/span>
+&lt;span style="color:#000;font-weight:bold">},&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;hits&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;total&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;value&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">3&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;relation&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;eq&amp;#34;&lt;/span>
+&lt;span style="color:#000;font-weight:bold">},&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;max_score&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">100.0&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;hits&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">[&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_index&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;twitter&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_type&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;_doc&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_id&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;2&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_score&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">100.0&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_source&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;content&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;Apple iPad&amp;#34;&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">},&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_index&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;twitter&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_type&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;_doc&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_id&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;3&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_score&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">100.0&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_source&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;content&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;Apple employee like Apple Pie and Apple Juice&amp;#34;&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">},&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_index&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;twitter&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_type&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;_doc&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_id&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;1&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_score&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">100.0&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;_source&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;content&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;Apple Mac&amp;#34;&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">]&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>Other: Elasticsearch复合查询-Boolean查询</title><link>/other/db/elasticsearch/search-dsl/complex-search/elasticsearch-boolean/</link><pubDate>Fri, 14 Feb 2020 00:00:00 +0000</pubDate><guid>/other/db/elasticsearch/search-dsl/complex-search/elasticsearch-boolean/</guid><description>
+&lt;blockquote>
+&lt;p>注意：以下语法都是基于Elasticsearch的7.6版本&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="布尔查询">布尔查询&lt;/h3>
+&lt;p>Bool查询语法有以下特点&lt;/p>
+&lt;ol>
+&lt;li>子查询可以任意顺序出现&lt;/li>
+&lt;li>可以嵌套多个查询，包括bool查询&lt;/li>
+&lt;li>如果bool查询中没有must条件，should中必须至少满足一条才会返回结果。&lt;/li>
+&lt;/ol>
+&lt;p>匹配文档与其他查询的布尔组合的查询。bool查询映射到Lucene BooleanQuery。它是使用一个或多个布尔子句构建的，每个子句都有一个类型化的出现，发生类型&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>发生类型&lt;/th>
+&lt;th>描述&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>&lt;code>must&lt;/code>&lt;/td>
+&lt;td>子句(查询)必须出现在匹配的文档中，并对分数有贡献(&lt;strong>必须匹配。贡献算分&lt;/strong>)&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;code>filter&lt;/code>&lt;/td>
+&lt;td>子句(查询)必须出现在匹配的文档中。但是与“必须”不同的是，查询的分数将被忽略。筛选器子句在筛选器上下文中执行，这意味着忽略评分，并考虑子句用于缓存。(&lt;strong>过滤子句，必须匹配，但不贡献算分&lt;/strong>)&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;code>should&lt;/code>&lt;/td>
+&lt;td>子句(查询)应该出现在匹配的文档中（&lt;strong>选择性匹配，至少满足一条。贡献算分&lt;/strong>）&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;code>must_not&lt;/code>&lt;/td>
+&lt;td>子句(查询)不能出现在匹配的文档中。子句在筛选器上下文中执行，这意味着忽略评分，而子句用于缓存。因为忽略了评分，所以返回所有文档的“0”评分。(&lt;strong>过滤子句，必须不能匹配，但不贡献算分&lt;/strong>)&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>bool查询采用的是“匹配越多越好”的方法，因此来自每个匹配的must或should子句的分数将被添加到一起，以提供每个文档的最终_score。例子：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-json" data-lang="json">&lt;span style="color:#a40000">POST&lt;/span> &lt;span style="color:#a40000">_search&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;query&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;bool&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;must&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;term&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;user&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;kimchy&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">},&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;filter&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;term&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;tag&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;tech&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">},&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;must_not&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;range&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;age&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;gte&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">10&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;lte&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">20&lt;/span> &lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">},&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;should&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">[&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;term&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;tag&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;wow&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">}&lt;/span> &lt;span style="color:#000;font-weight:bold">},&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;term&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;tag&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;elasticsearch&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">}&lt;/span> &lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">],&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;minimum_should_match&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">1&lt;/span>&lt;span style="color:#000;font-weight:bold">,&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;boost&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">1.0&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="使用minimum_should_match">使用minimum_should_match&lt;/h4>
+&lt;p>可以使用minimum_should_match参数指定返回的文档必须匹配的should子句的数量或百分比。如果bool查询包含至少一个should子句和没有 must或filter子句，则默认值为1。否则，默认值为0。其他的值&lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html">minimum_should_match&lt;/a>。&lt;/p>
+&lt;h4 id="用boolfilter评分">用bool.filter评分&lt;/h4>
+&lt;p>在筛选器元素下指定的查询对评分没有影响—返回的分数为0。分数只受指定查询的影响。例如，以下三个查询都返回status字段中包含术语active的所有文档。第一个查询为所有文档赋值0分，因为没有指定打分查询：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-json" data-lang="json">&lt;span style="color:#a40000">GET&lt;/span> &lt;span style="color:#a40000">_search&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;query&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;bool&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;filter&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;term&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;status&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;active&amp;#34;&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>这个bool查询有一个match_all查询，它为所有文档赋值1.0&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-json" data-lang="json">&lt;span style="color:#a40000">GET&lt;/span> &lt;span style="color:#a40000">_search&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;query&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;bool&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;must&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;match_all&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">},&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;filter&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;term&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;status&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;active&amp;#34;&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>这个constant_score查询的行为与上面的第二个示例完全相同。constant_score查询为筛选器匹配的所有文档分配1.0分。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-json" data-lang="json">&lt;span style="color:#a40000">GET&lt;/span> &lt;span style="color:#a40000">_search&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;query&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;constant_score&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;filter&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;term&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;status&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;active&amp;#34;&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>Other: Elasticsearch复合查询-Disjunction max query</title><link>/other/db/elasticsearch/search-dsl/complex-search/elasticsearch-disjunction-max-query/</link><pubDate>Fri, 14 Feb 2020 00:00:00 +0000</pubDate><guid>/other/db/elasticsearch/search-dsl/complex-search/elasticsearch-disjunction-max-query/</guid><description>
+&lt;blockquote>
+&lt;p>注意：以下语法都是基于Elasticsearch的7.6版本&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="disjunction-max-query最佳匹配查询">Disjunction max query(最佳匹配查询)&lt;/h3>
+&lt;p>返回与一个或多个包装查询(称为查询子句或子句)匹配的文档。&lt;/p>
+&lt;p>如果返回的文档匹配多个查询子句，dis_max查询将从任何匹配子句中为文档分配最高的相关性得分，并为任何其他匹配子查询分配一个打破平局的增量。&lt;/p>
+&lt;p>您可以使用dis_max在映射了不同boost因子的字段中搜索一个术语。下面看一下官方的例子：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-json" data-lang="json">&lt;span style="color:#a40000">GET&lt;/span> &lt;span style="color:#a40000">/_search&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;query&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;dis_max&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;queries&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">[&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;term&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;title&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;Quick pets&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">}},&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;term&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;body&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;Quick pets&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">}}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">],&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;tie_breaker&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">0.7&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>queries&lt;/strong>&lt;/p>
+&lt;p>(必须参数，查询对象数组)包含一个或多个查询子句。返回的文档必须匹配一个或多个这些查询。如果文档匹配多个查询，则Elasticsearch使用最高的相关性得分。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>tie_breaker&lt;/strong>&lt;/p>
+&lt;p>0到1.0之间的浮点数，用于增加匹配多个查询子句的文档的相关性得分。默认为0.0。您可以使用tie_breaker值为在多个字段中包含相同术语的文档分配较高的相关性分数，而不是只在多个字段中包含该术语的文档中最好的一个，而不会将其与多个字段中两个不同术语的较好情况相混淆。如果一个文档匹配多个子句，dis_max查询将计算该文档的相关分数，如下所示:&lt;/p>
+&lt;ol>
+&lt;li>从具有最高分数的匹配子句中获取关联分数。&lt;/li>
+&lt;li>将任何其他匹配子句的得分乘以tie_breaker值。&lt;/li>
+&lt;li>把最高的分数加到相乘的分数上。&lt;/li>
+&lt;/ol>
+&lt;p>如果tie_breaker值大于0.0，所有匹配的子句都算数，但是分数最高的子句算数最多。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="例子">例子&lt;/h3>
+&lt;pre>&lt;code>#1、创建索引
+PUT /dismaxmxsm
+{
+&amp;quot;settings&amp;quot;: {
+&amp;quot;number_of_shards&amp;quot;: 1,
+&amp;quot;number_of_replicas&amp;quot;: 1
+},
+&amp;quot;mappings&amp;quot;: {
+&amp;quot;properties&amp;quot;: {
+&amp;quot;title&amp;quot;: {
+&amp;quot;type&amp;quot;:&amp;quot;text&amp;quot;
+},
+&amp;quot;content&amp;quot;: {
+&amp;quot;type&amp;quot;:&amp;quot;text&amp;quot;
+}
+}
+}
+}
+#2、创建数据
+PUT /dismaxmxsm/_doc/1
+{
+&amp;quot;title&amp;quot; : &amp;quot;Java&amp;quot;,
+&amp;quot;content&amp;quot; : &amp;quot;Javajava&amp;quot;
+}
+PUT /dismaxmxsm/_doc/2
+{
+&amp;quot;title&amp;quot; : &amp;quot;GO&amp;quot;,
+&amp;quot;content&amp;quot; : &amp;quot;Development GO&amp;quot;
+}
+PUT /dismaxmxsm/_doc/3
+{
+&amp;quot;title&amp;quot; :&amp;quot;python&amp;quot;,
+&amp;quot;content&amp;quot; :&amp;quot;Python development beginner&amp;quot;
+}
+&lt;/code>&lt;/pre>&lt;h4 id="用should查询">用should查询&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-json" data-lang="json">&lt;span style="color:#a40000">GET&lt;/span> &lt;span style="color:#a40000">dismaxmxsm/_search&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;query&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;bool&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;should&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">[&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;match&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;title&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;java &amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">}},&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;match&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;content&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;java beginner&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">}}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">]&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>结果：&lt;/p>
+&lt;pre>&lt;code>{
+&amp;quot;took&amp;quot; : 0,
+&amp;quot;timed_out&amp;quot; : false,
+&amp;quot;_shards&amp;quot; : {
+&amp;quot;total&amp;quot; : 1,
+&amp;quot;successful&amp;quot; : 1,
+&amp;quot;skipped&amp;quot; : 0,
+&amp;quot;failed&amp;quot; : 0
+},
+&amp;quot;hits&amp;quot; : {
+&amp;quot;total&amp;quot; : {
+&amp;quot;value&amp;quot; : 2,
+&amp;quot;relation&amp;quot; : &amp;quot;eq&amp;quot;
+},
+&amp;quot;max_score&amp;quot; : 0.9808291,
+&amp;quot;hits&amp;quot; : [
+{
+&amp;quot;_index&amp;quot; : &amp;quot;dismaxmxsm&amp;quot;,
+&amp;quot;_type&amp;quot; : &amp;quot;_doc&amp;quot;,
+&amp;quot;_id&amp;quot; : &amp;quot;1&amp;quot;,
+&amp;quot;_score&amp;quot; : 0.9808291,
+&amp;quot;_source&amp;quot; : {
+&amp;quot;title&amp;quot; : &amp;quot;Java&amp;quot;,
+&amp;quot;content&amp;quot; : &amp;quot;Javajava&amp;quot;
+}
+},
+{
+&amp;quot;_index&amp;quot; : &amp;quot;dismaxmxsm&amp;quot;,
+&amp;quot;_type&amp;quot; : &amp;quot;_doc&amp;quot;,
+&amp;quot;_id&amp;quot; : &amp;quot;3&amp;quot;,
+&amp;quot;_score&amp;quot; : 0.81427324,
+&amp;quot;_source&amp;quot; : {
+&amp;quot;title&amp;quot; : &amp;quot;python&amp;quot;,
+&amp;quot;content&amp;quot; : &amp;quot;Python development beginner&amp;quot;
+}
+}
+]
+}
+}
+&lt;/code>&lt;/pre>&lt;h4 id="用dis_max查询">用dis_max查询&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-json" data-lang="json">&lt;span style="color:#a40000">GET&lt;/span> &lt;span style="color:#a40000">dismaxmxsm/_search&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;query&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;dis_max&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;#34;queries&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">[&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;match&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;title&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;java&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">}},&lt;/span>
+&lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;match&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;content&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;java beginner&amp;#34;&lt;/span> &lt;span style="color:#000;font-weight:bold">}}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">]&lt;/span>
+&lt;span style="color:#000;font-weight:bold">,&lt;/span> &lt;span style="color:#204a87;font-weight:bold">&amp;#34;tie_breaker&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">:&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">0.7&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>结果：&lt;/p>
+&lt;pre>&lt;code>{
+&amp;quot;took&amp;quot; : 1,
+&amp;quot;timed_out&amp;quot; : false,
+&amp;quot;_shards&amp;quot; : {
+&amp;quot;total&amp;quot; : 1,
+&amp;quot;successful&amp;quot; : 1,
+&amp;quot;skipped&amp;quot; : 0,
+&amp;quot;failed&amp;quot; : 0
+},
+&amp;quot;hits&amp;quot; : {
+&amp;quot;total&amp;quot; : {
+&amp;quot;value&amp;quot; : 2,
+&amp;quot;relation&amp;quot; : &amp;quot;eq&amp;quot;
+},
+&amp;quot;max_score&amp;quot; : 0.9808291,
+&amp;quot;hits&amp;quot; : [
+{
+&amp;quot;_index&amp;quot; : &amp;quot;dismaxmxsm&amp;quot;,
+&amp;quot;_type&amp;quot; : &amp;quot;_doc&amp;quot;,
+&amp;quot;_id&amp;quot; : &amp;quot;1&amp;quot;,
+&amp;quot;_score&amp;quot; : 0.9808291,
+&amp;quot;_source&amp;quot; : {
+&amp;quot;title&amp;quot; : &amp;quot;Java&amp;quot;,
+&amp;quot;content&amp;quot; : &amp;quot;Javajava&amp;quot;
+}
+},
+{
+&amp;quot;_index&amp;quot; : &amp;quot;dismaxmxsm&amp;quot;,
+&amp;quot;_type&amp;quot; : &amp;quot;_doc&amp;quot;,
+&amp;quot;_id&amp;quot; : &amp;quot;3&amp;quot;,
+&amp;quot;_score&amp;quot; : 0.81427324,
+&amp;quot;_source&amp;quot; : {
+&amp;quot;title&amp;quot; : &amp;quot;python&amp;quot;,
+&amp;quot;content&amp;quot; : &amp;quot;Python development beginner&amp;quot;
+}
+}
+]
+}
+}
+&lt;/code>&lt;/pre></description></item></channel></rss>

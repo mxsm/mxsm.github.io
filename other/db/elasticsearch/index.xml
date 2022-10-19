@@ -1,0 +1,33 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Elasticsearch</title><link>/other/db/elasticsearch/</link><description>Recent content in Elasticsearch on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/db/elasticsearch/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: Elasticsearch Mapping</title><link>/other/db/elasticsearch/mapping/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/other/db/elasticsearch/mapping/</guid><description/></item><item><title>Other: Elasticsearch 查询DSL</title><link>/other/db/elasticsearch/search-dsl/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/other/db/elasticsearch/search-dsl/</guid><description/></item><item><title>Other: Elasticsearch 索引</title><link>/other/db/elasticsearch/index/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/other/db/elasticsearch/index/</guid><description/></item><item><title>Other: elasticsearch基本概念</title><link>/other/db/elasticsearch/elasticsearch-basic-conception/</link><pubDate>Fri, 14 Feb 2020 00:00:00 +0000</pubDate><guid>/other/db/elasticsearch/elasticsearch-basic-conception/</guid><description>
+&lt;h3 id="基本概念">基本概念&lt;/h3>
+&lt;p>首先了解一下ES的几个基本概念。&lt;/p>
+&lt;h4 id="索引index">索引(index)&lt;/h4>
+&lt;p>ElasticSearch把数据存放到一个或者多个索引(indices)中。如果用关系型数据库模型对比，索引(index)的地位与数据库实例(database)相当。索引存放和读取的基本单元是文档(Document)。我们也一再强调，ElasticSearch内部用Apache Lucene实现索引中数据的读写。读者应该清楚的是：在ElasticSearch中被视为单独的一个索引(index)，在Lucene中可能不止一个。这是因为在分布式体系中，ElasticSearch会用到分片(shards)和备份(replicas)机制将一个索引(index)存储多份。&lt;/p>
+&lt;h4 id="文档document">文档(Document)&lt;/h4>
+&lt;p>在ElasticSearch的世界中，文档(Document)是主要的存在实体(在Lucene中也是如此)。所有的ElasticSearch应用需求到最后都可以统一建模成一个检索模型：检索相关文档。文档(Document)由一个或者多个域(Field)组成，每个域(Field)由一个域名(此域名非彼域名)和一个或者多个值组成(有多个值的值称为多值域(multi-valued))。在ElasticSeach中，每个文档(Document)都可能会有不同的域(Field)集合；也就是说文档(Document)是没有固定的模式和统一的结构。文档(Document)之间保持结构的相似性即可(Lucene中的文档(Document)也秉持着相同的规定)。实际上，ElasticSearch中的文档(Document)就是Lucene中的文档(Document)。从客户端的角度来看，文档(Document)就是一个JSON对象(关于JSON格式的相关信息,请参看hhtp://en.wikipedia.org/wiki/JSON)。&lt;/p>
+&lt;h4 id="参数映射mapping">参数映射(Mapping)&lt;/h4>
+&lt;p>所有的文档(Document)在存储之前都必须经过分析(analyze)流程。用户可以配置输入文本分解成Token的方式；哪些Token应该被过滤掉；或者其它的的处理流程，比如去除HTML标签。此外，ElasticSearch提供的各种特性，比如排序的相关信息。保存上述的配置信息，这就是参数映射(Mapping)在ElasticSearch中扮演的角色。尽管ElasticSearch可以根据域的值自动识别域的类型(field type)，在生产应用中，都是需要自己配置这些信息以避免一些奇的问题发生。要保证应用的可控性。&lt;/p>
+&lt;h4 id="文档类型type">文档类型(Type)&lt;/h4>
+&lt;p>每个文档在ElasticSearch中都必须设定它的类型。文档类型使得同一个索引中在存储结构不同文档时，只需要依据文档类型就可以找到对应的参数映射(Mapping)信息，方便文档的存取。&lt;/p>
+&lt;h3 id="es和关系型数据库的比较">ES和关系型数据库的比较&lt;/h3>
+&lt;p>一个ES集群可以包含多个索引（数据库），每个索引又包含了很多类型（表），类型中包含了很多文档（行），每个文档使用 JSON 格式存储数据，包含了很多字段（列）。&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th style="text-align:left">关系型数据库&lt;/th>
+&lt;th>数据库&lt;/th>
+&lt;th>表&lt;/th>
+&lt;th>行&lt;/th>
+&lt;th>列&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td style="text-align:left">ElasticSearch&lt;/td>
+&lt;td>索引(index)&lt;/td>
+&lt;td>类型(Types)&lt;/td>
+&lt;td>文档(Documents)&lt;/td>
+&lt;td>字段(Fields)&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table></description></item></channel></rss>

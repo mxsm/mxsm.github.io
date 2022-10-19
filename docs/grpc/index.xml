@@ -1,0 +1,431 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – gRPC</title><link>/docs/grpc/</link><description>Recent content in gRPC on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/docs/grpc/index.xml" rel="self" type="application/rss+xml"/><item><title>Docs: 深入浅出理解gRPC</title><link>/docs/grpc/grpc/</link><pubDate>Fri, 31 Dec 2021 00:00:00 +0000</pubDate><guid>/docs/grpc/grpc/</guid><description>
+&lt;h3 id="前言">前言&lt;/h3>
+&lt;p>gRPC在最近的几年出现的频率越来越高，越来越多的项目都引入了gRPC,例如：Dubbo3.0, Nacos, RocketMQ5.0。那么gRPC到底是什么我们从下面的几个方面来进行分析&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/image-20220101214137128.png" alt="image-20220101214137128">&lt;/p>
+&lt;h3 id="1-grpc是什么">1. gRPC是什么？&lt;/h3>
+&lt;p>gRPC是一个现代的开源高性能远程过程调用(RPC)框架，可以在任何环境中运行。它可以有效地连接数据中心内和跨数据中心的服务，支持负载均衡、跟踪、健康检查和身份验证。它也适用于分布式计算，将设备、移动应用程序和浏览器连接到后端服务&amp;mdash;这是官方给的说明。gRPC特点：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/image-20211231173154257.png" alt="image-20211231173154257">&lt;/p>
+&lt;p>那么gRPC是什么呢？&lt;/p>
+&lt;ul>
+&lt;li>一个高性能RPC框架，一个跨语言平台的RPC框架。&lt;/li>
+&lt;li>使用&lt;a href="https://developers.google.com/protocol-buffers">Protocol Buffers&lt;/a>作为二进制序列化&lt;/li>
+&lt;li>使用HTTP/2进行数据传输&lt;/li>
+&lt;/ul>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/image-20211231173654659.png" alt="图片来源gRPC官网">&lt;/p>
+&lt;p>gRPC客户机和服务器可以在各种环境中彼此运行和通信。服务端使用的C++实现。而客户端可以是Ruby、Java、Go等其他的语言。这就体现了gRPC的跨平。&lt;/p>
+&lt;h3 id="2-grpc与protocol-buffers">2. gRPC与Protocol Buffers&lt;/h3>
+&lt;h4 id="21-protocol-buffers是什么">2.1 Protocol Buffers是什么？&lt;/h4>
+&lt;blockquote>
+&lt;p>Protocol Buffers官网：https://developers.google.com/protocol-buffers&lt;/p>
+&lt;/blockquote>
+&lt;p>由Google定义的一个与语言和平台无关具有可拓展的用于序列化结构化的数据(例如：XML、JSON)的协议。但更小、更快、更简单。您只需定义数据的结构化方式，然后就可以使用特殊生成的源代码轻松地向各种数据流写入和读取结构化数据，并可以被各种语言使用。&lt;/p>
+&lt;blockquote>
+&lt;p>Akka的节点之间的数据传输可以自定义基于&lt;a href="https://developers.google.com/protocol-buffers">Protocol Buffers&lt;/a>序列化的处理。&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="22--grpc使用protocol-buffers序列化结构化数据">2.2 gRPC使用Protocol Buffers序列化结构化数据&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-protobuf" data-lang="protobuf">&lt;span style="color:#8f5902;font-style:italic">// The greeter service definition.
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">service&lt;/span> &lt;span style="color:#000">Greeter&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span> &lt;span style="color:#8f5902;font-style:italic">// Sends a greeting
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">rpc&lt;/span> &lt;span style="color:#000">SayHello&lt;/span> &lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HelloRequest&lt;/span>&lt;span style="color:#000;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">returns&lt;/span> &lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HelloReply&lt;/span>&lt;span style="color:#000;font-weight:bold">)&lt;/span> &lt;span style="color:#000;font-weight:bold">{}&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#000;font-weight:bold">}&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#8f5902;font-style:italic">// The request message containing the user&amp;#39;s name.
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">message&lt;/span> &lt;span style="color:#000">HelloRequest&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">string&lt;/span> &lt;span style="color:#000">name&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">1&lt;/span>&lt;span style="color:#000;font-weight:bold">;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#000;font-weight:bold">}&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#8f5902;font-style:italic">// The response message containing the greetings
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">message&lt;/span> &lt;span style="color:#000">HelloReply&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">string&lt;/span> &lt;span style="color:#204a87;font-weight:bold">message&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">1&lt;/span>&lt;span style="color:#000;font-weight:bold">;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#000;font-weight:bold">}&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>通过定义 &lt;em>proto&lt;/em> 文件，来定义 &lt;strong>&lt;code>service&lt;/code>&lt;/strong> 和 &lt;strong>&lt;code>message&lt;/code>&lt;/strong> 。 service负责提供服务， message提供结构化数据的序列化。&lt;/p>
+&lt;p>gRPC与Protocol Buffers的关系:&lt;/p>
+&lt;p>&lt;strong>Protocol Buffers 负责gRPC的结构化数据的序列化&lt;/strong>&lt;/p>
+&lt;h3 id="3-grpc与http2">3. gRPC与HTTP2&lt;/h3>
+&lt;blockquote>
+&lt;p>&lt;a href="https://developers.google.com/web/fundamentals/performance/http2?hl=zh-cn">HTTP/2&lt;/a>&lt;/p>
+&lt;/blockquote>
+&lt;p>让我们深入了解gRPC概念如何与HTTP/2概念相关。gRPC引入了三个新概念:channel、RPC和Message。三者之间的关系很简单:每个Channel可能有许多RPC，而每个RPC可能有许多Message。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/chanel%E5%92%8CRPC%E5%92%8CMessage%E7%9A%84%E5%85%B3%E7%B3%BB.png" alt="chanel和RPC和Message的关系">&lt;/p>
+&lt;h4 id="31-grpc如何关联http2">3.1 gRPC如何关联HTTP/2&lt;/h4>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/gRPC%E4%B8%8EHTTP_2.png" alt="gRPC与HTTP_2">&lt;/p>
+&lt;p>HTTP/2中的流在一个连接上允许多个并发会话,而gRPC的通过支持多个并发连接上的多个流扩展了这个概念。&lt;/p>
+&lt;blockquote>
+&lt;p>Channel: 表示和终端的一个虚拟链接&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;code>Channel&lt;/code> 背后实际上可能有多个HTTP/2 连接。从上面关系图来看，一个RPC和一个HTTP/2连接相关联，rpc实际上是纯HTTP/2流。Message与rpc关联，并以HTTP/2数据帧的形式发送。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/RPC%E5%92%8CMessage%E5%92%8CFrame.png" alt="RPC和Message和Frame">&lt;/p>
+&lt;blockquote>
+&lt;p>消息是在数据帧之上分层的。一个数据帧可能有许多gRPC消息，或者如果一个gRPC消息非常大，它可能跨越多个数据帧。&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="32-解析器和负载均衡">3.2 解析器和负载均衡&lt;/h4>
+&lt;p>为了保持连接的alive、Healthy和利用，gRPC使用了许多组件，其中最重要的是名称解析器和负载平衡器。&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>解析器将名称转换为地址，然后将这些地址交给负载均衡器。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>负载均衡器负责从这些地址创建连接，并在连接之间对rpc进行负载均衡。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/gRPC%E8%A7%A3%E6%9E%90%E5%99%A8%E5%92%8C%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1.png" alt="gRPC解析器和负载均衡">&lt;/p>
+&lt;h4 id="33-连接的管理">3.3 连接的管理&lt;/h4>
+&lt;p>配置完成后，gRPC将保持连接池(解析器和平衡器定义的)处于正常状态、处于活动状态和已使用状态。&lt;/p>
+&lt;p>当连接失败时，负载均衡器将开始使用最后已知的地址列表重新连接。同时，解析器将开始尝试重新解析主机名列表。这在许多场景中都很有用。例如，如果代理不再可达，我们希望解析器更新地址列表，使其不包含该代理的地址。再举一个例子:DNS条目可能会随着时间的推移而改变，因此可能需要定期更新地址列表。通过这种方式和其他方式，gRPC旨在实现长期弹性。&lt;/p>
+&lt;p>一旦解析完成，负载均衡器就会被告知新的地址。如果地址发生了变化，负载均衡器可能会关闭到新列表中不存在的地址的连接，或者创建到以前不存在的地址的连接。&lt;/p>
+&lt;blockquote>
+&lt;p>连接也试用了池化&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="34-失效连接识别">3.4 失效连接识别&lt;/h4>
+&lt;p>gRPC连接管理的有效性取决于它识别失败连接的能力。失效连接分为两种：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>清除的失效连接&amp;mdash;通讯失败（例如：连接失败）&lt;/p>
+&lt;p>当端点有意终止连接时，可能会发生清除故障。例如，端点可能已经优雅地关闭，或者可能超过了计时器，从而提示端点关闭连接。当连接干净地关闭时，TCP语义就足够了:关闭连接会导致FIN握手。这将结束HTTP/2连接，从而结束gRPC连接。gRPC将立即开始重新连接。不需要额外的HTTP/2或gRPC语义。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>不可清除的失效连接（复杂的网络环境）&lt;/p>
+&lt;p>endpoint死亡或挂起而不通知客户端。在这种情况下，TCP可能会在认为连接失败之前进行长达10分钟的重试。当然，没有意识到连接已死10分钟是不可接受的。gRPC使用HTTP/2语义解决了这个问题:当配置KeepAlive时，gRPC会定期发送HTTP/2 PING帧。这些帧绕过流量控制，用来建立连接是否有效。如果PING响应没有及时返回，gRPC将认为连接失败，关闭连接，并开始重新连接&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;p>通过这种方式，gRPC保持连接池的健康状态，并定期使用HTTP/2来确定连接的健康状态。&lt;/p>
+&lt;h4 id="35-alive保持">3.5 Alive保持&lt;/h4>
+&lt;p>通过发送HTTP/2 PING来定期检查连接的健康状况，以确定连接是否仍然活着&lt;/p>
+&lt;blockquote>
+&lt;p>&lt;strong>gRPC与HTTP/2的关系：HTTP/2为长连接、实时的通信流提供了基础。gRPC建立在这个基础之上，具有连接池、健康语义、高效使用数据帧和多路复用以及KeepAlive，gRPC的通讯基石就是HTTP/2&lt;/strong>&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="4-grpc的应用">4. gRPC的应用&lt;/h3>
+&lt;p>现在gRPC在很多项目中都有应用&lt;/p>
+&lt;ul>
+&lt;li>Nacos(2.x)&lt;/li>
+&lt;li>Dubbo(3.x)&lt;/li>
+&lt;li>Apache RocketMQ（5.x）&lt;/li>
+&lt;/ul>
+&lt;p>有兴趣的可以研究一下对应项目的源码&lt;/p>
+&lt;h3 id="5-总结">5. 总结&lt;/h3>
+&lt;ul>
+&lt;li>gRPC是一个高可用的 &lt;strong>&lt;code>跨平台&lt;/code>&lt;/strong> 的RPC框架&lt;/li>
+&lt;li>gRPC数据序列化是通过&lt;a href="https://developers.google.com/protocol-buffers">Protocol Buffers&lt;/a>,数据传输基于HTTP/2&lt;/li>
+&lt;li>HTTP/2的语义提供给gRPC的长连接和实时的通讯，以及其他的HTTP/2的特性&lt;/li>
+&lt;/ul></description></item><item><title>Docs: gRPC的概念-图文并茂</title><link>/docs/grpc/grpc-concepts-architecture-lifecycle/</link><pubDate>Sat, 01 Jan 2022 00:00:00 +0000</pubDate><guid>/docs/grpc/grpc-concepts-architecture-lifecycle/</guid><description>
+&lt;p>之前在学习gRPC梳理了Protobuf Buffers和HTTP/2在gRPC中的作用和关系。接下来对gRPC的几个概念整理一下。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/image-20220101165554451.png" alt="image-20220101165554451">&lt;/p>
+&lt;p>主要有两个：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>gRPC中如何定义一个服务&lt;/p>
+&lt;p>gRPC使用的是 &lt;a href="https://developers.google.com/protocol-buffers">Protocol Buffers&lt;/a>作为接口定义语言&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>RPC生命周期&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="1-服务定义">1. 服务定义&lt;/h3>
+&lt;p>gRPC使用的是 &lt;a href="https://developers.google.com/protocol-buffers">Protocol Buffers&lt;/a>作为接口定义语言，通过&lt;a href="https://developers.google.com/protocol-buffers">Protocol Buffers&lt;/a>来定义，下面以Java作为例子来定义一个&lt;/p>
+&lt;blockquote>
+&lt;p>&lt;a href="https://developers.google.com/protocol-buffers">Protocol Buffers&lt;/a>官网：https://developers.google.com/protocol-buffers&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="11-定义一个proto文件">1.1 定义一个proto文件&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-protobuf" data-lang="protobuf">&lt;span style="color:#000">syntax&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;proto3&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">option&lt;/span> &lt;span style="color:#000">java_multiple_files&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#000;font-weight:bold">;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">option&lt;/span> &lt;span style="color:#000">java_package&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;com.github.mxsm.grpc&amp;#34;&lt;/span>&lt;span style="color:#000;font-weight:bold">;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#8f5902;font-style:italic">/*下面这一段来自gRPC官网，或者也可以自己定义，这里只是做一个演示*/&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">service&lt;/span> &lt;span style="color:#000">HelloService&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">rpc&lt;/span> &lt;span style="color:#000">SayHello&lt;/span> &lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HelloRequest&lt;/span>&lt;span style="color:#000;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">returns&lt;/span> &lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HelloResponse&lt;/span>&lt;span style="color:#000;font-weight:bold">);&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#000;font-weight:bold">}&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">message&lt;/span> &lt;span style="color:#000">HelloRequest&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">string&lt;/span> &lt;span style="color:#000">greeting&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">1&lt;/span>&lt;span style="color:#000;font-weight:bold">;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#000;font-weight:bold">}&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">message&lt;/span> &lt;span style="color:#000">HelloResponse&lt;/span> &lt;span style="color:#000;font-weight:bold">{&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span> &lt;span style="color:#204a87;font-weight:bold">string&lt;/span> &lt;span style="color:#000">reply&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#0000cf;font-weight:bold">1&lt;/span>&lt;span style="color:#000;font-weight:bold">;&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;span style="color:#a40000">&lt;/span>&lt;span style="color:#000;font-weight:bold">}&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>文件的位置放在 &lt;strong>&lt;code>src/main/proto&lt;/code>&lt;/strong>（默认情况）&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="12-pomxml文件增加依赖和插件">1.2 pom.xml文件增加依赖和插件&lt;/h4>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml">&lt;span style="color:#8f5902;font-style:italic">&amp;lt;!-- gRPC依赖 --&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>io.grpc&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>grpc-netty-shaded&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>1.43.1&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>io.grpc&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>grpc-protobuf&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>1.43.1&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>io.grpc&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>grpc-stub&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>1.43.1&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependency&amp;gt;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">&amp;lt;!-- necessary for Java 9+ --&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>org.apache.tomcat&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>annotations-api&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>6.0.53&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;scope&amp;gt;&lt;/span>provided&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/scope&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependency&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>上面就是增加了相关的gRPC依赖。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml">&lt;span style="color:#204a87;font-weight:bold">&amp;lt;build&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;extensions&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;extension&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>kr.motd.maven&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>os-maven-plugin&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>1.6.2&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/extension&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/extensions&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;plugins&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;plugin&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>org.xolstice.maven.plugins&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>protobuf-maven-plugin&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>0.6.1&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;configuration&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;protocArtifact&amp;gt;&lt;/span>com.google.protobuf:protoc:3.19.1:exe:${os.detected.classifier}&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/protocArtifact&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;pluginId&amp;gt;&lt;/span>grpc-java&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/pluginId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;pluginArtifact&amp;gt;&lt;/span>io.grpc:protoc-gen-grpc-java:1.43.1:exe:${os.detected.classifier}&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/pluginArtifact&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;protoSourceRoot&amp;gt;&lt;/span>${basedir}/src/main/resources&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/protoSourceRoot&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;outputDirectory&amp;gt;&lt;/span>src/main/java&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/outputDirectory&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/configuration&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;executions&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;execution&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;goals&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;goal&amp;gt;&lt;/span>compile&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/goal&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;goal&amp;gt;&lt;/span>compile-custom&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/goal&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/goals&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/execution&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/executions&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/plugin&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/plugins&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/build&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>这里增加的代码生成插件。&lt;/p>
+&lt;blockquote>
+&lt;p>通过protoSourceRoot修改了proto文件的存放的位置，outputDirectory修改输出的位置。&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/gRPC%E4%BB%A3%E7%A0%81%E7%94%9F%E6%88%90.gif" alt="gRPC代码生成">&lt;/p>
+&lt;p>通过动态图可以看出来，通过&lt;a href="https://developers.google.com/protocol-buffers">Protocol Buffers&lt;/a>定义出来了对应的接口。以及结构化的数据。&lt;/p>
+&lt;blockquote>
+&lt;p>也可以参考Nacos定义的服务，看看开源服务是怎么样去定义的。文件地址：https://github.com/alibaba/nacos/blob/develop/api/src/main/proto/nacos_grpc_service.proto&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="2-服务方法分类">2. 服务方法分类&lt;/h3>
+&lt;p>gRPC能够让我们定义四类服务方法&lt;/p>
+&lt;h4 id="21-一元rpc">2.1 一元RPC&lt;/h4>
+&lt;p>客户端发送一个单独的请求到服务器，然后服务器在返回一个单独响应给客户端&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/%E4%B8%80%E5%85%83RPC.png" alt="一元RPC">&lt;/p>
+&lt;p>这种就是客户端请求，然后等待服务器返回。&lt;/p>
+&lt;p>定义方式：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-protobuf" data-lang="protobuf">&lt;span style="color:#204a87;font-weight:bold">rpc&lt;/span> &lt;span style="color:#000">SayHello&lt;/span>&lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HelloRequest&lt;/span>&lt;span style="color:#000;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">returns&lt;/span> &lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HelloResponse&lt;/span>&lt;span style="color:#000;font-weight:bold">);&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="22-服务器流式rpc">2.2 服务器流式RPC&lt;/h4>
+&lt;p>客户端向服务器发送请求，并获得一个流来读取一系列消息。客户端从返回的流中读取，直到没有更多的消息。gRPC保证单个RPC调用中的消息顺序&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%B5%81%E5%BC%8FRPC.png" alt="服务器流式RPC">&lt;/p>
+&lt;p>客户端请求一次，但是服务器通过流返回多个返回消息。&lt;/p>
+&lt;p>定义方式：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-protobuf" data-lang="protobuf">&lt;span style="color:#204a87;font-weight:bold">rpc&lt;/span> &lt;span style="color:#000">LotsOfReplies&lt;/span>&lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HelloRequest&lt;/span>&lt;span style="color:#000;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">returns&lt;/span> &lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#000">stream&lt;/span> &lt;span style="color:#000">HelloResponse&lt;/span>&lt;span style="color:#000;font-weight:bold">);&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>Tips: 在返回的消息的前面使用 stream 关键字&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="23-客户端流式rpc">2.3 客户端流式RPC&lt;/h4>
+&lt;p>其中客户端写入一系列消息并将它们发送到服务器，再次使用提供的流。一旦客户端完成了消息的写入，它就会等待服务器读取消息并返回响应。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%B5%81%E5%BC%8FRPC.png" alt="客户端流式RPC">&lt;/p>
+&lt;p>定义方式：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-protobuf" data-lang="protobuf">&lt;span style="color:#204a87;font-weight:bold">rpc&lt;/span> &lt;span style="color:#000">LotsOfGreetings&lt;/span>&lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#000">stream&lt;/span> &lt;span style="color:#000">HelloRequest&lt;/span>&lt;span style="color:#000;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">returns&lt;/span> &lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#000">HelloResponse&lt;/span>&lt;span style="color:#000;font-weight:bold">);&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="24-双向流rpc">2.4 双向流RPC&lt;/h4>
+&lt;p>双方使用读写流发送一系列消息。两个流独立运作,因此客户端和服务器可以读和写在他们喜欢的任何顺序:例如,服务器可以等待收到所有客户端消息之前写的反应,也可以交替阅读一条消息然后写一个消息,或其他一些读写的结合。每个流中的消息顺序被保留。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/%E5%8F%8C%E5%90%91%E6%B5%81.png" alt="双向流">&lt;/p>
+&lt;p>定义方式：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-protobuf" data-lang="protobuf">&lt;span style="color:#204a87;font-weight:bold">rpc&lt;/span> &lt;span style="color:#000">BidiHello&lt;/span>&lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#000">stream&lt;/span> &lt;span style="color:#000">HelloRequest&lt;/span>&lt;span style="color:#000;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">returns&lt;/span> &lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#000">stream&lt;/span> &lt;span style="color:#000">HelloResponse&lt;/span>&lt;span style="color:#000;font-weight:bold">);&lt;/span>&lt;span style="color:#a40000">
+&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>服务定义在 &lt;strong>&lt;code>.proto&lt;/code>&lt;/strong> 文件中，gRPC提供了gRPC提供了生成客户端和服务器端代码的协议缓冲区编译器插件。gRPC在客户端调用定义的接口，在服务器端实现定义的相对应的接口&lt;/p>
+&lt;ul>
+&lt;li>在服务器端，服务器实现服务声明的方法，并运行gRPC服务器来处理客户端调用。gRPC基础设施对传入的请求进行解码，执行服务方法，并对服务响应进行编码。(RPC的调用过程)&lt;/li>
+&lt;li>在客户端，客户端有一个称为存根的本地对象，它实现了与服务相同的方法。然后客户端可以在本地对象上调用这些方法，将调用的参数包装在适当的Protocol Buffers消息类型中——gRPC负责向服务器发送请求并返回服务器的Protocol Buffers响应。&lt;/li>
+&lt;/ul>
+&lt;p>gRPC有同步和异步两种风格&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="3-rpc的生命周期">3. RPC的生命周期&lt;/h3>
+&lt;p>上面说了四种不同的RPC,每种RPC的生命周期也不一样，下面来看一下不同RPC的生命周期。&lt;/p>
+&lt;blockquote>
+&lt;p>元数据是以键-值对列表的形式表示的关于特定RPC调用(比如身份验证细节)的信息，其中键是字符串，值通常是字符串，但也可以是二进制数据。元数据对于gRPC本身是不透明的——它让客户机提供与服务器调用相关联的信息，反之亦然。&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="31-一元rpc生命周期">3.1 一元RPC生命周期&lt;/h4>
+&lt;p>客户端发送一个请求并且等待服务器的返回。&lt;/p>
+&lt;ol>
+&lt;li>一旦客户机调用存根方法，服务器就会被通知，RPC已经被调用了，该调用使用客户机的元数据、方法名以及指定的截止日期等等&lt;/li>
+&lt;li>服务器可以直接返回它自己的初始元数据(必须在任何响应之前发送)，或者等待客户机的请求消息&lt;/li>
+&lt;li>一旦服务器获得了客户机的请求消息，它就会执行创建和填充响应所需的任何工作。然后将响应(如果成功)连同状态详细信息(状态代码和可选的状态消息)和可选的跟踪元数据返回给客户端&lt;/li>
+&lt;li>如果响应状态为OK，则客户端将获得响应，从而完成客户端上的调用&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/gRPC/%E4%B8%80%E5%85%83RPC%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.png" alt="一元RPC生命周期">&lt;/p>
+&lt;h4 id="32-服务器流rpc生命周期">3.2 服务器流RPC生命周期&lt;/h4>
+&lt;p>服务器流RPC类似于一元RPC，不同之处是服务器返回响应客户机请求的消息流。在发送所有消息之后，服务器的状态详细信息(状态代码和可选的状态消息)和可选的跟踪元数据被发送到客户端。这就完成了服务器端的处理。客户端拥有服务器的所有消息后就完成了。&lt;/p>
+&lt;h4 id="33-客户端流rpc生命周期">3.3 客户端流RPC生命周期&lt;/h4>
+&lt;p>客户端流RPC类似于一元RPC，不同之处是客户端向服务器发送消息流而不是单个消息。服务器用一条消息(以及它的状态详细信息和可选的跟踪元数据)响应，通常但不一定是在它收到所有客户端消息之后&lt;/p>
+&lt;h4 id="34-双向流rpc生命周期">3.4 双向流RPC生命周期&lt;/h4>
+&lt;p>在双向流RPC中，调用是由调用方法的客户机和接收客户机元数据、方法名和截止日期的服务器发起的。服务器可以选择发回其初始元数据或等待客户端开始流消息。客户端和服务器端流处理是特定于应用程序的。由于这两个流是独立的，客户端和服务器可以以任何顺序读写消息。例如,一个服务器可以等到它已经收到了客户的所有信息之前写它的消息,或者是服务器和客户端可以玩“乒乓球”——服务器收到一个请求,然后发回一个响应,然后根据响应客户端发送另一个请求,等等&lt;/p>
+&lt;h4 id="35-截止时间过期时间">3.5 截止时间/过期时间&lt;/h4>
+&lt;p>gRPC允许客户端指定在使用DEADLINE_EXCEEDED错误终止RPC之前，他们愿意等待RPC完成多长时间。在服务器端，服务器可以查询特定的RPC是否超时，或者还剩下多少时间来完成RPC。&lt;/p>
+&lt;h4 id="36-rpc终止">3.6 RPC终止&lt;/h4>
+&lt;p>在gRPC中，客户端和服务器都对调用的成功做出独立的和本地的判断，它们的结论可能不匹配。这意味着，例如，您可以有一个RPC，它在服务器端成功完成(“我已经发送了我所有的响应!”)，但在客户端失败(“响应在我的截止日期之后到达!”)。服务器也可以在客户端发送完所有请求之前决定是否完成。&lt;/p>
+&lt;blockquote>
+&lt;p>例如：web网页请求某一个后端的接口，但是还没又返回的时候前端已经关闭了连接。就在关闭连接没多久后端完成了处理这个接口并且准备返回数据。这个时候就会出现后端数据没法传输到前端。&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="4-什么是channel">4 什么是Channel?&lt;/h3>
+&lt;p>gRPC通道提供到指定主机和端口的gRPC服务器的连接。它在创建客户端存根时使用。客户端可以指定通道参数来修改gRPC的默认行为，比如打开或关闭消息压缩。通道有状态，包括已连接和空闲。&lt;/p></description></item><item><title>Docs: Protobuf与JSON的优劣-用数据说话</title><link>/docs/grpc/protobut-json/</link><pubDate>Tue, 25 Jan 2022 00:00:00 +0000</pubDate><guid>/docs/grpc/protobut-json/</guid><description>
+&lt;p>JSON因为其轻量和易阅读，对开发者友好逐步替代了XML,所以现在大多数的前后端交互都是使用的JSON，但是由于容器化、K8s的崛起。有Google设计的Protobuf作为一种跨平台的序列化结构化数据的协议慢慢的开始了展露头角。同时gRPC在对Protobuf的应用也让Protobuf快速崛起。国内很多的开源的项目如：Nacos、Dubbo3、RocketMQ5 都已gRPC作为基础。那么Protobuf既然好处这么多我们平时的开发中为什么还是用JSON比较多。从以下几个方面分析：&lt;/p>
+&lt;p>&lt;img src="E:%5Cdownload%5CProtobuf%E5%92%8CJSON%E6%AF%94%E8%BE%83.png" alt="Protobuf和JSON比较">&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>序列化和反序列化的时间&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>相同结构化的数据反序列化内存占用&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>对开发者的友好程度&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;h3 id="1-序列化和反序列化的时间">1. 序列化和反序列化的时间&lt;/h3>
+&lt;p>定一个简单User数据结构,首先是Protobuf的定义&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#000">syntax&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;proto3&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">option&lt;/span> &lt;span style="color:#000">java_multiple_files&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">option&lt;/span> &lt;span style="color:#000">java_package&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;com.github.mxsm.grpc.login&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">message&lt;/span> &lt;span style="color:#000">UserProto&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">string&lt;/span> &lt;span style="color:#000">name&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">int32&lt;/span> &lt;span style="color:#000">age&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">2&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">string&lt;/span> &lt;span style="color:#000">address&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">3&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">string&lt;/span> &lt;span style="color:#000">email&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">4&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">string&lt;/span> &lt;span style="color:#000">phone&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">5&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>Java类的定义&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">UserJson&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">name&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">age&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">address&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">email&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">phone&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">//省略了get set方法
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>编写序列化的测试程序&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@BenchmarkMode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Mode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">AverageTime&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Warmup&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">iterations&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">2&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">time&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">5&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Measurement&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">iterations&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">3&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">time&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">5&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Threads&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Fork&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@State&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">value&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">Scope&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">Benchmark&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@OutputTimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">TimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">MICROSECONDS&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">ProtobufJsonTest&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Param&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">({&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;100000&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;1000000&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">})&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">counter&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">UserJson&lt;/span> &lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#000">UserProto&lt;/span> &lt;span style="color:#000">userProto&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">byte&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">userJsonBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">byte&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">userProtoBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Setup&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">init&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(){&lt;/span>
+&lt;span style="color:#000">Faker&lt;/span> &lt;span style="color:#000">faker&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Faker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Locale&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;zh-CN&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">));&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">name&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">faker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">name&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">fullName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">age&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">faker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">number&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">numberBetween&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">100&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">address&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">faker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">address&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">fullAddress&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">email&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">faker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">internet&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">emailAddress&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">phone&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">faker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">phoneNumber&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">cellPhone&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">userJson&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">UserJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">name&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setAge&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">age&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setAddress&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">address&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setEmail&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">email&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setPhone&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">phone&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">userJsonBytes&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">JSON&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">toJSONBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">userProto&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">UserProto&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">newBuilder&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">setName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">name&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">setAge&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">age&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">setAddress&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">address&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">setEmail&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">email&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setPhone&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">phone&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">build&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">userProtoBytes&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">userProto&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">toByteArray&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Benchmark&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">protobufSerializable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Blackhole&lt;/span> &lt;span style="color:#000">blackhole&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">byte&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">bytes&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(;&lt;/span>&lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span> &lt;span style="color:#000">counter&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;++&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#000">bytes&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">userProto&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">toByteArray&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000">blackhole&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">consume&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">bytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Benchmark&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">jsonSerializable&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Blackhole&lt;/span> &lt;span style="color:#000">blackhole&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">byte&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">bytes&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(;&lt;/span>&lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span> &lt;span style="color:#000">counter&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;++&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#000">bytes&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">JSON&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">toJSONBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000">blackhole&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">consume&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">bytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Benchmark&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">protobufDeserialization&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Blackhole&lt;/span> &lt;span style="color:#000">blackhole&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">InvalidProtocolBufferException&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">UserProto&lt;/span> &lt;span style="color:#000">up&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(;&lt;/span>&lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span> &lt;span style="color:#000">counter&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;++&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#000">up&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">UserProto&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">parseFrom&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">userProtoBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000">blackhole&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">consume&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">up&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Benchmark&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">jsonDeserialization&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Blackhole&lt;/span> &lt;span style="color:#000">blackhole&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#000">UserJson&lt;/span> &lt;span style="color:#000">aaa&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">null&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(;&lt;/span>&lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span> &lt;span style="color:#000">counter&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;++&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#000">aaa&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">JSON&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">parseObject&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">userJsonBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">UserJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000">blackhole&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">consume&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">aaa&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">main&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">RunnerException&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Options&lt;/span> &lt;span style="color:#000">opt&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">OptionsBuilder&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>
+&lt;span style="color:#000">include&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ProtobufJsonTest&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getSimpleName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">())&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">result&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;result.json&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">resultFormat&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ResultFormatType&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">JSON&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">build&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Runner&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">opt&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;blockquote>
+&lt;p>Tips：这里测试还是用到了JMH和Faker，JSON序列化和反序列化使用的Fastjson&lt;/p>
+&lt;/blockquote>
+&lt;p>代码运行结果：&lt;/p>
+&lt;p>&lt;img src="E:%5Cdownload%5Cimage-20220125224526677.png" alt="image-20220125224526677">&lt;/p>
+&lt;p>&lt;img src="E:%5Cdownload%5Cprotobufjson%E5%AF%B9%E6%AF%94.png" alt="protobufjson对比">&lt;/p>
+&lt;p>从上图可以看出来&lt;strong>protobuf的序列化和反序列化的性能都优于JSON&lt;/strong>（不同的JSON序列化工具可能速度不一样，但是fastjson是较快的序列化工具了）&lt;/p>
+&lt;h3 id="2-占用的内存">2. 占用的内存&lt;/h3>
+&lt;p>对比一下序列化生成byte数组占用的大小。测试代码：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">MemeryTest&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">main&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Faker&lt;/span> &lt;span style="color:#000">faker&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Faker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Locale&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;zh-CN&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">));&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">name&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">faker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">name&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">fullName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">age&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">faker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">number&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">numberBetween&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">100&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">address&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">faker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">address&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">fullAddress&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">email&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">faker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">internet&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">emailAddress&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">phone&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">faker&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">phoneNumber&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">cellPhone&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">name&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34; &amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">age&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#4e9a06">&amp;#34; &amp;#34;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">address&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#4e9a06">&amp;#34; &amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">email&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#4e9a06">&amp;#34; &amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span>&lt;span style="color:#000">phone&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">UserJson&lt;/span> &lt;span style="color:#000">userJson&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">UserJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">name&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setAge&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">age&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setAddress&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">address&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setEmail&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">email&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setPhone&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">phone&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">byte&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">userJsonBytes&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">JSON&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">toJSONBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">userJson&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">UserProto&lt;/span> &lt;span style="color:#000">userProto&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">UserProto&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">newBuilder&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">setName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">name&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">setAge&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">age&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">setAddress&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">address&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">setEmail&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">email&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">setPhone&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">phone&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">build&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">byte&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">userProtoBytes&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">userProto&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">toByteArray&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;userJsonBytes=&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span>&lt;span style="color:#000">userJsonBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">length&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;;userProtoBytes=&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span>&lt;span style="color:#000">userProtoBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">length&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>运行结果：&lt;/p>
+&lt;p>&lt;img src="E:%5Cdownload%5Cimage-20220125220932902.png" alt="image-20220125220932902">&lt;/p>
+&lt;p>Protobuf比JSON少了45个byte。&lt;strong>Protobuf比JSON序化以后占用的字节数更少，在网络传输的过程中Protobuf更具有优势。&lt;/strong>&lt;/p>
+&lt;h3 id="3-对开发者的友好程度">3. 对开发者的友好程度&lt;/h3>
+&lt;p>测试代码还是使用 &lt;strong>MemeryTest&lt;/strong> 的测试代码在最后加两句打印：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">userJsonBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">));&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">userProtoBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">));&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>运行结果：&lt;/p>
+&lt;p>&lt;img src="E:%5Cdownload%5Cimage-20220125221428571.png" alt="image-20220125221428571">&lt;/p>
+&lt;p>发现 JSON 开发者能够很好的识别，而Protobuf会出现乱码的情况。这里说明了一个问题：在对程序员的友好程度上JSON优于Protobuf。&lt;/p>
+&lt;p>另外还有一个JSON和对应的Bean之间是可以互相转换，而Protobuf需要先在 &lt;strong>&lt;code>proto&lt;/code>&lt;/strong> 文件中定义结构化的数据，然后通过编译工具转换为对应语言的数据结构，使用起来比较繁琐。&lt;/p>
+&lt;h3 id="4-总结">4. 总结&lt;/h3>
+&lt;ul>
+&lt;li>protobuf在序列化和反序列的速度领先于JSON,而序列化以后的内存占用有少于JSON。所以总的来说protobuf由于JSON&lt;/li>
+&lt;li>由于对开发者的友好程度不如JSON，使用过程比较繁琐。这可能是JSON的普及率大于Protobuf的原因，但是在一些对于性能和传输数据有极高要求的项目Protobuf可能更加的适合，例如IM的数据交互。&lt;/li>
+&lt;li>将Protobuf和JSON相结合可能是一个不错的选择(这个没有进行测试)&lt;/li>
+&lt;/ul></description></item></channel></rss>

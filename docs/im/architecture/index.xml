@@ -1,0 +1,100 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – IM架构</title><link>/docs/im/architecture/</link><description>Recent content in IM架构 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Sun, 07 Nov 2021 00:00:00 +0000</lastBuildDate><atom:link href="/docs/im/architecture/index.xml" rel="self" type="application/rss+xml"/><item><title>Docs: 客户端接入服务(Magpie Bridge)</title><link>/docs/im/architecture/magpie-bridge/</link><pubDate>Sun, 20 Mar 2022 00:00:00 +0000</pubDate><guid>/docs/im/architecture/magpie-bridge/</guid><description>
+&lt;h3 id="1-概述">1 概述&lt;/h3>
+&lt;p>客户端接入服务(Magpie Bridge)-鹊桥(名字来源探月工程的中继卫星名称)。正如名称一样功能就是做一个消息的转发工作，将客户端发送的消息转发给消息处理服务，处理完成后接着将消息转发给接收消息的客户端。&lt;/p>
+&lt;h3 id="2-架构">2. 架构&lt;/h3>
+&lt;p>&lt;img src="E:%5Cdownload%5C%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%8E%A5%E5%85%A5%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84.png" alt="客户端接入服务架构">&lt;/p>
+&lt;ul>
+&lt;li>从DNS服务器获取注册中心的IP地址&lt;/li>
+&lt;li>启动的客户端接入服务注册到注册中心集群&lt;/li>
+&lt;li>从注册中心获取到消息处理服务IP，客户端接入服务连接消息处理服务并且维持长连接&lt;/li>
+&lt;li>连接客户端，并且将客户端消息转发给消息处理服务处理，并且将消息处理服务发送的数据转发给对应的接收客户端&lt;/li>
+&lt;/ul>
+&lt;h3 id="3-功能">3. 功能&lt;/h3>
+&lt;p>&lt;img src="E:%5Cdownload%5C%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%8E%A5%E5%85%A5%E6%9C%8D%E5%8A%A1%E5%8A%9F%E8%83%BD.png" alt="客户端接入服务功能">&lt;/p></description></item><item><title>Docs: IM系统总体架构</title><link>/docs/im/architecture/overall-architecture/</link><pubDate>Sun, 07 Nov 2021 00:00:00 +0000</pubDate><guid>/docs/im/architecture/overall-architecture/</guid><description>
+&lt;blockquote>
+&lt;p>&lt;strong>简介：&lt;/strong> 前言 IM全称是『Instant Messaging』，中文名是即时通讯。在这个高度信息化的移动互联网时代，生活中IM类产品已经成为必备品，比较有名的如钉钉、微信、QQ等以IM为核心功能的产品。当然目前微信已经成长为一个生态型产品，但其核心功能还是IM。&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="1-前言">1. 前言&lt;/h3>
+&lt;p>IM全称是『Instant Messaging』，中文名是即时通讯。在这个高度信息化的移动互联网时代，生活中IM类产品已经成为必备品，比较有名的如钉钉、微信、QQ等以IM为核心功能的产品。当然目前微信已经成长为一个生态型产品，但其核心功能还是IM。还有一些非以IM系统为核心的应用，最典型的如一些在线游戏、社交应用，IM也是其重要的功能模块。可以说，IM系统已经是任何一个带有社交属性的应用需要具备的基础功能，网络上对于这类系统的设计与实现的讨论也越来越多。&lt;/p>
+&lt;p>IM系统在互联网初期即存在，其基础技术架构在这十几年的发展中更新迭代多次，从早期的CS、P2P架构，到现在后台已经演变为一个复杂的分布式系统，涉及移动端、网络通信、协议、安全、存储和搜索等技术的方方面面。IM系统中最核心的部分是消息系统，消息系统中最核心的功能是消息的同步、存储和检索：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>消息的同步&lt;/strong>：将消息完整的、快速的从发送方传递到接收方，就是消息的同步。消息同步系统最重要的衡量指标就是消息传递的实时性、完整性以及能支撑的消息规模。从功能上来说，一般至少要支持在线和离线推送，高级的IM系统还支持『多端同步』。&lt;/li>
+&lt;li>&lt;strong>消息的存储&lt;/strong>：消息存储即消息的持久化保存，传统消息系统通常只能支持消息在接收端的本地存储，数据基本不具备可靠性。现代消息系统能支持消息在服务端的在线存储，功能上对应的就是『消息漫游』，消息漫游的好处是可以实现账号在任意端登陆查看所有历史消息。(微信说是服务器不存储用户的聊天数据，而QQ是可以通过开通会员来实现消息漫游将消息存在云端。对于钉钉是提供有限时间的消息漫游，好像是可以拉取一年的消息)&lt;/li>
+&lt;li>&lt;strong>消息的检索&lt;/strong>：消息一般是文本，所以支持全文检索也是必备的能力之一。传统消息系统通常来说也是只能支持消息的本地检索，基于本地存储的消息数据来构建。而现在消息系统在能支持消息的在线存储后，也具备了消息的『在线检索』能力。&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>PS: 当时给公司做的IM系统也是不支持消息漫游，只是将未读的消息进行了七天保存到ETCD中。超过七天的消息会自动过期，反正坑太多。都是泪不说了！&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="2-技术架构">2. 技术架构&lt;/h3>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/IM/IM%E6%8A%80%E6%9C%AF%E6%9E%B6%E6%9E%84%E5%9B%BE.png" alt="IM技术架构图">&lt;/p>
+&lt;p>IM架构主要分为六个部分，如上图所示：&lt;/p>
+&lt;ul>
+&lt;li>**Register: ** 注册中心，注册中心与注册中心之间没有联系，已单例模式构建集群。这样的好处就是实现简单，通过多个单例达到高可用。&lt;/li>
+&lt;li>&lt;strong>Client:&lt;/strong> 主要负责消息的收发，从注册中心(Register)获取合适的 &lt;strong>MagpieBridge&lt;/strong> 地址进行链接，根据配置的策略进行获取。客户端支持限流&lt;/li>
+&lt;li>&lt;strong>MagpieBridge：&lt;/strong> 负责客户端的接入，服务启动会往注册中心注册**&lt;code>MagpieBridge&lt;/code>** 的元数据。同时定时向注册中心发送**&lt;code>MagpieBridge&lt;/code>** 接入的客户端数据信息。&lt;/li>
+&lt;li>&lt;strong>MessageHandlerService：&lt;/strong> 负责处理客户端发送过来的消息，转发消息给对应的接收人，同时将消息持久化到数据库。提供数据持久化服务 以及历史数据查询和消息处理服务&lt;/li>
+&lt;li>&lt;strong>Cassandra：&lt;/strong> 消息存储数据库，负责用户数据的存储&lt;/li>
+&lt;li>&lt;strong>Metric：&lt;/strong> 系统的服务监控指标获取&lt;/li>
+&lt;/ul>
+&lt;h3 id="3-注册中心register">3. 注册中心(Register)&lt;/h3>
+&lt;p>注册中心(Register)可以实现线性拓展。&lt;/p>
+&lt;p>注册中心主要有两个功能：&lt;/p>
+&lt;ol>
+&lt;li>提供MagpieBridge和MessageHandlerService的服务注册发现&lt;/li>
+&lt;li>Client连接MagpieBridge的时候会从注册中心选取对应的MagpieBridge地址进行接入。同时为metric提供统计数据支持。&lt;/li>
+&lt;/ol>
+&lt;p>注册中心的集群由单个注册中心组成。当一个注册中心出现问题，客户端可以从其他的注册中心获取客户端的接入服务 &lt;strong>MagpieBridge&lt;/strong> 来接入消息的连接。注册中心同时会同步 &lt;strong>MagpieBridge&lt;/strong> 本身的相关在线状态信息以及接入的客户端的信息。也包含消息处理服务 &lt;strong>MessageHandlerService&lt;/strong> 在线服务信息。&lt;/p>
+&lt;h3 id="4-客户端接入服务magpiebridge">4. 客户端接入服务（MagpieBridge）&lt;/h3>
+&lt;p>MagpieBridge允许线性拓展，服务于服务之间没有联系。可以单独进行部署。客户端接入后会记录客户端的一些基本信息，同时会定时将客户端的信息同步到注册中心的每个节点便于后续新接入的客户端选择接入点的策略同时给&lt;strong>Metric&lt;/strong> 服务提供检测数据。&lt;/p>
+&lt;h3 id="5消息处理服务messagehandlerservice">5.消息处理服务(MessageHandlerService)&lt;/h3>
+&lt;p>消息处理服务(MessageHandlerService)允许线性拓展，服务上线就需要将服务的信息同步到注册中心以及链接到消息处理服务的客户端接入服务的信息。&lt;/p>
+&lt;h3 id="6-cassandra">6. Cassandra&lt;/h3>
+&lt;p>负责消息存储&lt;/p>
+&lt;h3 id="7-metric">7. Metric&lt;/h3>
+&lt;p>主要负责提供监控数据的展示&lt;/p></description></item><item><title>Docs: IM协议</title><link>/docs/im/architecture/protocol/</link><pubDate>Fri, 04 Feb 2022 00:00:00 +0000</pubDate><guid>/docs/im/architecture/protocol/</guid><description>
+&lt;h3 id="1-im协议概述">1. IM协议概述&lt;/h3>
+&lt;p>&lt;img src="E:%5Cdownload%5CIM%E5%8D%8F%E8%AE%AE.png" alt="IM协议">&lt;/p>
+&lt;p>网络传输协议：TCP/IP&lt;/p>
+&lt;p>应用层数据交换协议：基于Protobuf自定义。&lt;/p>
+&lt;p>设计思路：客户端与注册中心之间用一套数据交互协议，客户端与接入服务之间用一套数据交互协议，内部&lt;/p>
+&lt;h3 id="2-客户端与服务之间的协议设计">2. 客户端与服务之间的协议设计&lt;/h3>
+&lt;p>客户端与服务之间的协议分为两类：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>客户端与注册中心&lt;/strong>&lt;/p>
+&lt;p>这里的数据交换主要是获取客户端要接入的接入服务的信息&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>客户端与接入服务&lt;/strong>&lt;/p>
+&lt;p>客户端与客户端之间的消息转发，同时包含客户端与接入服务之间的心跳消息&lt;/p>
+&lt;/li>
+&lt;/ul></description></item><item><title>Docs: 注册中心(Register)</title><link>/docs/im/architecture/register/</link><pubDate>Sun, 13 Feb 2022 00:00:00 +0000</pubDate><guid>/docs/im/architecture/register/</guid><description>
+&lt;h3 id="1概述">1.概述&lt;/h3>
+&lt;p>整个IM系统，注册中心提供服务注册发现的功能，同时为监控提供数据。客户端接入服务、消息处理服务的服务注册发现都是由注册中心提供。当两个服务有服务上线就会往注册中心注册相对应的服务信息，同时对于客户端的接入服务会定时的讲接入的客户端信息(定时器)同步到注册中心，以便监控服务的查看同时也为后续的客户端接入服务。&lt;/p>
+&lt;h3 id="2-架构">2. 架构&lt;/h3>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/IM/register/%E6%B3%A8%E5%86%8C%E4%B8%AD%E5%BF%83%E6%9E%B6%E6%9E%84.png" alt="注册中心架构">&lt;/p>
+&lt;ul>
+&lt;li>注册中心设定一个域名(register.mxsm.local),当注册中心集群有服务上线，就在DNS服务中注册IP与域名的绑定关系。&lt;/li>
+&lt;li>客户端接入服务集群和消息处理集群，定时拉取DNS服务中的新增的注册中心集群IP,将客户端接入服务集群和消息处理集群信息注册到新上线的注册中心的服务。&lt;/li>
+&lt;li>客户端通过去注册中心通过某种策略获取到客户端接入服务的IP地址，连接服务。&lt;/li>
+&lt;/ul>
+&lt;h3 id="3-coredns组件">3. CoreDNS组件&lt;/h3>
+&lt;p>CoreDNS组件引入搭建内部换件的DNS服务，主要提供服务发现。使得客户端接入服务集群和消息处理集群的服务只需要配置注册中心集群的域名地址，就能动态感知注册中心新上线的服务的IP地址，然后将两个集群的服务数据同步到新上线的注册中心。&lt;/p>
+&lt;h3 id="4-注册中心高可用保障">4. 注册中心高可用保障&lt;/h3>
+&lt;p>注册中心的高可用注意项，以集群节点数为N（N&amp;gt;=1）：&lt;/p>
+&lt;ul>
+&lt;li>对于一个注册中心集群包含N个节点允许最大N-1个服务发生故障&lt;/li>
+&lt;li>当注册中心全部的N个节点都发生故障，会影响发生故障后的新的要接入的客户端，之前接入的不影响。客户端会保存上一次客户端接入服务的IP,在注册中心全部不可用的情况下使用原有的本地缓存&lt;/li>
+&lt;li>只要存在一个节点可以用,整个注册中心都可用。同时注册中心集群都不可用也不会影响已经接入的过的服务。&lt;/li>
+&lt;/ul>
+&lt;p>注册中心集群服务之间是没有任何通讯的。那么整个注册中心的高可用如何保障？&lt;/p>
+&lt;p>注册中心集群中的每一个节点都包含了所有的客户端接入服务和消息处理集群的元数据，同时也包含了客户端接入服务的客户端的信息，以及消息处理服务接入的客户端接入服务的信息。只要有一台注册中心能够使用就能够提供接入服务。&lt;/p>
+&lt;h3 id="5-注册中心的功能">5. 注册中心的功能&lt;/h3>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/IM/register/%E6%B3%A8%E5%86%8C%E4%B8%AD%E5%BF%83%E5%8A%9F%E8%83%BD.png" alt="注册中心功能">&lt;/p>
+&lt;p>主要的功能：&lt;/p>
+&lt;ul>
+&lt;li>服务注册与发现(DNS)&lt;/li>
+&lt;li>为客户端选择客户端接入服务&lt;/li>
+&lt;li>提供监控的底层数据&lt;/li>
+&lt;li>注册中心启动自动注册IP到CoreDNS&lt;/li>
+&lt;/ul></description></item></channel></rss>

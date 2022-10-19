@@ -1,0 +1,182 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – IM-即时通讯</title><link>/docs/im/</link><description>Recent content in IM-即时通讯 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/docs/im/index.xml" rel="self" type="application/rss+xml"/><item><title>Docs: IM架构</title><link>/docs/im/architecture/</link><pubDate>Sun, 07 Nov 2021 00:00:00 +0000</pubDate><guid>/docs/im/architecture/</guid><description>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/IM/IM%E6%8A%80%E6%9C%AF%E6%9E%B6%E6%9E%84%E5%9B%BE.png" alt="IM技术架构图">&lt;/p></description></item><item><title>Docs: CoreDNS搭建内网DNS服务</title><link>/docs/im/coredns-1/</link><pubDate>Thu, 17 Feb 2022 00:00:00 +0000</pubDate><guid>/docs/im/coredns-1/</guid><description>
+&lt;h3 id="1-背景">1. 背景&lt;/h3>
+&lt;p>因为自己有在开发一个聊天的服务，注册中心设计参考了RocketMQ的NameServer。注册中心都是单独部署，注册中心和注册中心之间没有数据交互。注册中心只有和接入服务和消息服务有交互。也就是每个注册中心都链接所有的接入服务和消息服务。通过心跳协议维持连接：&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CDesktop%5Cpic%5CIM%E6%8A%80%E6%9C%AF%E6%9E%B6%E6%9E%84%E5%9B%BE.png" alt="IM技术架构图">&lt;/p>
+&lt;p>但是这样存在一个问题，例如我新增一个注册中心，在不停机的情况下只有在注册中心新增后新增的接入服务和消息处理服务才可能将信息同步到注册中心，前面的接入服务和消息处理服务就注册中心的IP是写死在配置文件没有做动态加载(动态加载也会很麻烦需要修改每台机器部署的服务的注册中心IP地址)。然后就想到DNS，DNS拥有域名和IP对应关系，只需要确定好注册中心的域名，然后获取到DNS中域名对应的IP地址就可以实现动态的将接入服务和消息处理服务动态的同步到新增的注册中心：&lt;/p>
+&lt;p>&lt;img src="E:%5Cdownload%5CIM%E7%BD%91%E7%BB%9C%E5%9B%BE.png" alt="IM网络图">&lt;/p>
+&lt;p>由于我这个是一个内网的域名服务，所以DNS服务需要自己搭建，在研究Nacos的时候发现了一个CoreDNS的域名服务。然后通过研究发现CoreDNS可以作为一个内网自建的域名服务，同时在K8s有应用。&lt;/p>
+&lt;h3 id="2-coredns安装">2. CoreDNS安装&lt;/h3>
+&lt;p>安装有两种方式：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>直接下载编译好的压缩包&lt;/strong>&lt;/p>
+&lt;blockquote>
+&lt;p>下载地址：https://github.com/coredns/coredns/releases&lt;/p>
+&lt;/blockquote>
+&lt;p>这种方式就是不关心自定义插件的开发，只是想搭建一个环境比较适合&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>源码编译&lt;/strong>&lt;/p>
+&lt;p>通过源码编译安装，下面来讲这种方式&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="21-本地源码编译">2.1 本地源码编译&lt;/h4>
+&lt;p>CoreDNS用Go编写，所以在编译之前确保已经安装了GO的开发环境&lt;/p>
+&lt;blockquote>
+&lt;p>GO的版本需要大于1.17&lt;/p>
+&lt;/blockquote>
+&lt;p>从Github上面Check out下来项目，然后使用 &lt;strong>&lt;code>make&lt;/code>&lt;/strong> 编译项目：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ git clone https://github.com/coredns/coredns
+$ &lt;span style="color:#204a87">cd&lt;/span> coredns
+$ make
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="22-docker编译">2.2 Docker编译&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ docker run --rm -i -t -v &lt;span style="color:#000">$PWD&lt;/span>:/v -w /v golang:1.17 make
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>golang的Docker镜像版本可以选择&lt;/p>
+&lt;h3 id="3-配置例子">3. 配置例子&lt;/h3>
+&lt;h4 id="31-官方版hello-word配置">3.1 官方版Hello Word配置&lt;/h4>
+&lt;p>根据官网的直接启动&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ ./coredns
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220216233915743.png" alt="image-20220216233915743">&lt;/p>
+&lt;p>查询CoreDNS 服务：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">dig @127.0.0.1 -p &lt;span style="color:#0000cf;font-weight:bold">53&lt;/span> www.example.com
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220216234138713.png" alt="image-20220216234138713">&lt;/p>
+&lt;p>解析成功。&lt;/p>
+&lt;h4 id="32-自定义域名解析">3.2 自定义域名解析&lt;/h4>
+&lt;p>配置文件放在和 &lt;strong>&lt;code>coredns&lt;/code>&lt;/strong> 命令相同的 &lt;strong>&lt;code>Corefile&lt;/code>&lt;/strong> 文件中&lt;/p>
+&lt;p>语法：&lt;/p>
+&lt;pre>&lt;code># define a snippet
+(snip) {
+prometheus
+log
+errors
+}
+. {
+whoami
+import snip
+}
+&lt;/code>&lt;/pre>&lt;p>自定义配置：&lt;/p>
+&lt;pre>&lt;code>. {
+forward . 8.8.8.8
+}
+mxsm.local {
+file mxsm.local {
+reload 30s
+}
+}
+&lt;/code>&lt;/pre>&lt;p>配置一个mxsm.local文件：&lt;/p>
+&lt;pre>&lt;code>@ IN SOA mxsm.local. devops.mxsm.local. (
+20200202 ; SERIAL
+7200 ; REFRESH
+600 ; RETRY
+3600000 ; EXPIRE
+60) ; MINIMUM
+@ IN NS dns1.mxsm.local.
+mxsm.local. IN A 192.168.43.128
+redis.mxsm.local. IN A 192.168.43.128
+mysql.mxsm.local. IN A 192.168.43.128
+elasticsearch.mxsm.local. IN A 192.168.43.128
+ftp IN A 192.168.43.128
+&lt;/code>&lt;/pre>&lt;p>重新运行coredns服务，验证：&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220216235311444.png" alt="image-20220216235311444">&lt;/p>
+&lt;p>外网解析验证&lt;/p>
+&lt;p>&lt;img src="C:%5CUsers%5Cmxsm%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20220216235339131.png" alt="image-20220216235339131">&lt;/p>
+&lt;p>到这里就搭建完成了&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢！&lt;/p>
+&lt;/blockquote>
+&lt;p>参考文档：&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://coredns.io/">https://coredns.io/&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Docs: CoreDNS+ETCD实现DNS服务发现</title><link>/docs/im/coredns-2/</link><pubDate>Thu, 17 Feb 2022 00:00:00 +0000</pubDate><guid>/docs/im/coredns-2/</guid><description>
+&lt;h3 id="1-引言">1. 引言&lt;/h3>
+&lt;p>在前面的文章中讲了如何搭建一个内网的DNS服务，但是这里有个问题，mxsm-register.local表示局域网的注册中心域名，如果需要将每台部署了注册中心的IP地址写到CoreDNS的配置文件中。这样就需要我每次都去修改 &lt;strong>&lt;code>Corefile&lt;/code>&lt;/strong> 配置文件。那有没有一种方式我服务启动然后自动将注册中心所在机器的IP与mxsm-register.local进行绑定，注册中心下线对应的IP也从DNS服务器删除。下面就来讲一下如何利用CoreDNS+etcd来实现这个功能。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 由于本人编码只会Java（Go计划学习中），后续涉及的代码都是Java来讲解&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="2-coredns-etcd-插件">2. CoreDNS etcd 插件&lt;/h3>
+&lt;p>&lt;strong>CoreDNS&lt;/strong> 是一个高度灵活插件化的一个组件，其本身提供了很多插件官方的插件，同时也允许开发者进行插件的拓展。要实现上述的功能这里依赖了一个叫做 &lt;strong>etcd插件&lt;/strong> ，这个插件有如下功能：实现了SkyDNS服务发现，它不适合作为一个通用的DNS区域数据插件。只实现了DNS记录类型的一个子集。&lt;/p>
+&lt;p>配置语法：&lt;/p>
+&lt;pre>&lt;code class="language-properties" data-lang="properties">etcd [ZONES...] {
+fallthrough [ZONES...]
+path PATH
+endpoint ENDPOINT...
+credentials USERNAME PASSWORD
+tls CERT KEY CACERT
+}
+&lt;/code>&lt;/pre>&lt;ul>
+&lt;li>fallthrough: 如果区域匹配但没有记录可以生成，将请求传递给下一个插件&lt;/li>
+&lt;li>path: etcd中的路径，默认值/skydns&lt;/li>
+&lt;li>endpoint: etcd endpoint&lt;/li>
+&lt;li>credentials: etcd的用户名和密码&lt;/li>
+&lt;li>tls： CA&lt;/li>
+&lt;/ul>
+&lt;h3 id="3-如何搭建">3. 如何搭建&lt;/h3>
+&lt;h4 id="31-环境准备">3.1 环境准备&lt;/h4>
+&lt;ol>
+&lt;li>CoreDNS搭建&lt;/li>
+&lt;li>etcd环境搭建&lt;/li>
+&lt;/ol>
+&lt;p>这两个是前置条件。&lt;/p>
+&lt;h4 id="32-配置文件">3.2 配置文件&lt;/h4>
+&lt;p>这里使用之前的《&lt;a href="https://juejin.cn/post/7065337264036904990">CoreDNS搭建内网DNS服务&lt;/a>》 里面的配置进行修改，&lt;strong>&lt;code>Corefile&lt;/code>&lt;/strong> 文件：&lt;/p>
+&lt;pre>&lt;code>. {
+forward . 8.8.8.8
+}
+mxsm.local {
+file mxsm.local {
+reload 30s
+}
+}
+etcd-mxsm.local:53 {
+etcd {
+path /mxsm
+endpoint http://172.22.50.98:2379 --- 这里根据自己的etcd部署进行填写
+}
+}
+&lt;/code>&lt;/pre>&lt;p>启动CoreDNS进行验证&lt;/p>
+&lt;h4 id="33-etcd-key值说明">3.3 etcd key值说明&lt;/h4>
+&lt;p>etcd插件利用目录结构查询相关条目，已上面的 &lt;code>etcd-mxsm.local&lt;/code> 为例，配置的etcd的path为 &lt;strong>&lt;code>/mxsm&lt;/code>&lt;/strong> , 上面的条目就是如下：&lt;code>/mxsm/local/etcd-mxsm/&lt;/code> 、&lt;code>/mxsm/local/etcd-mxsm/x&lt;/code> 、 &lt;code>/mxsm/local/etcd-mxsm/b&lt;/code> 等等。这种情况下就是查询 &lt;code>etcd-mxsm.local&lt;/code> 。&lt;/p>
+&lt;h4 id="34-验证">3.4 验证&lt;/h4>
+&lt;p>利用 &lt;code>etcdctl&lt;/code> 命令put：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$./etcdctl put /mxsm/local/etcd-mxsm/ &lt;span style="color:#4e9a06">&amp;#39;{&amp;#34;host&amp;#34;:&amp;#34;172.22.50.28&amp;#34;,&amp;#34;ttl&amp;#34;:60}&amp;#39;&lt;/span>
+$./etcdctl put /mxsm/local/etcd-mxsm/1 &lt;span style="color:#4e9a06">&amp;#39;{&amp;#34;host&amp;#34;:&amp;#34;172.22.50.128&amp;#34;,&amp;#34;ttl&amp;#34;:60}&amp;#39;&lt;/span>
+$./etcdctl put /mxsm/local/etcd-mxsm/2 &lt;span style="color:#4e9a06">&amp;#39;{&amp;#34;host&amp;#34;:&amp;#34;172.22.50.228&amp;#34;,&amp;#34;ttl&amp;#34;:60}&amp;#39;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>然后用 &lt;strong>&lt;code>dig&lt;/code>&lt;/strong> 进行验证：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">$ dig @127.0.0.1 a etcd-mxsm.local
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/concurrencemultithreading/corednsetcd.gif" alt="corednsetcd">&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/concurrencemultithreading/image-20220217225950015.png" alt="image-20220217225950015">&lt;/p>
+&lt;h3 id="4-如何将项目集成">4. 如何将项目集成&lt;/h3>
+&lt;p>项目集成就是替换上面手动操作 &lt;strong>&lt;code>etcdctl&lt;/code>&lt;/strong> 命令。增加maven依赖：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml">&lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>io.etcd&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>jetcd-core&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>0.6.1&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependency&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>代码：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">Etcd&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">main&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">Exception&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#8f5902;font-style:italic">// create client using endpoints
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#000">Client&lt;/span> &lt;span style="color:#000">client&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">Client&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">builder&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">endpoints&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;xxxx地址自己的填写&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">build&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">KV&lt;/span> &lt;span style="color:#000">kvClient&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">client&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getKVClient&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">ByteSequence&lt;/span> &lt;span style="color:#000">key&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">ByteSequence&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">from&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;/mxsm/local/etcd-mxsm/&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#000">ByteSequence&lt;/span> &lt;span style="color:#000">value&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">ByteSequence&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">from&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;{\&amp;#34;host\&amp;#34;:\&amp;#34;172.22.50.98\&amp;#34;,\&amp;#34;ttl\&amp;#34;:60}&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getBytes&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#000">PutResponse&lt;/span> &lt;span style="color:#000">putResponse&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">kvClient&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">put&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">key&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">value&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">get&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">putResponse&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">toString&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;span style="color:#000">TimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">SECONDS&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">sleep&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">20&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#000">DeleteResponse&lt;/span> &lt;span style="color:#000">deleteResponse&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">kvClient&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">delete&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">key&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">DeleteOption&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">newBuilder&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">isPrefix&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">build&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()).&lt;/span>&lt;span style="color:#c4a000">get&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#000">System&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">out&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">println&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">deleteResponse&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>下面看一下代码的演示：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/concurrencemultithreading/corednsetcd1.gif" alt="corednsetcd1">&lt;/p>
+&lt;p>可以看到结果和预期的一样&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢！&lt;/p>
+&lt;/blockquote>
+&lt;p>参考文档：&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://github.com/etcd-io/jetcd">https://github.com/etcd-io/jetcd&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://etcd.io/">https://etcd.io/&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://coredns.io/plugins/etcd/">https://coredns.io/plugins/etcd/&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Docs: 分布式ID生成器</title><link>/docs/im/distributedidgenerator/</link><pubDate>Fri, 01 Apr 2022 00:00:00 +0000</pubDate><guid>/docs/im/distributedidgenerator/</guid><description/></item></channel></rss>

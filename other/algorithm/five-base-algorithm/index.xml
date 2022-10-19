@@ -1,0 +1,56 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – 五大基本算法</title><link>/other/algorithm/five-base-algorithm/</link><description>Recent content in 五大基本算法 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/algorithm/five-base-algorithm/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: 五大基本算法之动态规划</title><link>/other/algorithm/five-base-algorithm/dp/</link><pubDate>Mon, 20 Sep 2021 00:00:00 +0000</pubDate><guid>/other/algorithm/five-base-algorithm/dp/</guid><description>
+&lt;h3 id="1-动态规划是什么">1. 动态规划是什么？&lt;/h3>
+&lt;p>动态规划（Dynamic Programming，DP）是&lt;a href="https://baike.sogou.com/lemma/ShowInnerLink.htm?lemmaId=168782&amp;amp;ss_c=ssc.citiao.link">运筹学&lt;/a>的一个分支，是求解决策过程最优化的过程。&lt;/p>
+&lt;p>20世纪50年代初，美国数学家贝尔曼（R.Bellman）等人在研究多阶段决策过程的优化问题时，提出了著名的&lt;a href="https://baike.sogou.com/lemma/ShowInnerLink.htm?lemmaId=420583&amp;amp;ss_c=ssc.citiao.link">最优化原理&lt;/a>，从而创立了动态规划。动态规划的应用极其广泛，包括工程技术、经济、工业生产、军事以及自动化控制等领域，并在&lt;a href="https://baike.sogou.com/lemma/ShowInnerLink.htm?lemmaId=7898479&amp;amp;ss_c=ssc.citiao.link">背包问题&lt;/a>、生产经营问题、资金管理问题、资源分配问题、&lt;a href="https://baike.sogou.com/lemma/ShowInnerLink.htm?lemmaId=1951740&amp;amp;ss_c=ssc.citiao.link">最短路径问题&lt;/a>和复杂系统可靠性问题等中取得了显著的效果。&lt;/p>
+&lt;p>把多阶段过程转化为一系列单阶段问题，利用各阶段之间的关系，逐个求解，创立了解决这类过程优化问题的新方法——动态规划&lt;/p>
+&lt;blockquote>
+&lt;ol>
+&lt;li>动态规划是运筹学一个分支&lt;/li>
+&lt;li>将复杂问题简单化(化繁为简)&lt;/li>
+&lt;li>适应于多阶段最优化策略问题解决&lt;/li>
+&lt;/ol>
+&lt;/blockquote>
+&lt;p>动态规划过程是：每次决策依赖于当前状态，又随即引起状态的转移。一个决策序列就是在变化的状态中产生出来的，所以，这种多阶段最优化决策解决问题的过程就称为动态规划。&lt;/p>
+&lt;h3 id="2-动态规划与递归">2. 动态规划与递归&lt;/h3>
+&lt;p>动态规划是自底向上，递归树是自顶向下。为什么动态规划一般都脱离了递归，而是由循环迭代完成计算。&lt;/p>
+&lt;h4 id="21-什么叫自顶向下">2.1 什么叫自顶向下？&lt;/h4>
+&lt;p>用斐波那契数列来举例子，如果用递归来求解代码如下：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java"> &lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">fibonacci&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">n&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">n&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#000">1&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">||&lt;/span> &lt;span style="color:#000">n&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#000">2&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#8f5902;font-style:italic">//递归停止条件
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">fibonacci&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">n&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">fibonacci&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">n&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span>&lt;span style="color:#000">2&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>递归这样的形式就是自顶向下。例如你输入n=8那么先算7和6，一直递归下去到n=1和n=2的情况。&lt;/p>
+&lt;h4 id="22-什么叫自底向上">2.2 什么叫自底向上？&lt;/h4>
+&lt;p>反过来，我们直接从最底下，最简单，问题规模最小的 f(1) 和 f(2) 开始往上推，直到推到我们想要的答案 f(20)，这就是动态规划的思路，这也是为什么动态规划一般都脱离了递归，而是由循环迭代完成计算。&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java"> &lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">fibonacci&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">n&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">if&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">n&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#000">1&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">||&lt;/span> &lt;span style="color:#000">n&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">==&lt;/span> &lt;span style="color:#000">2&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">int&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">dp&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#000">n&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">];&lt;/span>
+&lt;span style="color:#000">dp&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">dp&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#000">2&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">3&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;=&lt;/span> &lt;span style="color:#000">n&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">++&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">){&lt;/span>
+&lt;span style="color:#000">dp&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">dp&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">]&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">+&lt;/span> &lt;span style="color:#000">dp&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">-&lt;/span>&lt;span style="color:#000">2&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">];&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#000">dp&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[&lt;/span>&lt;span style="color:#000">n&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">];&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="3-力扣例子解析">3. 力扣例子解析&lt;/h3>
+&lt;h4 id="31-最小路径和-力扣64">3.1 最小路径和-力扣64&lt;/h4>
+&lt;p>&lt;a href="https://leetcode-cn.com/problems/minimum-path-sum/">最小路径和-力扣64&lt;/a>&lt;/p>
+&lt;p>状态方程如下：
+$$
+dp(i,j) = min(dp[i-1][j],dp[i,j-1])+grid[i][j]
+$$
+左上角到右下角的路径说明只能从上往下走或者从左往右走，
+$$
+dp[i-1][j]表示从左往右走
+$$&lt;/p>
+&lt;p>$$
+dp[i][j-1]表示从上往下走
+$$&lt;/p>
+&lt;p>参考文献:&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://www.cxyxiaowu.com/8536.html">https://www.cxyxiaowu.com/8536.html&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://houbb.github.io/2020/01/23/data-struct-learn-07-base-dp#dynamic-programming">https://houbb.github.io/2020/01/23/data-struct-learn-07-base-dp#dynamic-programming&lt;/a>&lt;/li>
+&lt;/ul></description></item></channel></rss>

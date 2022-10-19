@@ -1,0 +1,211 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Java测试</title><link>/blog/java-test/</link><description>Recent content in Java测试 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/blog/java-test/index.xml" rel="self" type="application/rss+xml"/><item><title>Blog: Java微基准测试工具-JMH</title><link>/blog/java-test/jmh/</link><pubDate>Sun, 19 Dec 2021 00:00:00 +0000</pubDate><guid>/blog/java-test/jmh/</guid><description>
+&lt;h3 id="1-jmh介绍">1. JMH介绍&lt;/h3>
+&lt;p>&lt;strong>JMH&lt;/strong> 的全名是 Java Microbenchmark Harness，它是由 &lt;strong>Java 虚拟机团队&lt;/strong>开发的一款用于 Java &lt;strong>微基准测试工具&lt;/strong>。说白了就是一个测试工具。用来测试接口的性能&lt;/p>
+&lt;blockquote>
+&lt;p>PS: 我第一次关注到这个是在spring-framework框架中有用到&lt;/p>
+&lt;/blockquote>
+&lt;p>Github地址：https://github.com/openjdk/jmh&lt;/p>
+&lt;p>&lt;strong>Java的基准测试需要注意的几点&lt;/strong>：&lt;/p>
+&lt;ul>
+&lt;li>测试预热&lt;/li>
+&lt;li>防止无效代码&lt;/li>
+&lt;li>并发测试&lt;/li>
+&lt;li>测试结果呈现&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>使用JMH的典型场景：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>方法优化前后的对比，可以用JMH优化前后的结果进行定量分析&lt;/li>
+&lt;li>接口方法的不同实现的性能对比(序列化/反序列化的时间：fastjson和Jackson)&lt;/li>
+&lt;li>函数执行的时间和输入的值之间的关系(例如：HashMap设置初始值还是不设置初始值)&lt;/li>
+&lt;/ul>
+&lt;h3 id="2-jmh概念">2. JMH概念&lt;/h3>
+&lt;ul>
+&lt;li>&lt;strong>Iteration - iteration 是 JMH 进行测试的最小单位，测量迭代次数。&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>Warmup-预热，在实际进行 benchmark 前先进行预热。因为某个函数被调用多次之后，JIT 会对其进行编译，通过预热可以使测量结果更加接近真实情况&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;h3 id="3-快速开始">3. 快速开始&lt;/h3>
+&lt;p>引入Maven依赖&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml"> &lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependencies&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>org.openjdk.jmh&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>jmh-core&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>${project.version}&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>org.openjdk.jmh&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>jmh-generator-annprocess&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>${project.version}&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;scope&amp;gt;&lt;/span>provided&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/scope&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependencies&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>增加打包工具：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml"> &lt;span style="color:#204a87;font-weight:bold">&amp;lt;build&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;plugins&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;plugin&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>org.apache.maven.plugins&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>maven-shade-plugin&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>3.2.1&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;executions&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;execution&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;phase&amp;gt;&lt;/span>package&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/phase&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;goals&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;goal&amp;gt;&lt;/span>shade&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/goal&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/goals&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;configuration&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;transformers&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;transformer&lt;/span> &lt;span style="color:#c4a000">implementation=&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;org.apache.maven.plugins.shade.resource.ManifestResourceTransformer&amp;#34;&lt;/span>&lt;span style="color:#204a87;font-weight:bold">&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;mainClass&amp;gt;&lt;/span> 这里填写Main类 &lt;span style="color:#204a87;font-weight:bold">&amp;lt;/mainClass&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/transformer&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/transformers&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/configuration&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/execution&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/executions&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/plugin&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/plugins&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/build&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>测试代码：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#5c35cc;font-weight:bold">@BenchmarkMode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Mode&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">AverageTime&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Warmup&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">iterations&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">3&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">time&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Measurement&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">iterations&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">5&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">time&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">5&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Threads&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">4&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Fork&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@State&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">value&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">Scope&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">Benchmark&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@OutputTimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">TimeUnit&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">MILLISECONDS&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">class&lt;/span> &lt;span style="color:#000">MapTest&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Param&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">value&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;1022&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;5121&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;10241&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">})&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">private&lt;/span> &lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">length&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Benchmark&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">mapWithSize&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Blackhole&lt;/span> &lt;span style="color:#000">blackhole&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Map&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">Integer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>&lt;span style="color:#000">Integer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">map&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">HashMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&amp;gt;(&lt;/span>&lt;span style="color:#000">length&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span> &lt;span style="color:#000">length&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">++)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">map&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">put&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000">blackhole&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">consume&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">map&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Benchmark&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">mapWithoutSize&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">Blackhole&lt;/span> &lt;span style="color:#000">blackhole&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Map&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">Integer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>&lt;span style="color:#000">Integer&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#000">map&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">HashMap&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&amp;gt;();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">for&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">int&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#000">0&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#000">i&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span> &lt;span style="color:#000">length&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span> &lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">++)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">map&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">put&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">i&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#000">blackhole&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">consume&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">map&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">static&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">main&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">[]&lt;/span> &lt;span style="color:#000">args&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">RunnerException&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">Options&lt;/span> &lt;span style="color:#000">opt&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">OptionsBuilder&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">include&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">MapTest&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">getSimpleName&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">())&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">result&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#4e9a06">&amp;#34;result.json&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">resultFormat&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ResultFormatType&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#c4a000">JSON&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">build&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">new&lt;/span> &lt;span style="color:#000">Runner&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">opt&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">run&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>执行Maven命令：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">mvn clear package
+jar -jar target&lt;span style="color:#4e9a06">\x&lt;/span>xxx.jar
+&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="4-注解介绍">4. 注解介绍&lt;/h3>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/test/JMH%E6%B3%A8%E8%A7%A3.png" alt="">&lt;/p>
+&lt;h4 id="41-benchmarkmode">4.1 @BenchmarkMode&lt;/h4>
+&lt;p>基准测试类型，可以有几种选择：&lt;/p>
+&lt;ul>
+&lt;li>Throughput: 整体吞吐量&lt;/li>
+&lt;li>AverageTime: 调用的平均时间&lt;/li>
+&lt;li>SampleTime: 随机取样，最后输出取样结果的分布&lt;/li>
+&lt;li>SingleShotTime: 以上模式都是默认一次 iteration 是 1s，唯有 SingleShotTime 是只运行一次。往往同时把 warmup 次数设为0，用于测试冷启动时的性能。&lt;/li>
+&lt;li>All 上面的所有情况&lt;/li>
+&lt;/ul>
+&lt;h4 id="42-warmup">4.2 Warmup&lt;/h4>
+&lt;p>进行基准测试前需要进行预热。为什么需要预热？因为JVM的JIT机制存在如果某个函数被调用多次之后，JVM 会尝试将其编译成为机器码从而提高执行速度。&lt;/p>
+&lt;ul>
+&lt;li>iterations：迭代次数&lt;/li>
+&lt;li>time：每一次时间&lt;/li>
+&lt;li>timeUnit： 时间单位&lt;/li>
+&lt;li>batchSize：每个操作调用基准测试方法的数量&lt;/li>
+&lt;/ul>
+&lt;h4 id="43-measurement">4.3 @Measurement&lt;/h4>
+&lt;p>测量的一些基本参数：&lt;/p>
+&lt;ul>
+&lt;li>iterations：进行测试的轮次&lt;/li>
+&lt;li>time： 每轮进行的时长&lt;/li>
+&lt;li>timeUnit： 时长单位&lt;/li>
+&lt;/ul>
+&lt;h4 id="44-threads">4.4 @Threads&lt;/h4>
+&lt;p>每个进程中的测试线程，一般为cpu核数*2&lt;/p>
+&lt;h4 id="45-fork">4.5 @Fork&lt;/h4>
+&lt;p>进行 fork 的次数。如果 fork 数是2的话，则 JMH 会 fork 出两个进程来进行测试&lt;/p>
+&lt;h4 id="46-outputtimeunit">4.6 @OutputTimeUnit&lt;/h4>
+&lt;p>基准测试结果的时间类型。一般选择秒、毫秒、微秒&lt;/p>
+&lt;h4 id="47-benchmark">4.7 @Benchmark&lt;/h4>
+&lt;p>表示该方法是需要进行 benchmark 的对象，用法和 JUnit 的 @Test 类似&lt;/p>
+&lt;h4 id="48-param">4.8 @Param&lt;/h4>
+&lt;p>@Param 可以用来指定某项参数的多种情况。特别适合用来测试一个函数在不同的参数输入的情况下的性能，例如上面代码设置Map的初始化大小&lt;/p>
+&lt;h4 id="49-setup">4.9 @Setup&lt;/h4>
+&lt;p>注解的作用就是我们需要在测试之前进行一些准备工作，比如对一些数据的初始化之类的，这个也和Junit的@Before&lt;/p>
+&lt;h4 id="410-teardown">4.10 @TearDown&lt;/h4>
+&lt;p>在测试之后进行一些结束工作，主要用于资源回收&lt;/p>
+&lt;h4 id="411state">4.11@State&lt;/h4>
+&lt;p>State 用于声明某个类是一个”状态”，然后接受一个 Scope 参数用来表示该状态的共享范围。 因为很多 benchmark 会需要一些表示状态的类，JMH 允许你把这些类以依赖注入的方式注入到 benchmark 函数里。Scope 主要分为三种。&lt;/p>
+&lt;ol>
+&lt;li>Thread: 该状态为每个线程独享。&lt;/li>
+&lt;li>Group: 该状态为同一个组里面所有线程共享。&lt;/li>
+&lt;li>Benchmark: 该状态在所有线程间共享。&lt;/li>
+&lt;/ol>
+&lt;blockquote>
+&lt;p>Tips: 例子可以参照官网：https://github.com/openjdk/jmh/tree/master/jmh-samples&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="5-jmh可视化">5. JMH可视化&lt;/h3>
+&lt;p>JMH生成数据后可以存放在文件中，然后可以通过网上提供的可视化网站上传测试数据进行可视化。&lt;/p></description></item><item><title>Blog: Awaitilityr同步异步工具介绍与实战</title><link>/blog/java-test/awaitility/</link><pubDate>Wed, 24 Aug 2022 00:00:00 +0000</pubDate><guid>/blog/java-test/awaitility/</guid><description>
+&lt;p>在编写测试用例的时候遇到有异步或者队列处理的时候经常会用到 &lt;strong>&lt;code>Thread.sleep()&lt;/code>&lt;/strong> 等待来进行测试。例如：&lt;a href="https://github.com/openmessaging/dledger">DLedger&lt;/a> 测试选举的过程。当DLedger Leader下线。此时DLedger会重新发起选举，这个选举的过程是需要一定时间。很多时候在测试代码中就会使用 &lt;strong>&lt;code>Thread.sleep&lt;/code>&lt;/strong> 。 由于选举需要的时间多少不确定所以sleep时间就会设置为开发者经验的最大值。这样会造成测试代码会变得很慢。 当然开发者可以通过自己轮询来实现减少时间的消耗。&lt;/p>
+&lt;p>下面介绍一个处理这个一类问题的工具：&lt;a href="https://github.com/awaitility/awaitility">&lt;strong>awaitility&lt;/strong>&lt;/a>&lt;/p>
+&lt;h3 id="1-awaitility入门">1. awaitility入门&lt;/h3>
+&lt;p>Maven：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-xml" data-lang="xml">&lt;span style="color:#204a87;font-weight:bold">&amp;lt;dependency&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;groupId&amp;gt;&lt;/span>org.awaitility&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/groupId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;artifactId&amp;gt;&lt;/span>awaitility&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/artifactId&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;version&amp;gt;&lt;/span>xxxx&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/version&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;scope&amp;gt;&lt;/span>test&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/scope&amp;gt;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">&amp;lt;/dependency&amp;gt;&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>文章编写的时候版本为：&lt;strong>4.2.0&lt;/strong>&lt;/p>
+&lt;h4 id="11-静态导入">1.1 静态导入&lt;/h4>
+&lt;p>为了有效地使用Awaitility，建议从Awaitility框架中静态地导入以下方法：&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>org.awaitility.Awaitility.*&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>在使用的时候需要搭配Java的时间相关的类以及Junit相关类：&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>java.time.Duration.*&lt;/code>&lt;/li>
+&lt;li>&lt;code>java.util.concurrent.TimeUnit.*&lt;/code>&lt;/li>
+&lt;li>&lt;code>org.junit.Assert.*&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;h4 id="11-简单例子">1.1 简单例子&lt;/h4>
+&lt;p>&lt;strong>例子1：&lt;/strong>&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#000">await&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">until&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">newUserIsAdded&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>等待直到执行newUserIsAdded()返回true. 这个是没有返回值的。&lt;/p>
+&lt;p>&lt;strong>例子2：&lt;/strong>&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#000">await&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">atMost&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">5&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">SECONDS&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">).&lt;/span>&lt;span style="color:#c4a000">until&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">newUserWasAdded&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">());&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>最多等待5秒，等待直到执行newUserIsAdded()返回true. 这个是没有返回值的。&lt;/p>
+&lt;p>&lt;strong>例子3：&lt;/strong>&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#000">await&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">().&lt;/span>&lt;span style="color:#c4a000">until&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span> &lt;span style="color:#000">userRepositorySize&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(),&lt;/span> &lt;span style="color:#000">equalTo&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">1&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>等待直到执行userRepositorySize()返回方法对应的值. 这个是有返回值&lt;/p>
+&lt;p>更多的例子可以&lt;a href="https://github.com/awaitility/awaitility/wiki/Usage">&lt;strong>参照官网&lt;/strong>&lt;/a> 使用例子&lt;/p>
+&lt;h3 id="2-awaitility在rocketmq中的实战">2. awaitility在RocketMQ中的实战&lt;/h3>
+&lt;p>在RocketMQ的test cases 中有一些使用了 Thread.sleep，接下来我们看看如何使用awaitility进行优化，减少测试用例的执行时间。以ControllerManagerTest测试用例为例子来解决，在代码中可以看到有这样的代码：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/test/image-20220824233729934.png" alt="image-20220824233729934">&lt;/p>
+&lt;p>上图框出来的代码主要的作用是什么呢？等待Broker的Master过期，但是过期的时间我们根据设置的心跳的过期时间来预估时间。所以这里填写的是6秒当然你也可以填写10秒或者更长。&lt;/p>
+&lt;p>&lt;strong>解决之前的执行时间&lt;/strong>：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/test/QQ%E6%88%AA%E5%9B%BE20220824231856.jpg" alt="QQ截图20220824231856">&lt;/p>
+&lt;p>&lt;strong>使用awaitility对代码进行改造重构&lt;/strong>：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/test/image-20220824234043745.png" alt="image-20220824234043745">&lt;/p>
+&lt;p>重构后的代码，如上图的红线框出来部分。当然我这里还对其他的进行处理。&lt;/p>
+&lt;blockquote>
+&lt;p>有兴趣的可以关注一下RocketMQ的这个ISSUE:https://github.com/apache/rocketmq/issues/4873&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;strong>使用awaitility重构后的执行时间&lt;/strong>：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/java/test/QQ%E6%88%AA%E5%9B%BE20220824231713.jpg" alt="QQ截图20220824231713">&lt;/p>
+&lt;p>时间有明显的下降。相比之前的下降了5秒左右。&lt;/p>
+&lt;h3 id="3-总结">3. 总结&lt;/h3>
+&lt;ul>
+&lt;li>在测试过程中引入awaitility能够很大程度上方便测试，无需要每次都凭经验去预估时间。并且很多时候这个Thread.sleep的时间不是很好估算。减少了单元测试执行的时间。特别是像RocketMQ这样大型的项目单元测试很多。并且很多都是去测试分布式的，如果使用Thread.sleep会导致整个单元测试的时间很长。&lt;/li>
+&lt;li>无需自己去实现轮询来减少单元测试的时间。&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象(&lt;a href="https://github.com/mxsm">GitHub&lt;/a>，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢&lt;/p>
+&lt;/blockquote></description></item></channel></rss>

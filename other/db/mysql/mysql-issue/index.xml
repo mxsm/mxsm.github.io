@@ -1,0 +1,6 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – mysql使用过程中的问题</title><link>/other/db/mysql/mysql-issue/</link><description>Recent content in mysql使用过程中的问题 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/other/db/mysql/mysql-issue/index.xml" rel="self" type="application/rss+xml"/><item><title>Other: 虚拟机VMware的Linux系统挂起后 docker中的mysql容器无法访问</title><link>/other/db/mysql/mysql-issue/mysql-docker-cannot-conn/</link><pubDate>Sat, 28 Aug 2021 00:00:00 +0000</pubDate><guid>/other/db/mysql/mysql-issue/mysql-docker-cannot-conn/</guid><description>
+&lt;h3 id="1-问题描述">1. 问题描述&lt;/h3>
+&lt;p>vm虚拟机挂起再开启后，宿住机便无法访问虚拟机中的docker容器， 但是宿主机是可以ping通linux虚拟机的。 搞得每次都得重启虚拟机&lt;/p>
+&lt;h3 id="2-解决方式">2. 解决方式&lt;/h3>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-shell" data-lang="shell">vim /usr/lib/sysctl.d/00-system.conf
+&lt;/code>&lt;/pre>&lt;/div></description></item></channel></rss>

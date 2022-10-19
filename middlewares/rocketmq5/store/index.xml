@@ -1,0 +1,352 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – RocketMQ5.0 Store</title><link>/middlewares/rocketmq5/store/</link><description>Recent content in RocketMQ5.0 Store on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Mon, 29 Aug 2022 00:00:00 +0000</lastBuildDate><atom:link href="/middlewares/rocketmq5/store/index.xml" rel="self" type="application/rss+xml"/><item><title>Middlewares: RocketMQ5.0-CommitLog设计与源码解析</title><link>/middlewares/rocketmq5/store/commitlog/</link><pubDate>Sat, 10 Sep 2022 00:00:00 +0000</pubDate><guid>/middlewares/rocketmq5/store/commitlog/</guid><description>
+&lt;p>RocketMQ4.x设RocketMQ5.0在CommitLog的设计上面基本上没有太多调整，还是沿用了之前的设计。下面来对CommitLog的设计思想和源码进行分析。&lt;/p>
+&lt;h3 id="1-commitlog示意图">1. CommitLog示意图&lt;/h3>
+&lt;p>CommitLog是对RocketMQ的存储的抽象，示意图如下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/CommitLog%E7%A4%BA%E6%84%8F%E5%9B%BE.png" alt="CommitLog示意图">&lt;/p>
+&lt;p>&lt;strong>&lt;code>CommitLog&lt;/code>&lt;/strong> 主要由几部分组成：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>MappedFileQueue：&lt;/strong> 主要用来操作相关数据存储文件。将一系列的MappedFile抽象成一个队列。&lt;/li>
+&lt;li>&lt;strong>FlushManager：&lt;/strong> 数据落地磁盘的管理，主要分为两类：实时数据刷盘(FlushRealTimeService),以及异步刷盘(GroupCommitService)&lt;/li>
+&lt;li>&lt;strong>FlushDiskWatcher：&lt;/strong> 刷盘观察者，处理队列中的刷盘请求，对于规定时间内没有刷盘成功的进行处理。&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>Tips: 多目录存储参照&lt;a href="https://github.com/apache/rocketmq/wiki/RIP-7-Multiple-Directories-Storage-Support">RIP-7&lt;/a>&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;strong>&lt;code>CommitLog&lt;/code>&lt;/strong> 底层主要是通过FileChannel来实现。其中还有一些RocketMQ的自身优化，例如： TransientStorePool。&lt;/p>
+&lt;h3 id="2-mappedfilequeue">2. MappedFileQueue&lt;/h3>
+&lt;p>&lt;strong>&lt;code>MappedFileQueue&lt;/code>&lt;/strong> 是对数据存储文件的一个抽象，将多个数据文件抽象成为一个文件队列。通过这个文件队列对文件进行操作操作。同时保存一些 &lt;strong>&lt;code>CommitLog&lt;/code>&lt;/strong> 的属性。来看一下MappedFileQueue中的几个重要的属性：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>storePath：&lt;/strong> 数据文件存储的位置&lt;/li>
+&lt;li>&lt;strong>mappedFileSize：&lt;/strong> 单个数据文件的大小&lt;/li>
+&lt;li>&lt;strong>mappedFiles：&lt;/strong> 数据文件列表&lt;/li>
+&lt;li>&lt;strong>allocateMappedFileService：&lt;/strong> 分配文件服务&lt;/li>
+&lt;li>&lt;strong>&lt;code>flushedWhere&lt;/code>： 当前刷盘指针，表示该指针之前所有的数据全部持久化到了硬盘上面&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>&lt;code>committedWhere&lt;/code> ：当前数据提交指针，内存中byteBuffer当前的写指针，该值大于等于flushedWhere&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>Tips: 同步刷盘的过程中flushedWhere等于committedWhere&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;strong>&lt;code>MappedFileQueue&lt;/code>&lt;/strong> 同时提供了一些操作例如：&lt;/p>
+&lt;ul>
+&lt;li>刷新文件(更新flushedWhere) MappedFileQueue#flush&lt;/li>
+&lt;li>提交文件(更新committedWhere)MappedFileQueue#commit&lt;/li>
+&lt;li>以及一些文件的操作，获取最新文件和第一个文件等等。&lt;/li>
+&lt;/ul>
+&lt;h4 id="21-mappedfile">2.1 MappedFile&lt;/h4>
+&lt;p>&lt;strong>&lt;code>MappedFile&lt;/code>&lt;/strong> 是对文件的抽象，包含了对RocketMQ数据文件的整个操作。例如获取文件名称、文件大小、判断文件是否可用、是否已经满了等等的操作。&lt;/p>
+&lt;p>单个数据文件默认是 &lt;strong>1G&lt;/strong> 。然后按照顺序存储Producer发送的消息。数据格式如下图所示：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/RocketMQ%20%E6%B6%88%E6%81%AF%E6%95%B0%E6%8D%AE%E6%A0%BC%E5%BC%8F.png" alt="RocketMQ 消息数据格式">&lt;/p>
+&lt;p>数据文件就是由上图所示的一条条的数据组成。通过观察你可能会发现存储Topic的长度只占用了一个字节。这个也是在使用RocketMQ需要注意的一点就是：&lt;/p>
+&lt;p>&lt;strong>&lt;code>由于只用了一个字节保存Topic的长度所以Topic的最大长度是127字符,如果使用中文长度会更短。&lt;/code>&lt;/strong> 在RocketMQ5.0的版本中增加 &lt;strong>&lt;code>PutMessageHook&lt;/code>&lt;/strong> 会在Put Message之前去Check一些必要的数据和参数。例如Topic的长度就其中之一。具体可以参照 &lt;strong>&lt;code>HookUtils&lt;/code>&lt;/strong> 工具类。&lt;/p>
+&lt;h3 id="3-commitlog消息处理流程">3. CommitLog消息处理流程&lt;/h3>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/CommitLog%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png" alt="CommitLog工作流程">&lt;/p>
+&lt;h4 id="31-消息校验">3.1 消息校验&lt;/h4>
+&lt;p>生产者发送消息到 &lt;strong>&lt;code>Broker Master&lt;/code>&lt;/strong> 后，在存入 &lt;strong>&lt;code>CommitLog&lt;/code>&lt;/strong> 之前首先会经过一个 &lt;strong>&lt;code>PutMessageHook&lt;/code>&lt;/strong> 的处理接口类，这个有不同的实现，主要用于校验一些消息的数据如：Message Topic 大小、Message Body大小、以及MessageStore的一些状态等等。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 通过实现PutMessageHook可以做到更多校验以及一些其他的事情。&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="32-消息处理">3.2 消息处理&lt;/h4>
+&lt;p>&lt;strong>&lt;code>CommitLog#asyncPutMessage&lt;/code>&lt;/strong> 在CommitLog有两个分别用来处理单个消息和批量消息。下面以单个消息处理为例&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>消息的一些属性设置&lt;/strong>&lt;/p>
+&lt;p>消息体的CRC、设置消息生产者的IP地址是否为IPV6、设置存储Broker IP地址是否为IPV6&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>HA处理设置&lt;/strong>&lt;/p>
+&lt;p>根据服务的设置判断是否需要处理HA. RocketMQ5.0 HA有两种模式：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Controller Model模式：&lt;/strong> DLedger模式的进阶版本，对原有的DLedger模式进行优化&lt;/li>
+&lt;li>&lt;strong>SlaveActingMaster模式&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;p>这两个模式主要目的是根据返回ACK的Slave数量来判断消息是否同步到Slave成功&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>Append Message 到 MappedByteBuffer&lt;/strong>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>处理Append的Result&lt;/strong>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>根据Broker的配置进行刷盘&lt;/strong>&lt;/p>
+&lt;p>刷盘是根据在启动Broker的时候配置的刷盘模式进行不同的刷盘策略。&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>SYNC_FLUSH：&lt;/strong> GroupCommitService线程进行实时刷盘&lt;/li>
+&lt;li>&lt;strong>ASYNC_FLUSH：&lt;/strong> FlushRealTimeService线程进行异步刷盘&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>处理HA&lt;/strong>&lt;/p>
+&lt;p>HA的处理不是必须的，这个看RocketMQ是否配置了HA模式。只有配置了才需要进行处理。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="4-刷盘解析">4. 刷盘解析&lt;/h3>
+&lt;p>刷盘主要有两种模式：同步刷盘和异步刷盘。刷盘主要由 &lt;strong>&lt;code>FlushManager&lt;/code>&lt;/strong> 进行管理。刷盘接口关系：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/%E5%88%B7%E7%9B%98%E6%8E%A5%E5%8F%A3%E5%85%B3%E7%B3%BB%E5%9B%BE.png" alt="刷盘接口关系图">&lt;/p>
+&lt;h4 id="41-同步刷盘解析">4.1 同步刷盘解析&lt;/h4>
+&lt;p>同步刷盘是由 &lt;strong>&lt;code>GroupCommitService&lt;/code>&lt;/strong> 来处理，同步刷盘的详细流程如下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/%E5%90%8C%E6%AD%A5%E5%88%B7%E7%9B%98%E7%9A%84%E8%AF%A6%E7%BB%86%E6%B5%81%E7%A8%8B.png" alt="同步刷盘的详细流程">&lt;/p>
+&lt;p>在刷盘过程中使用到的两个类：&lt;strong>&lt;code>GroupCommitService&lt;/code>&lt;/strong> 和 &lt;strong>&lt;code>FlushDiskWatcher&lt;/code>&lt;/strong> 从本质上看都是一个Thread。&lt;/p>
+&lt;p>GroupCommitService处理主要分为三步：&lt;/p>
+&lt;ol>
+&lt;li>
+&lt;p>往链表中写入GroupCommitRequest请求&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/image-20220912140817889.png" alt="image-20220912140817889">&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>GroupCommitService执行doCommit方法&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/image-20220912140929356.png" alt="image-20220912140929356">&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>执行刷盘操作，将结果写入GroupCommitRequest&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/image-20220912141357835.png" alt="image-20220912141357835">&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;p>到这里就已经基本上完成整个同步的刷盘步骤。细心的可能会发现还有一个 &lt;strong>&lt;code>FlushDiskWatcher&lt;/code>&lt;/strong> 这个类。它的功能主要是：处理在规定时间内还没有刷盘成功的请求。&lt;/p>
+&lt;h4 id="42-异步刷盘解析">4.2 异步刷盘解析&lt;/h4>
+&lt;p>异步刷盘的服务是**&lt;code>FlushRealTimeService&lt;/code>** ，不过当内存缓存池 **&lt;code>TransientStorePool&lt;/code>** 可用时，消息会先提交到TransientStorePool中的WriteBuffer内部，再提交到MappedFile的FileChannel中，此时异步刷盘服务就是CommitRealTimeService。下面看一下 **FlushRealTimeService** ：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/image-20220912145045587.png" alt="image-20220912145045587">&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/image-20220912145109156.png" alt="image-20220912145109156">&lt;/p>
+&lt;p>而在启用了暂存池的情况下使用的是 &lt;strong>&lt;code>CommitRealTimeService&lt;/code>&lt;/strong> 进行刷盘：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/image-20220912151020859.png" alt="image-20220912151020859">&lt;/p>
+&lt;h3 id="5-总结">5. 总结&lt;/h3>
+&lt;ul>
+&lt;li>CommitLog在RocketMQ中充当一个存储的抽象，所有的存储操作都是通过CommitLog对外暴露。底层包含了很多其他组件来支持&lt;/li>
+&lt;li>刷盘的模式可以通过配置文件的 &lt;strong>flushDiskType&lt;/strong> 字段来配置，SYNC_FLUSH表示同步刷盘、ASYNC_FLUSH表示异步刷盘&lt;/li>
+&lt;li>刷盘的服务主要是由三个服务：FlushRealTimeService、GroupCommitService、CommitRealTimeService来实现刷盘，以及FlushDiskWatcher来处理一些特殊的刷盘情况。这些服务本质上都是线程。&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢&lt;/p>
+&lt;/blockquote>
+&lt;p>参考资料：&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://github.com/apache/rocketmq/wiki/RIP-7-Multiple-Directories-Storage-Support">https://github.com/apache/rocketmq/wiki/RIP-7-Multiple-Directories-Storage-Support&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Middlewares: RocketMQ5.0源码分析-AutoSwitchHAClient</title><link>/middlewares/rocketmq5/store/autoswitchhaclient-source-code-analysis/</link><pubDate>Fri, 07 Oct 2022 00:00:00 +0000</pubDate><guid>/middlewares/rocketmq5/store/autoswitchhaclient-source-code-analysis/</guid><description>
+&lt;p>在RocketMQ5.0的HA模式中，&lt;code>AutoSwitchHAClient&lt;/code> 是一个重要的组件，主要作用Broker Slave中用来处理Broker Master发来的CommitLog数据。RocketMQ5.0对&lt;code>AutoSwitchHAClient&lt;/code>进行了增强来适应RocketMQ5.0的DLedger Controller的模式。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: RocketMQ版本：5.0.0&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="1-rocketmq4x和rocketmq50版本协议对比">1. RocketMQ4.x和RocketMQ5.0版本协议对比&lt;/h2>
+&lt;p>在RocketMQ4.x版本中只有一个CommitLog数据传输的协议，而RocketMQ5.0为了适配DLedger Controller的模式增加了新的握手和连接协议以及对原有的CommitLog传输协议进行了增强。&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>HANDSHAKE(新增协议)&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>TRANSFER(对4.x版本进行了增强)&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;h3 id="11-handshake协议">1.1 HANDSHAKE协议&lt;/h3>
+&lt;p>&lt;strong>Slave发送给Master协议格式：&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/Handshake%20header.png" alt="Handshake header">&lt;/p>
+&lt;p>&lt;strong>作用：将Slave的状态告诉Master。&lt;/strong>&lt;/p>
+&lt;p>这个协议是RocketMQ5.0新增的协议。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 在Broker Slave给Broker Master发了HANDSHAKE后，Broker Master处理完成后会给Broker Slave回一个ACK&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;strong>Master给Slave回复的ACK协议格式：&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/Master%20Handshare%20Message%20ACK.png" alt="Master Handshare Message ACK">&lt;/p>
+&lt;p>&lt;strong>作用：用于对齐Slave和Master的数据&lt;/strong>&lt;/p>
+&lt;h3 id="12-transfer协议">1.2 TRANSFER协议&lt;/h3>
+&lt;p>&lt;strong>RocketMQ4.x协议格式：&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/transfer%20protocol.png" alt="transfer protocol">&lt;/p>
+&lt;p>分为头部和数据两大部分，头部包含了offSet和数据大小&lt;/p>
+&lt;p>&lt;strong>RocketMQ5.0协议格式：&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/Transfer%20Message.png" alt="Transfer Message">&lt;/p>
+&lt;p>由于是RocketMQ4.x的协议增强，除了包含offSet和数据大小以外还包含了DLedger Controller模式的一些Broker的元数据信息。&lt;/p>
+&lt;h2 id="2-rocketmq50-autoswitchhaclient处理流程">2. RocketMQ5.0 AutoSwitchHAClient处理流程&lt;/h2>
+&lt;p>&lt;strong>&lt;code>AutoSwitchHAClient&lt;/code>&lt;/strong> 处理流程示意图如下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/AutoSwitchHAClient%20Handle%20flow.png" alt="AutoSwitchHAClient Handle flow">&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 从源码可以知道AutoSwitchHAClient继承了ServiceThread，所以本质上AutoSwitchHAClient是一个线程。线程的循环执行来处理Master Broker发送过来的CommitLog。&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;code>AutoSwitchHAClient&lt;/code> 主要通过不同的状态来控制不同的流程：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/AutoSwitchHAClient-status-change.png" alt="AutoSwitchHAClient-status-change">&lt;/p>
+&lt;p>&lt;strong>状态有以下几种：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>SHUTDOWN&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>READY&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>HANDSHAKE&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>TRANSFER&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>SUSPEND(暂时没用到)&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;p>AutoSwitchHAClient主要是Broker Slave用来处理Broker Master发送的数据，以及Broker Slave自身的一些内部&lt;/p>
+&lt;h3 id="21-ready">2.1 READY&lt;/h3>
+&lt;p>&lt;strong>&lt;code>READY&lt;/code>&lt;/strong> 状态也是初始化状态，当AutoSwitchHAClient被初始化，AutoSwitchHAClient的状态会被设置为READY状态。在READY状态下主要做两件事：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Truncate Invalid message(截断无效的message)&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>Connect Broker Master（与Master建立TCP链接）&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;p>接下来我们就来分析这两种情况。&lt;/p>
+&lt;h4 id="211-truncate-invalid-message截断无效的message">2.1.1 Truncate Invalid message(截断无效的message)&lt;/h4>
+&lt;p>什么情况下需要进行消息进行截断？当Broker分发的数据存在落后的情况也就是从Producer生成的消息发送到Broker后还存在有没有dispatch的数据这种情况下可能需要进行消息截断。然后对未dispatch的消息数据进行预处理校验。然后将预处理完成后的值后面的日志进行截断(也有可能不存在，这里是处理无效数据)&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221012214111881.png" alt="image-20221012214111881">&lt;/p>
+&lt;p>&lt;strong>通过分析代码发现 AutoSwitchHAClient READY 状态下截断本质上是做的处理Slave Broker的无效日志和消费者队列的数据。也就是首先对齐自身的数据这里包括：CommitLog和Consumer Queue&lt;/strong>&lt;/p>
+&lt;h4 id="211--connect-broker-master与master建立tcp链接">2.1.1 Connect Broker Master（与Master建立TCP链接）&lt;/h4>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221012215935051.png" alt="image-20221012215935051">&lt;/p>
+&lt;p>如果与Broker Master建立了TCP连接，然后会将状态设置为**&lt;code>HANDSHAKE&lt;/code>**&lt;/p>
+&lt;h3 id="22-handshake">2.2 HANDSHAKE&lt;/h3>
+&lt;p>AutoSwitchHAClient在HANDSHAKE状态下会发送握手信息给Master，信息格式如下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/Handshake%20header.png" alt="Handshake header">&lt;/p>
+&lt;p>也就是上文提到的HANDSHAKE协议数据。这里包括：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Slave的状态&lt;/strong>&lt;/li>
+&lt;li>同步开始的文件位置，以及是否为Learner角色&lt;/li>
+&lt;li>slave的地址(通过长度来判断是否为IPV4还是IPV6)&lt;/li>
+&lt;/ul>
+&lt;p>在Master收到Slave的发送的HANDSHAKE数据后会对数据进行处理：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221012221841662.png" alt="image-20221012221841662">&lt;/p>
+&lt;p>主要是将Slave的状态数据以及角色和IP地址记录到Master，同时master会构建一个HANDSHAKE的ACK给到Slave。那么Master给Slave返回的数据HANDSHAKE ACK数据格式：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/Master%20Handshare%20Message%20ACK.png" alt="Master Handshare Message ACK">&lt;/p>
+&lt;p>Master给Slave回的ACK包含了Master的一些元数据信息。源码代码构建如下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221016094054892.png" alt="image-20221016094054892">&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 在5.0.0的代码中为了和发送日志数据的头统一，Master在给Slave回复 HANDSHAKE ACK状态的时候请求头也增加了EpochStartOffset和Additional info 字段。设置为0，为了减少数据传输笔者进行了优化去除了这两个字段传输具体可以参照 &lt;a href="https://github.com/apache/rocketmq/issues/5157">ISSUE#5157&lt;/a> 对应的PR，社区已经approved等待代码合并。这个优化主要是处于两个考虑：&lt;/p>
+&lt;ul>
+&lt;li>和文档中的设计统一&lt;/li>
+&lt;li>减少传输过程中的数据传输&lt;/li>
+&lt;/ul>
+&lt;/blockquote>
+&lt;p>Slave收到Master的HANDSHAKE ACK后获取数据&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221016103311015.png" alt="image-20221016103311015">&lt;/p>
+&lt;p>&lt;strong>主要是作用是Slave和Master对齐数据&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221016103809712.png" alt="image-20221016103809712">&lt;/p>
+&lt;p>到这里为止就完成整个传输数据的前期准备工作。&lt;/p>
+&lt;blockquote>
+&lt;p>总结：前期的准备工作主要做了两件事情&lt;/p>
+&lt;ul>
+&lt;li>Slave自身的数据对齐，删除一些无效的数据(如果有的情况下)，这些无效的数据包括日志数据、cq数据&lt;/li>
+&lt;li>Slave和Master的数据对齐，当Slave的数据在Master前面的时候也就是数据多于Master，此时会对数据进行删除。与此同时会对齐&lt;/li>
+&lt;/ul>
+&lt;/blockquote>
+&lt;h3 id="23-transfer">2.3 TRANSFER&lt;/h3>
+&lt;p>Slave AutoSwitchHAClient状态变成TRANSFER后就开始处理Master的发送过来的日志数据，处理完成后报告Slave的maxOffSet。&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/image-20221016121849931.png" alt="image-20221016121849931">&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 日志数据传输不能跨Epoch传输。&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="3-协议优化思考">3. 协议优化思考&lt;/h2>
+&lt;h3 id="31-handshake协议优化">3.1 HANDSHAKE协议优化&lt;/h3>
+&lt;p>&lt;strong>Slave发送给Master协议格式优化:&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/Handshake%20header.png" alt="Handshake header">&lt;/p>
+&lt;p>协议可以发现，用了4个字节来表示状态。这里的设计是和枚举的int类型进行了对应，其实我们可以用1btye来表示。地位到高位每一个bit表示状态，例如地位第一位1表示READY状态。同时Flags也可以进行优化用同样的1byte就可以表示状态。这样8byte的数据用2个byte就可以表示。&lt;/p>
+&lt;p>&lt;strong>Master发送给Slave的协议格式优化：&lt;/strong>&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/Master%20Handshare%20Message%20ACK.png" alt="Master Handshare Message ACK">&lt;/p>
+&lt;p>这个优化同样也是优化state字段，优化的思路和上面的一致。&lt;/p>
+&lt;h3 id="32-transfer协议优化">3.2 TRANSFER协议优化&lt;/h3>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/broker/ha/Transfer%20Message.png" alt="Transfer Message">&lt;/p>
+&lt;p>这个优化同样也是优化state字段，优化的思路和上面的一致。&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 后续笔者会在社区创建ISSUE进行社区讨论然后确定是否进行协议优化，如果确定进行协议优化提交对应的PR&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="4-总结">4. 总结&lt;/h2>
+&lt;p>AutoSwitchHAClient作为RocketMQ5.0高可用的重要一个主键，其功能主要是Slave Broker和Master进行通讯同时处理来自Master传输的日志数据。搭配其他的组件使用来确保DLedger Controller模式下的自主切换和RocketMQ的高可用。后续会有文章接着分析其他DLedger Controller模式高可用的其他组件。&lt;/p>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象(GitHub:mxsm)，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢!&lt;/p>
+&lt;/blockquote></description></item><item><title>Middlewares: RocketMQ5.0源码解析-CommitLog设计与几个重要的属性关系图文解析</title><link>/middlewares/rocketmq5/store/commitlog-important-attribute/</link><pubDate>Sat, 15 Oct 2022 00:00:00 +0000</pubDate><guid>/middlewares/rocketmq5/store/commitlog-important-attribute/</guid><description>
+&lt;p>如果把RocketMQ看做应用系统CommitLog就相当于应用的系统中的存储层也就是数据库的功能。下面就来聊一聊CommitLog的设计以及CommitLog包含的组件中的一些重要属性字段wrotePosition、committedPosition、flushedPosition、fileFromOffset、flushedWhere、committedWhere之间的关系。&lt;/p>
+&lt;h2 id="1commitlog的组成">1.CommitLog的组成&lt;/h2>
+&lt;p>&lt;code>CommitLog&lt;/code> 是MQ对存储层的抽象，整体的架构设计如下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/CommitLog%20architecture.png" alt="CommitLog architecture">&lt;/p>
+&lt;p>从上图可以看出来整个分为了三层：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>MappedFile&lt;/strong>&lt;/p>
+&lt;p>作为底层的数据存储，默认情况下单个文件大小1G。MappedFile提供了一些对文件元数据以及可用性的一些操作以及添加消息数据到文件中的接口。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>MappedFileQueue&lt;/strong>&lt;/p>
+&lt;p>讲底层的单个数据文件以队列的形式组织起来，主要提供获取单个MappedFile的一些操作。例如：获取第一个或者最后一个数据文件，以及文件属性的相关操作都是由&lt;strong>MappedFileQueue&lt;/strong> 提供。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>CommitLog&lt;/strong>&lt;/p>
+&lt;p>整个对外提供服务的封装，同时一些数据刷盘操作都是在CommitLog中实现的。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;p>MappedFile文件列表组成了MappedFileQueue，然后通过增加相关的对外操作于MappedFileQueue组成了CommitLog。&lt;/p>
+&lt;h2 id="2-组件重要位置属性说明">2. 组件重要位置属性说明&lt;/h2>
+&lt;p>在&lt;strong>CommitLog、MappedFileQueue、MappedFile&lt;/strong> 这三个组件中都有几个重要的属性，来标记日志的waterline,如下图：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/CommitLog%20attribute%20relation.png" alt="CommitLog attribute relation">&lt;/p>
+&lt;p>下面来一一分析不同情况下这些属性之间的关系，在RocketMQ中很多地方都有用到这些waterline的关系特别是在处理日志恢复以及HA的时候有用到。&lt;/p>
+&lt;h3 id="21-mappedfile-waterline-说明">2.1 MappedFile waterline 说明&lt;/h3>
+&lt;p>在MappedFile的默认实现中有如下的几个属性：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>wrotePosition&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>committedPosition&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>flushedPosition&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>fileFromOffset&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;p>这几个属性指向的文件的位置决定了日志的数据是否丢失和新增的日志应该从哪个位置写入。下面会根据不同的情况来进行分析&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/MappedFile%20Waterline.png" alt="MappedFile Waterline">&lt;/p>
+&lt;p>上图说明上述四个变量之间的关系&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: 上述图是从生产者的角度来看的，也就是生产者收到Broker的确认ACK。&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;strong>字段说明：&lt;/strong>&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>字段&lt;/th>
+&lt;th>说明&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>wrotePosition&lt;/td>
+&lt;td>初始化值0，当有消息append的时候wrotePosition会增加，一个消息发送到Broker,wrotePosition指针就会往前移动&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>committedPosition&lt;/td>
+&lt;td>初始化值0，表示从TransientStorePool中Commit了多少数据到File Channel中的指针，当暂存池为空的时候使用的是wrotePosition&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>flushedPosition&lt;/td>
+&lt;td>初始值为0，flushedPosition指针表示的是已经落盘的持久化数据。这个指针之前的数据表示已经落盘就算服务异常退出只要不删除本地文件就不会丢失&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>fileFromOffset&lt;/td>
+&lt;td>数据文件的开始值，也就是数据文件的名称。例如：文件大小默认为1G的来说，那么第二个文件的fileFromOffset=1024 * 1024 * 1024,文件创建该值的大小就不会变&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>&lt;strong>大小关系：wrotePosition &amp;gt;= committedPosition &amp;gt;= flushedPosition &amp;gt;= fileFromOffset&lt;/strong>&lt;/p>
+&lt;h3 id="22-mappedfilequeue-waterline说明">2.2 MappedFileQueue waterline说明&lt;/h3>
+&lt;p>在MappedFileQueue存在这样的两个属性：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>flushedWhere&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>committedWhere&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;p>看到这两个属性你会发现和MappedFile中的两个属性committedPosition和flushedPosition属性比较相似。通过下图看一下两者之间的关系：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/MappedFileQueue%E5%AD%97%E6%AE%B5%E5%85%B3%E7%B3%BB.png" alt="MappedFileQueue字段关系">&lt;/p>
+&lt;p>&lt;strong>flushedWhere&lt;/strong> 、&lt;strong>committedWhere&lt;/strong> 这两个字段主要是从MappedFileQueue的角度去看的。从源码进行分析：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/image-20221015161021289.png" alt="image-20221015161021289">&lt;/p>
+&lt;p>&lt;strong>committedWhere：&lt;/strong> 当前MappedFile的fileFromOffset + 当前MappedFile的committedPosition&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/image-20221015161105559.png" alt="image-20221015161105559">&lt;/p>
+&lt;p>&lt;strong>flushedWhere ：&lt;/strong> 当前MappedFile的fileFromOffset + 当前MappedFile的flushedPosition&lt;/p>
+&lt;h3 id="23-commitlog">2.3 CommitLog&lt;/h3>
+&lt;p>CommitLog主要是提供对外的接口服务，这里包括：&lt;/p>
+&lt;ul>
+&lt;li>消息的插入操作&lt;/li>
+&lt;li>消息的刷盘任务(同步和异步)&lt;/li>
+&lt;li>暂存池的数据提交到FileChannel中的任务&lt;/li>
+&lt;/ul>
+&lt;h2 id="3-commitlog消息处理流程">3. CommitLog消息处理流程&lt;/h2>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/rocketmq5/store/commitlog/CommitLog%20handle%20message%20flow.png" alt="CommitLog handle message flow">&lt;/p>
+&lt;p>CommitLog启动后同时会启动相对应的线程来处理Commit和Flush Disk。&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>FlushManager处理Commit指针和Flush Disk指针的推进&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>MappedFile#appendMessage处理writePosition指针&lt;/strong>&lt;/li>
+&lt;/ul>
+&lt;p>Producer发送消息给Broker后，首先就是推动wrotePosition往前(不管是使用FileChannel还是暂存池)，然后根据配置的是否启用暂存池来确定是否需要CommitRealTimeService线程池去处理将暂存池的数据提交到FileChannel中，这个会推动committedPosition指针往前移动。然后就是根据刷盘策略是异步刷盘还是同步刷盘来启动不同的线程去处理刷盘来推动MappedFile和MappedFileQueue 提交相关的指针往前。&lt;/p>
+&lt;h2 id="4-总结">4. 总结&lt;/h2>
+&lt;p>&lt;strong>MappedFile字段：&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>fileFromOffset其实就是日志数据存储文件的名称，初始值为0，每增加增加一个文件默认情况下增加1024 * 1024 * 1024&lt;/li>
+&lt;li>wrotePosition表示写入FileChannel的数据，这些数据可能还存在内存中不应落盘。每次增加日志wrotePosition就会往后移动&lt;/li>
+&lt;li>committedPosition在暂存池启动的时候才会使用到，暂存池提价的FileChannel中的数据位置，这个字段只有启用了暂存池才会用到，要不然就是使用的wrotePosition&lt;/li>
+&lt;li>flushedPosition表示就落盘的位置，在小于flushedPosition位置的数据都已经持久化到了磁盘&lt;/li>
+&lt;/ul>
+&lt;p>**MappedFileQueue字段: **&lt;/p>
+&lt;ul>
+&lt;li>flushedWhere整个文件队列的刷盘的位置，异步刷盘由 &lt;code>FlushRealTimeService&lt;/code> 线程处理，同步刷盘由 &lt;code>GroupCommitService&lt;/code> 处理&lt;/li>
+&lt;li>committedWhere暂存池的提交位置，由CommitRealTimeService线程处理&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>我是蚂蚁背大象(GitHub:mxsm)，文章对你有帮助点赞关注我，文章有不正确的地方请您斧正留言评论~谢谢!&lt;/p>
+&lt;/blockquote></description></item></channel></rss>

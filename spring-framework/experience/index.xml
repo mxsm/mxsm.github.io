@@ -1,0 +1,89 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>蚂蚁背大象 – Spring Framework经验心得</title><link>/spring-framework/experience/</link><description>Recent content in Spring Framework经验心得 on 蚂蚁背大象</description><generator>Hugo -- gohugo.io</generator><atom:link href="/spring-framework/experience/index.xml" rel="self" type="application/rss+xml"/><item><title>Spring-Framework: Spring中那些容易混淆的类开发中该如何选择?</title><link>/spring-framework/experience/spring-easy-confuse-class/</link><pubDate>Thu, 03 Feb 2022 00:00:00 +0000</pubDate><guid>/spring-framework/experience/spring-easy-confuse-class/</guid><description>
+&lt;p>Spring在使用过程中会发现有很多那些名字相近的拓展接口。这些接口有的实现的功能区别很大有的区别较小。下面就来总结下一下Spring中那些容易混淆的类，同时说一下作用以及拓展应用。&lt;/p>
+&lt;blockquote>
+&lt;p>Spring版本：5.3.x&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="1--beanfactorypostprocessor与beanpostprocessor">1. BeanFactoryPostProcessor与BeanPostProcessor&lt;/h3>
+&lt;p>BeanFactoryPostProcessor与BeanPostProcessor因为名字很相近稍微不注意就会认为是一样的。其实这个两个是两个完全不一样的接口&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/experience/BeanFactoryPostProcessor%E4%B8%8EBeanPostProcessor.png" alt="BeanFactoryPostProcessor与BeanPostProcessor">&lt;/p>
+&lt;h4 id="11-beanfactorypostprocessor">1.1 BeanFactoryPostProcessor&lt;/h4>
+&lt;p>&lt;strong>作用：&lt;/strong> BeanFactory的后置处理器，允许自定义修改应用上下文的Bean的定义。同时可以调整上下文的底层bean工厂的bean属性值。&lt;/p>
+&lt;p>&lt;strong>执行时间：&lt;/strong> Spring 上下文刷新的时候执行&lt;/p>
+&lt;p>&lt;strong>自定义拓展：&lt;/strong> 可以用来自定义修饰类的注解,比如自定义一个@Component&lt;/p>
+&lt;h4 id="12-beanpostprocessor">1.2 BeanPostProcessor&lt;/h4>
+&lt;p>&lt;strong>作用：&lt;/strong> Bean的后置处理器，允许自定义修改新bean实例——例如，检查标记接口或用代理包装bean。(动态代理)&lt;/p>
+&lt;p>&lt;strong>执行时间：&lt;/strong> 从Spring 容器中获取Bean的时候&lt;/p>
+&lt;p>&lt;strong>自定义拓展：&lt;/strong> 可以用来自定义修饰类熟悉的注解像@Value&lt;/p>
+&lt;h3 id="2-importbeandefinitionregistrar和importselector">2. ImportBeanDefinitionRegistrar和ImportSelector&lt;/h3>
+&lt;p>ImportBeanDefinitionRegistrar和ImportSelector主要搭配注解@Import使用，在一些自定义拓展的过程中可能会发现有的人使用的是ImportBeanDefinitionRegistrar实现类，有的使用的是ImportSelector使用类。所以在使用的时候就很疑惑到底使用哪个？&lt;/p>
+&lt;h4 id="21-importbeandefinitionregistrar">2.1 ImportBeanDefinitionRegistrar&lt;/h4>
+&lt;p>看一下接口源码：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">interface&lt;/span> &lt;span style="color:#000">ImportBeanDefinitionRegistrar&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">registerBeanDefinitions&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">AnnotationMetadata&lt;/span> &lt;span style="color:#000">importingClassMetadata&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">BeanDefinitionRegistry&lt;/span> &lt;span style="color:#000">registry&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span>
+&lt;span style="color:#000">BeanNameGenerator&lt;/span> &lt;span style="color:#000">importBeanNameGenerator&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">registerBeanDefinitions&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">importingClassMetadata&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">registry&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">registerBeanDefinitions&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">AnnotationMetadata&lt;/span> &lt;span style="color:#000">importingClassMetadata&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">BeanDefinitionRegistry&lt;/span> &lt;span style="color:#000">registry&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">)&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;strong>ImportBeanDefinitionRegistrar#registerBeanDefinitions&lt;/strong> 方法参数有一个&lt;strong>BeanDefinitionRegistry&lt;/strong> ，说明在&lt;strong>ImportBeanDefinitionRegistrar&lt;/strong> 实现可以直接往Spring容器中注册Bean的定义。同时也可以获取到 @Import修饰的注解。&lt;/p>
+&lt;h4 id="22-importselector">2.2 ImportSelector&lt;/h4>
+&lt;p>ImportSelector只能选择性的往导入需要的类名称，如果导入的类是ImportBeanDefinitionRegistrar或者ImportSelector会进行进一步处理，如果导入的是普通的类会将类包装为 &lt;strong>&lt;code>ConfigurationClass&lt;/code>&lt;/strong> 存放在ConfigurationClassParser类的configurationClasses属性中。在处理ConfigurationClassParser#parse结束后会将ConfigurationClassParser类的configurationClasses属性中没有加载的配置类定义加载到Spring容器中，如下图：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/experience/image-20220204011652184.png" alt="image-20220204011652184">&lt;/p>
+&lt;p>&lt;strong>在搭配@Import注解使用的时候到底使用哪一个看自定义过程中是否需要往Spring容器中自己注册Bean的定义，ImportBeanDefinitionRegistrar和ImportSelector两者功能类似有互补的情况&lt;/strong>&lt;/p>
+&lt;blockquote>
+&lt;p>Tips: ImportSelector导入的类是否标注了@Configuration注解最终都会当做配置类加载到Spring容器&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="3-importselector和deferredimportselector">3. ImportSelector和DeferredImportSelector&lt;/h3>
+&lt;p>ImportSelector和DeferredImportSelector两个的作用是一样的，都是导入类到Spring容器中，不同之处在于执行的时间不同。ImportSelector先执行，DeferredImportSelector后执行。我们从代码层面来看一下：&lt;/p>
+&lt;p>&lt;img src="https://raw.githubusercontent.com/mxsm/picture/main/spring/experience/image-20220204111609644.png" alt="image-20220204111609644">&lt;/p>
+&lt;p>在&lt;strong>ConfigurationClassParser#parse&lt;/strong> 方法中有这样一段代码如上图，前面的parse方法中执行的是 &lt;strong>ImportSelector&lt;/strong> ，如果遇到 &lt;strong>DeferredImportSelector&lt;/strong> 就会存放到属性 &lt;strong>&lt;code>deferredImportSelectorHandler&lt;/code>&lt;/strong> 在对 @Configuration注解解析完成后再一次执行 &lt;strong>DeferredImportSelector&lt;/strong> 的实现类。&lt;/p>
+&lt;p>&lt;strong>两个的功能基本上一样只是执行的时间不同，有延迟的作用。所以在使用的时候根据自定义拓展的使用者来定&lt;/strong>&lt;/p>
+&lt;h3 id="4-factorybean和beanfactory">4. FactoryBean和BeanFactory&lt;/h3>
+&lt;p>这个两个类稍微不注意就要搞混了。单词都一样只是顺序变了一下。其实这是两个完全不同的功能两个类。&lt;/p>
+&lt;h4 id="41-factorybean">4.1 FactoryBean&lt;/h4>
+&lt;p>Spring中的Bean有两种：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>普通的bean&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>工厂Bean也就是实现了FactoryBean&lt;/p>
+&lt;p>FactoryBean跟普通Bean不同，其返回的对象不是指定类的一个实例，而是该FactoryBean的getObject方法所返回的对象。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#204a87;font-weight:bold">public&lt;/span> &lt;span style="color:#204a87;font-weight:bold">interface&lt;/span> &lt;span style="color:#000">FactoryBean&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;&lt;/span>&lt;span style="color:#000">T&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;gt;&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">OBJECT_TYPE_ATTRIBUTE&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">=&lt;/span> &lt;span style="color:#4e9a06">&amp;#34;factoryBeanObjectType&amp;#34;&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Nullable&lt;/span>
+&lt;span style="color:#000">T&lt;/span> &lt;span style="color:#000">getObject&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">Exception&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#5c35cc;font-weight:bold">@Nullable&lt;/span>
+&lt;span style="color:#000">Class&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;?&amp;gt;&lt;/span> &lt;span style="color:#000">getObjectType&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">default&lt;/span> &lt;span style="color:#204a87;font-weight:bold">boolean&lt;/span> &lt;span style="color:#000">isSingleton&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#ce5c00;font-weight:bold">{&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">return&lt;/span> &lt;span style="color:#204a87;font-weight:bold">true&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;span style="color:#ce5c00;font-weight:bold">}&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>FactoryBean 通常是用来创建比较复杂的bean，一般的bean 直接用xml配置即可或者使用注解，但如果一个bean的创建过程中涉及到很多其他的bean 和复杂的逻辑，用xml配置比较困难，这时可以考虑用FactoryBean&lt;/p>
+&lt;p>很多开源项目在集成Spring 时都使用到FactoryBean，比如 &lt;a href="https://link.jianshu.com/?t=https://github.com/mybatis/mybatis-3">MyBatis3&lt;/a> 提供 mybatis-spring项目中的 &lt;code>org.mybatis.spring.SqlSessionFactoryBean&lt;/code>&lt;/p>
+&lt;blockquote>
+&lt;p>项目地址：https://github.com/mybatis/spring/blob/master/src/main/java/org/mybatis/spring/SqlSessionFactoryBean.java&lt;/p>
+&lt;/blockquote>
+&lt;h4 id="42-beanfactory">4.2 BeanFactory&lt;/h4>
+&lt;p>&lt;strong>BeanFactory&lt;/strong> 是Spring Bean容器的顶级接口接口。&lt;/p>
+&lt;blockquote>
+&lt;p>文章对你有帮助可以点个赞关注我，你的点赞、关注是我前进的动力，文章有不正确的地方请您斧正留言评论~谢谢！&lt;/p>
+&lt;/blockquote></description></item><item><title>Spring-Framework: Spring框架中接口命名的艺术</title><link>/spring-framework/experience/spring-interface-art/</link><pubDate>Sat, 02 May 2020 00:00:00 +0000</pubDate><guid>/spring-framework/experience/spring-interface-art/</guid><description>
+&lt;p>在Spring中有对外的拓展接口或者是内部的接口有很多。这些接口命名有一些规律。以后自己的代码也可以参照Spring的接口命名方式来进行命名。&lt;/p>
+&lt;h4 id="applicationcontext和configurableapplicationcontext">ApplicationContext和ConfigurableApplicationContext&lt;/h4>
+&lt;p>这两个接口代表了普通接口和 &lt;strong>&lt;code>Configurable&lt;/code>&lt;/strong> 前缀的接口。带 &lt;strong>&lt;code>Configurable&lt;/code>&lt;/strong> 前缀的表示可以配置，那么可以配置一些什么东西呢？下面来看一下接口的源码：&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#8f5902;font-style:italic">// ConfigurableApplicationContext
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">setId&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">String&lt;/span> &lt;span style="color:#000">id&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">setParent&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#5c35cc;font-weight:bold">@Nullable&lt;/span> &lt;span style="color:#000">ApplicationContext&lt;/span> &lt;span style="color:#000">parent&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">setEnvironment&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ConfigurableEnvironment&lt;/span> &lt;span style="color:#000">environment&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">addBeanFactoryPostProcessor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">BeanFactoryPostProcessor&lt;/span> &lt;span style="color:#000">postProcessor&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">addApplicationListener&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ApplicationListener&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">&amp;lt;?&amp;gt;&lt;/span> &lt;span style="color:#000">listener&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">addProtocolResolver&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">(&lt;/span>&lt;span style="color:#000">ProtocolResolver&lt;/span> &lt;span style="color:#000">resolver&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">);&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div>&lt;p>这一类接口增加了可配置的方法但是又不是仅仅局限于增加可配置的方法，如下面的代码&lt;/p>
+&lt;div class="highlight">&lt;pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;code class="language-java" data-lang="java">&lt;span style="color:#8f5902;font-style:italic">//ConfigurableApplicationContext
+&lt;/span>&lt;span style="color:#8f5902;font-style:italic">&lt;/span>&lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">refresh&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">()&lt;/span> &lt;span style="color:#204a87;font-weight:bold">throws&lt;/span> &lt;span style="color:#000">BeansException&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">,&lt;/span> &lt;span style="color:#000">IllegalStateException&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">;&lt;/span>
+&lt;span style="color:#204a87;font-weight:bold">void&lt;/span> &lt;span style="color:#000">registerShutdownHook&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">();&lt;/span>
+&lt;/code>&lt;/pre>&lt;/div></description></item></channel></rss>
