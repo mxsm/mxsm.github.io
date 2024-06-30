@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkmxsm_website=self.webpackChunkmxsm_website||[]).push([[3020],{1965:t=>{t.exports=JSON.parse('{"title":"Git","slug":"/others/tools/git","permalink":"/docs/others/tools/git","navigation":{"previous":{"title":"Overview","permalink":"/docs/others/tools"},"next":{"title":"Git Command","permalink":"/docs/others/tools/git/command/"}}}')}}]);
